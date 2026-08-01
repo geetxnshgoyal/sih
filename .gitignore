@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------- corpora
+# 8 GB of third-party sign-language data. Never commit it: INCLUDE alone is
+# 56.8 GB of source video, the licences are the upstream projects' to grant,
+# and every fetch script here reproduces it exactly.
+#
+#   data/fetch_video.sh   INCLUDE raw video (Zenodo 4010759, CC BY 4.0)
+#   data/fetch_poses_all.sh
+#   data/fetch_cislr.sh   CISLR (gated, AFL-3.0)
+data/
+!data/*.sh
+!data/README*
+
+# --------------------------------------------------------------- environments
+.venv/
+.venv-tf/
+.venv-mp/
+__pycache__/
+*.pyc
+node_modules/
+
+# --------------------------------------------------------------- build output
+app/dist/
+app/.vite/
+.DS_Store
+
+# ------------------------------------------------------------- pipeline state
+# Locks, PIDs and logs for the long-running fetch/extract jobs. Machine-local
+# by definition — and the reason these live in the repo rather than /tmp is
+# that macOS wiping /tmp killed the pipeline twice.
+run/
+
+# ---------------------------------------------------------- large checkpoints
+# The Keras checkpoints are 6-11 MB each and regenerable from train/train.py.
+# The TF.js model in app/public/model/ IS committed: it is 2.1 MB and the app
+# cannot run without it, which matters more than repo size for a demo people
+# are meant to be able to clone and try.
+models/*.keras
+models/*.h5
+models/saved_model/
+models/holistic_landmarker.task
+
+# Own recordings may contain identifiable video of real people. Contributors
+# should share these deliberately, not by accident.
+setu-recordings-*.json
+
+# ------------------------------------------------------------ editor/agent
+# Local tooling config — machine-specific, not part of the project.
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# --------------------------------------------------------------------- secrets
+.env
+.env.*
+*.pem
