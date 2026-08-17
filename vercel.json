@@ -1,10 +1,26 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "cd app && npm ci && npm run build",
-  "outputDirectory": "app/dist",
-  "installCommand": "echo skip",
-  "framework": null,
+
+  "//": [
+    "The project's Root Directory is set to app/ in Vercel's settings, so every",
+    "command below already runs from there — an earlier `cd app` failed with",
+    "'No such file or directory' for exactly that reason. Paths here are",
+    "therefore relative to app/, not the repo root.",
+    "",
+    "The SPA rewrite is not optional: without it any deep link or hard refresh",
+    "returns 404, because a static host has no route table.",
+    "",
+    "/model/ is ~6 MB of weights, labels and sign data that only change when the",
+    "model is retrained, and the filenames change when it is. Immutable caching",
+    "is therefore safe and saves re-downloading it on every visit."
+  ],
+
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+
   "headers": [
     {
       "source": "/model/(.*)",
