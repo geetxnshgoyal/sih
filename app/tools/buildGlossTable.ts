@@ -170,6 +170,26 @@ async function main() {
     return;
   }
 
+  // Check credentials BEFORE the first batch. Without this the run prints
+  // "batch 1/10" and then dies in an SDK stack trace, which reads like the
+  // generator is broken rather than like a key is missing.
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
+    console.error(`
+No API credentials found.
+
+This generator runs OFFLINE and on purpose: the table it writes is committed and
+served statically, so no key ever reaches the browser and the demo never depends
+on a live API call.
+
+  ANTHROPIC_API_KEY=sk-ant-... node --experimental-strip-types tools/buildGlossTable.ts
+
+${todo.length} sequences to generate, in ${Math.ceil(todo.length / BATCH_SIZE)} batches.
+Progress is cached to ${path.relative(APP, OUT_PATH)}, so an interrupted run resumes where it stopped.
+`);
+    process.exitCode = 1;
+    return;
+  }
+
   const client = new Anthropic();
   const entries: Record<string, Entry> = { ...existing };
 
