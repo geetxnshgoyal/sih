@@ -246,8 +246,8 @@ export default function SignBridge({
           if (g.fire) {
             const l = langRef.current;
             const now = Date.now();
-            const finished = uttRef.current.add(g.fire, now);
-            if (finished) emit(finished.glosses, finished.at, l, g.conf);
+            const finished = uttRef.current.add(g.fire, now, g.conf);
+            if (finished) emit(finished.glosses, finished.at, l, finished.conf);
             setPending(uttRef.current.pending);
           }
         } else {
@@ -258,7 +258,8 @@ export default function SignBridge({
       }
       const done = uttRef.current.tick(Date.now());
       if (done) {
-        emit(done.glosses, done.at, langRef.current, 1);
+        // Real confidence, not 1. See UtteranceBuilder.add().
+        emit(done.glosses, done.at, langRef.current, done.conf);
         setPending([]);
       }
 
@@ -499,7 +500,10 @@ export default function SignBridge({
                             // reading, so it goes straight into the utterance
                             // rather than back through the confidence gate.
                             const l = langRef.current;
-                            const finished = uttRef.current.add(c.gloss, Date.now());
+                            // 1.0 is correct here and ONLY here: a person tapped this candidate.
+                            // Human confirmation is not a model estimate, so it does
+                            // not inherit the model's uncertainty.
+                            const finished = uttRef.current.add(c.gloss, Date.now(), 1);
                             if (finished) emit(finished.glosses, finished.at, l, c.conf);
                             setPending(uttRef.current.pending);
                             setCandidates([]);
