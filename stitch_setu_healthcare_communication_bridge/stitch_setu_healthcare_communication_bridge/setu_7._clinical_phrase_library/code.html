@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><title>Setu Medical Bridge</title><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100vw;margin:0;padding:0;}body{overscroll-behavior:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: 'class', theme: { extend: { colors: { 'secondary-fixed-dim': '#bcc7de', 'error': '#ba1a1a', 'primary-fixed': '#bde9ff', 'tertiary': '#5d3400', 'on-error': '#ffffff', 'secondary-container': '#d5e0f8', 'outline-variant': '#bfc8cd', 'inverse-surface': '#213145', 'tertiary-fixed-dim': '#fbb97a', 'primary': '#004357', 'on-surface-variant': '#40484c', 'on-surface': '#0b1c30', 'error-container': '#ffdad6', 'inverse-on-surface': '#eaf1ff', 'on-secondary-fixed': '#111c2d', 'surface-dim': '#cbdbf5', 'secondary-fixed': '#d8e3fb', 'primary-container': '#0d5c75', 'outline': '#70787d', 'on-secondary-fixed-variant': '#3c475a', 'on-background': '#0b1c30', 'inverse-primary': '#90cfec', 'on-tertiary': '#ffffff', 'background': '#f8f9ff', 'on-primary': '#ffffff', 'surface-container-highest': '#d3e4fe', 'surface-tint': '#1e667f', 'on-tertiary-container': '#febd7d', 'primary-fixed-dim': '#90cfec', 'on-tertiary-fixed-variant': '#683c06', 'on-error-container': '#93000a', 'surface-container-low': '#eff4ff', 'on-secondary-container': '#586377', 'on-primary-fixed-variant': '#004d64', 'on-secondary': '#ffffff', 'surface-variant': '#d3e4fe', 'surface': '#f8f9ff', 'tertiary-fixed': '#ffdcbf', 'on-primary-container': '#93d3ef', 'surface-container-lowest': '#ffffff', 'secondary': '#545f73', 'surface-bright': '#f8f9ff', 'on-tertiary-fixed': '#2d1600', 'on-primary-fixed': '#001f2a', 'surface-container-high': '#dce9ff', 'surface-container': '#e5eeff', 'tertiary-container': '#794a15' }, borderRadius: { 'DEFAULT': '0.125rem', 'lg': '0.25rem', 'xl': '0.5rem', 'full': '0.75rem' }, spacing: { 'viewport-margin': '1.5rem', 'space-md': '0.75rem', 'space-sm': '0.5rem', 'space-3xl': '3rem', 'space-lg': '1rem', 'panel-gutter': '1rem', 'space-xs': '0.25rem', 'space-2xl': '2rem', 'space-xl': '1.5rem', 'space-xxs': '0.125rem' }, fontFamily: { 'headline-md': ['IBM Plex Sans'], 'display-lg': ['IBM Plex Sans'], 'display-md': ['IBM Plex Sans'], 'headline-lg': ['IBM Plex Sans'], 'body-lg': ['IBM Plex Sans'], 'body-xl': ['IBM Plex Sans'], 'label-sm': ['IBM Plex Sans'], 'body-md': ['IBM Plex Sans'], 'label-lg': ['IBM Plex Sans'], 'code-transcript': ['IBM Plex Sans'], 'label-md': ['IBM Plex Sans'] }, fontSize: { 'headline-md': ['18px', { lineHeight: '26px', letterSpacing: '0em', fontWeight: '600' }], 'display-lg': ['32px', { lineHeight: '40px', letterSpacing: '-0.01em', fontWeight: '700' }], 'display-md': ['26px', { lineHeight: '34px', letterSpacing: '-0.005em', fontWeight: '600' }], 'headline-lg': ['22px', { lineHeight: '30px', letterSpacing: '0em', fontWeight: '600' }], 'body-lg': ['17px', { lineHeight: '26px', letterSpacing: '0.01em', fontWeight: '400' }], 'body-xl': ['20px', { lineHeight: '32px', letterSpacing: '0.01em', fontWeight: '500' }], 'label-sm': ['11px', { lineHeight: '14px', letterSpacing: '0.08em', fontWeight: '600' }], 'body-md': ['15px', { lineHeight: '22px', letterSpacing: '0.005em', fontWeight: '400' }], 'label-lg': ['14px', { lineHeight: '18px', letterSpacing: '0.04em', fontWeight: '600' }], 'code-transcript': ['13px', { lineHeight: '18px', letterSpacing: '0.02em', fontWeight: '500' }], 'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.06em', fontWeight: '600' }] } } } }</script></head><body class="bg-surface font-body-md text-body-md text-on-surface flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-viewport-margin flex items-center justify-between"><div class="flex items-center gap-space-sm"><button aria-label="Go back" class="min-h-[44px] min-w-[44px] flex items-center justify-center text-primary rounded-xl hover:bg-surface-container-low transition-colors" onclick="history.back()"><span class="material-symbols-outlined text-[24px]">arrow_back</span></button><h1 class="font-headline-md text-headline-md text-on-surface font-semibold">Clinical Prompts</h1></div><div class="flex items-center gap-space-sm"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full pb-safe">
+<!-- Administrative Triage & Pairing Header Banner -->
+<div class="w-full bg-surface-container-low px-viewport-margin py-space-sm flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-sm min-w-0">
+<span class="w-2.5 h-2.5 rounded-full bg-primary animate-pulse flex-shrink-0"></span>
+<div class="flex flex-col min-w-0">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider truncate">Bedside 04 • Tablet Sync</span>
+<span class="font-label-md text-label-md text-on-surface font-semibold truncate">Patient: Aarav Patel (MRN-84920)</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs bg-surface-container px-space-sm py-space-xxs rounded-xl flex-shrink-0">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">cast_connected</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">ISL SCREEN ACTIVE</span>
+</div>
+</div>
+<!-- Search and Diagnostic Input Area -->
+<div class="px-viewport-margin pt-space-md pb-space-xs flex flex-col gap-space-sm">
+<div class="relative w-full">
+<div class="absolute inset-y-0 left-0 pl-space-md flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-primary text-[22px]">search</span>
+</div>
+<input class="w-full pl-11 pr-10 py-3 bg-surface-container-lowest rounded-xl font-body-md text-body-md text-on-surface placeholder:text-outline shadow-sm focus:outline-none focus:bg-surface-container-low transition-all" id="clinical-search" oninput="handleSearch(this.value)" placeholder="Search clinical questions or dosage instructions..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-space-md flex items-center">
+<span class="material-symbols-outlined text-outline-variant text-[20px] cursor-pointer hover:text-on-surface" onclick="document.getElementById('clinical-search').value=''; handleSearch('')">close</span>
+</div>
+</div>
+<!-- Category Pill Tabs with Active Underline Accent -->
+<div class="flex items-center gap-space-xs overflow-x-auto py-space-xs -mx-viewport-margin px-viewport-margin scrollbar-none" id="category-tabs">
+<button class="category-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-label-md text-label-md font-semibold whitespace-nowrap transition-all bg-surface-container-lowest text-secondary shadow-sm" data-cat="all" onclick="switchCategory('all')">
+<span class="material-symbols-outlined text-[16px]">apps</span>
+        All
+      </button>
+<button class="category-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-label-md text-label-md font-semibold whitespace-nowrap transition-all bg-surface-container-lowest text-secondary shadow-sm" data-cat="symptoms" onclick="switchCategory('symptoms')">
+<span class="material-symbols-outlined text-[16px]">stethoscope</span>
+        Symptoms
+      </button>
+<button class="category-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-label-md text-label-md font-semibold whitespace-nowrap transition-all bg-surface-container-lowest text-secondary shadow-sm" data-cat="examination" onclick="switchCategory('examination')">
+<span class="material-symbols-outlined text-[16px]">clinical_notes</span>
+        Examination
+      </button>
+<button class="category-btn active-tab flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-label-md text-label-md font-bold whitespace-nowrap transition-all bg-primary text-on-primary shadow-sm" data-cat="medication" onclick="switchCategory('medication')">
+<span class="material-symbols-outlined text-[16px]">medication</span>
+        Medication Dosage
+      </button>
+<button class="category-btn flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-label-md text-label-md font-semibold whitespace-nowrap transition-all bg-surface-container-lowest text-secondary shadow-sm" data-cat="emergency" onclick="switchCategory('emergency')">
+<span class="material-symbols-outlined text-[16px] text-error">emergency</span>
+        Emergency
+      </button>
+</div>
+</div>
+<!-- Realtime Transmission Telemetry Notification (Triggers on Tap) -->
+<div class="mx-viewport-margin my-space-xs p-space-sm bg-surface-container-highest rounded-xl flex items-center justify-between opacity-0 pointer-events-none transition-all duration-300 shadow-sm" id="telemetry-toast">
+<div class="flex items-center gap-space-sm min-w-0">
+<div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-on-primary text-[18px]">send_spark</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-label-sm text-label-sm text-primary font-bold tracking-wider">PROJECTED TO BEDSIDE</span>
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
+</div>
+<span class="font-body-md text-body-md text-on-surface font-medium truncate" id="telemetry-label">Transmitting ISL avatar video packet...</span>
+</div>
+</div>
+<div class="bg-surface-container px-2 py-1 rounded font-code-transcript text-code-transcript text-primary-container font-bold flex-shrink-0">
+      0.12s LAT
+    </div>
+</div>
+<!-- Primary Interactive Library Grid -->
+<div class="px-viewport-margin flex flex-col gap-space-md pt-space-xs" id="cards-container">
+<!-- Card 1: Tablet After Meals -->
+<div class="prompt-card group cursor-pointer bg-surface-container-lowest rounded-xl p-space-md shadow-sm active:scale-[0.99] transition-all flex flex-col gap-space-sm hover:shadow-md" data-category="medication" data-keywords="tablet pill food meal meals dawai khana goli" onclick="projectPrompt('Take 1 tablet after meals', 'भोजन के बाद 1 गोली लें', 'med_after_food', this)">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold tracking-wide">POST-MEAL</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">RX-01</span>
+</div>
+<div class="flex items-center gap-1 text-primary">
+<span class="font-label-sm text-label-sm font-semibold">TAP TO TRANSMIT</span>
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Take 1 tablet after meals</h3>
+<p class="font-body-lg text-body-lg text-secondary font-normal mt-0.5">भोजन के बाद 1 गोली लें • சாப்பாட்டுக்குப் பிறகு 1 மாத்திரை</p>
+</div>
+<!-- High Acuity ISL Visual Preview Rail -->
+<div class="w-full bg-surface-container-low rounded-xl p-space-sm flex items-center gap-space-md">
+<div class="relative w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-highest shadow-sm">
+<img class="w-full h-full object-cover" data-alt="A focused Indian Sign Language medical avatar demonstrating the two-handed gesture for taking medicine followed by eating gesture, high contrast clinical setting, soft daylight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCfHk4iWA1a7L_OTVrqdi6312nBAnjt2fvwWA1g--G4TEKSEjvuwvYCFq7tlQMrbD0BjA4-kqhjV5eyRmUVvqaa13HrRosRea1K7WtdIHSzG93X7mZVO7iaVa5qx1g4BNOWr4jqRSzc_U4KqJNSmtQghduY_r-LjYSa-R5JVPmhVqtxvIPm6HPuUUhrp37mCxDek27_CeARJ2VU0dafnLzIf8NT9V38zo8FEqEh-fjXuevobKy5mLmTvw"/>
+<div class="absolute bottom-1 right-1 bg-inverse-surface/80 rounded px-1 py-0.5 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-inverse-on-surface text-[10px]">sign_language</span>
+<span class="font-label-sm text-[9px] text-inverse-on-surface leading-none">ISL</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px]">motion_sensor_active</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">ISL GESTURE SEQUENCE</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant truncate">EAT (FOOD) ➔ 1 FINGER ➔ PILL-SWALLOW GESTURE</p>
+<span class="font-code-transcript text-code-transcript text-outline text-[11px] mt-0.5">Duration: 2.8s • Standard ISL V4.2</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Do Not Drink Cold Water -->
+<div class="prompt-card group cursor-pointer bg-surface-container-lowest rounded-xl p-space-md shadow-sm active:scale-[0.99] transition-all flex flex-col gap-space-sm hover:shadow-md" data-category="medication" data-keywords="water cold thanda pani drink restrict beverage" onclick="projectPrompt('Do not drink cold water', 'ठंडा पानी मत पिएं', 'drink_cold_water', this)">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold tracking-wide">RESTRICTION</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">RX-02</span>
+</div>
+<div class="flex items-center gap-1 text-primary">
+<span class="font-label-sm text-label-sm font-semibold">TAP TO TRANSMIT</span>
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Do not drink cold water</h3>
+<p class="font-body-lg text-body-lg text-secondary font-normal mt-0.5">ठंडा पानी मत पिएं • குளிர்ந்த நீர் குடிக்க வேண்டாம்</p>
+</div>
+<!-- High Acuity ISL Visual Preview Rail -->
+<div class="w-full bg-surface-container-low rounded-xl p-space-sm flex items-center gap-space-md">
+<div class="relative w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-highest shadow-sm">
+<img class="w-full h-full object-cover" data-alt="Indian sign language model signing the clear gesture for cold ice shaking followed by a hand wave gesture meaning prohibition or do not do, medical blue backdrop" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfreLSTmAPsg0GoZKCYAB4I3qUS7f-KcElVybOSDjKUKC0pNsxtmFb9Dqr8EW45y6KLVqGz8rzWupqdWsrjRCgH_-J2o97-lBafLWkeqKNFUwBJj2q_5YboRDj33-Ynz3LalYUclb-xhu6fqdG_3xacBMS5lqE8u5AshvtBcWA9mO4-YVHZ4PAjG6gUzHPcqQAPe13Xn55wiMwcYKcXUHnZ8_-E72bYQRZTB9TZImQyoSmwXTh6LntRw"/>
+<div class="absolute bottom-1 right-1 bg-inverse-surface/80 rounded px-1 py-0.5 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-inverse-on-surface text-[10px]">sign_language</span>
+<span class="font-label-sm text-[9px] text-inverse-on-surface leading-none">ISL</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px]">motion_sensor_active</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">ISL GESTURE SEQUENCE</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant truncate">COLD-SHIVER ➔ WATER DRINK ➔ NEGATIVE HEADSHAKE</p>
+<span class="font-code-transcript text-code-transcript text-outline text-[11px] mt-0.5">Duration: 2.1s • Standard ISL V4.2</span>
+</div>
+</div>
+</div>
+<!-- Card 3: Blood Test Empty Stomach -->
+<div class="prompt-card group cursor-pointer bg-surface-container-lowest rounded-xl p-space-md shadow-sm active:scale-[0.99] transition-all flex flex-col gap-space-sm hover:shadow-md" data-category="examination" data-keywords="blood test lab fasting khali pet subah morning sample" onclick="projectPrompt('Take blood test on empty stomach tomorrow morning', 'कल सुबह खाली पेट खून की जांच कराएं', 'fasting_blood_test', this)">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold tracking-wide">LABORATORY / FASTING</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">LAB-09</span>
+</div>
+<div class="flex items-center gap-1 text-primary">
+<span class="font-label-sm text-label-sm font-semibold">TAP TO TRANSMIT</span>
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Take blood test on empty stomach tomorrow morning</h3>
+<p class="font-body-lg text-body-lg text-secondary font-normal mt-0.5">कल सुबह खाली पेट खून की जांच कराएं • நாளை காலை வெறும் வயிற்றில் ரத்த பரிசோதனை</p>
+</div>
+<!-- High Acuity ISL Visual Preview Rail -->
+<div class="w-full bg-surface-container-low rounded-xl p-space-sm flex items-center gap-space-md">
+<div class="relative w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-highest shadow-sm">
+<img class="w-full h-full object-cover" data-alt="Female medical interpreter demonstrating Indian Sign Language sign for vein needle draw and sunrise morning gesture, clear neutral lighting studio portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvIg2rPin61AKVtRF6Slsq1YNc_HJlTQiQGKCy9MjsTaRMwaU4VpcOzZNVFDVWgXrXKjeO77Qng3IVV6vlDcMe2oGqZVMV37SxIvJpQ4qQZEfhTf8sgyMXh2Lr9_7q4bZJXJDuj8hYT7RGPeUW4Z5xPBH45oLVNnzzVbuGw3ITedvEUj2A20z45n15sJEsQf96iJu7kThH-sm8b4KMLBT4Q-3wJta4Olr51jw11SCWfth1MCV_h3AqNw"/>
+<div class="absolute bottom-1 right-1 bg-inverse-surface/80 rounded px-1 py-0.5 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-inverse-on-surface text-[10px]">sign_language</span>
+<span class="font-label-sm text-[9px] text-inverse-on-surface leading-none">ISL</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px]">motion_sensor_active</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">ISL GESTURE SEQUENCE</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant truncate">SUNRISE (TOMORROW) ➔ STOMACH EMPTY ➔ ARM NEEDLE PINCH</p>
+<span class="font-code-transcript text-code-transcript text-outline text-[11px] mt-0.5">Duration: 3.6s • Standard ISL V4.2</span>
+</div>
+</div>
+</div>
+<!-- Card 4: Apply Ointment Twice Daily -->
+<div class="prompt-card group cursor-pointer bg-surface-container-lowest rounded-xl p-space-md shadow-sm active:scale-[0.99] transition-all flex flex-col gap-space-sm hover:shadow-md" data-category="medication" data-keywords="ointment cream malham lagaye skin apply twice daily" onclick="projectPrompt('Apply ointment twice daily', 'दिन में दो बार मरहम लगाएं', 'apply_ointment', this)">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold tracking-wide">TOPICAL DOSAGE</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">RX-03</span>
+</div>
+<div class="flex items-center gap-1 text-primary">
+<span class="font-label-sm text-label-sm font-semibold">TAP TO TRANSMIT</span>
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Apply ointment twice daily</h3>
+<p class="font-body-lg text-body-lg text-secondary font-normal mt-0.5">दिन में दो बार मरहम लगाएं • தினமும் இரண்டு முறை களிம்பு தடவவும்</p>
+</div>
+<!-- High Acuity ISL Visual Preview Rail -->
+<div class="w-full bg-surface-container-low rounded-xl p-space-sm flex items-center gap-space-md">
+<div class="relative w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-highest shadow-sm">
+<img class="w-full h-full object-cover" data-alt="Indian clinical signer gesturing skin rubbing motion with two fingers indicating twice daily frequency, precise finger articulation, neutral grey hospital backdrop" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD_M2jzFrr2wiSZNpCVWQSXV3qstD06GVf3WsNOLN48UPl9kApp76D1E_NwrzCA-0uDFNOfUZle0ONzYAgkzLjCv3tBKqeBLlkV0dsmlBoN10hLyGfxvx3mb18XNUpKEJy-nxnFNmsQxjZIFgOpR3_GkHgvWLfHxJ_yLbLS3a0oXUcG6qqeyyXgNb6kigW2RrV-5UEyD_8szOeRiIJW85G9aCkq3ela_NZzQVgXSSyEmQFgu6NkIpVOeQ"/>
+<div class="absolute bottom-1 right-1 bg-inverse-surface/80 rounded px-1 py-0.5 flex items-center gap-0.5">
+<span class="material-symbols-outlined text-inverse-on-surface text-[10px]">sign_language</span>
+<span class="font-label-sm text-[9px] text-inverse-on-surface leading-none">ISL</span>
+</div>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px]">motion_sensor_active</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">ISL GESTURE SEQUENCE</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant truncate">FOREARM RUBBING (OINTMENT) ➔ TWO TIMES (DAY + NIGHT)</p>
+<span class="font-code-transcript text-code-transcript text-outline text-[11px] mt-0.5">Duration: 2.5s • Standard ISL V4.2</span>
+</div>
+</div>
+</div>
+<!-- Card 5: Pain Location Check (Symptoms Category) -->
+<div class="prompt-card group cursor-pointer bg-surface-container-lowest rounded-xl p-space-md shadow-sm active:scale-[0.99] transition-all flex flex-col gap-space-sm hover:shadow-md" data-category="symptoms" data-keywords="pain dard hurt location point spot question" onclick="projectPrompt('Where does it hurt the most? Point to the spot', 'सबसे ज्यादा दर्द कहां हो रहा है? जगह दिखाएं', 'pain_spot', this)">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded bg-surface-container-high text-primary font-label-sm text-label-sm font-bold tracking-wide">PAIN ASSESSMENT</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">SYM-01</span>
+</div>
+<div class="flex items-center gap-1 text-primary">
+<span class="font-label-sm text-label-sm font-semibold">TAP TO TRANSMIT</span>
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Where does it hurt the most? Point to the spot</h3>
+<p class="font-body-lg text-body-lg text-secondary font-normal mt-0.5">सबसे ज्यादा दर्द कहां हो रहा है? जगह दिखाएं • வலி எங்கு அதிகமாக உள்ளது?</p>
+</div>
+<div class="w-full bg-surface-container-low rounded-xl p-space-sm flex items-center gap-space-md">
+<div class="w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-highest flex items-center justify-center text-primary shadow-sm">
+<span class="material-symbols-outlined text-[32px]">touch_app</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px]">motion_sensor_active</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">INTERACTIVE PROMPT</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant truncate">Prompts interactive 3D anatomy figure on patient screen</p>
+<span class="font-code-transcript text-code-transcript text-outline text-[11px] mt-0.5">Bedside touch responsive mode</span>
+</div>
+</div>
+</div>
+<!-- Card 6: Emergency Inhale Deeply & Hold (Emergency Category) -->
+<div class="prompt-card group cursor-pointer bg-surface-container-lowest rounded-xl p-space-md shadow-sm active:scale-[0.99] transition-all flex flex-col gap-space-sm hover:shadow-md" data-category="emergency" data-keywords="breath सांस breathe emergency chest lungs hold steth" onclick="projectPrompt('Take a deep breath and hold it for 3 seconds', 'गहरी सांस लें और 3 सेकंड के लिए रोकें', 'breathe_deep', this)">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container font-label-sm text-label-sm font-bold tracking-wide">RESPIRATORY / URGENT</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant font-label-sm text-label-sm">EMG-04</span>
+</div>
+<div class="flex items-center gap-1 text-primary">
+<span class="font-label-sm text-label-sm font-semibold">TAP TO TRANSMIT</span>
+<span class="material-symbols-outlined text-[18px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+</div>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-md text-headline-md text-on-surface font-semibold">Take a deep breath and hold it for 3 seconds</h3>
+<p class="font-body-lg text-body-lg text-secondary font-normal mt-0.5">गहरी सांस लें और 3 सेकंड रोकें • ஆழ்ந்த மூச்சை எடுத்து 3 வினாடிகள் பிடித்து வைக்கவும்</p>
+</div>
+<div class="w-full bg-surface-container-low rounded-xl p-space-sm flex items-center gap-space-md">
+<div class="w-20 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-highest flex items-center justify-center text-error shadow-sm">
+<span class="material-symbols-outlined text-[32px]">air</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[14px]">motion_sensor_active</span>
+<span class="font-label-sm text-label-sm text-primary font-bold">ISL GESTURE SEQUENCE</span>
+</div>
+<p class="font-label-md text-label-md text-on-surface-variant truncate">EXPAND CHEST GESTURE ➔ THREE COUNT FINGERS ➔ HOLD</p>
+<span class="font-code-transcript text-code-transcript text-outline text-[11px] mt-0.5">Duration: 4.0s • Bedside Audio-Haptic Synced</span>
+</div>
+</div>
+</div>
+<!-- Empty Filter Fallback -->
+<div class="hidden flex-col items-center justify-center py-space-3xl px-viewport-margin text-center" id="no-results">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex items-center justify-center mb-space-sm">
+<span class="material-symbols-outlined text-primary text-[32px]">search_off</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface font-semibold">No matching medical prompt</h4>
+<p class="font-body-md text-body-md text-secondary mt-1 max-w-xs">Try searching by keyword like 'blood', 'pill', 'pain', or switch categories above.</p>
+</div>
+</div>
+<!-- Bottom Fast-Action Clinical Utility Strip -->
+<div class="fixed bottom-0 left-0 right-0 p-space-md bg-surface/90 backdrop-blur-xl shadow-lg flex items-center justify-between gap-space-sm z-40">
+<button class="flex-1 h-12 rounded-xl bg-surface-container-highest hover:bg-surface-container-high text-primary font-label-lg text-label-lg font-semibold flex items-center justify-center gap-2 transition-colors active:scale-[0.98]" onclick="requestClarificationCustom()">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+      Custom Phrase
+    </button>
+<button class="flex-1 h-12 rounded-xl bg-error text-on-error font-label-lg text-label-lg font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98]" onclick="escalateHumanInterpreter()">
+<span class="material-symbols-outlined text-[20px]">support_agent</span>
+      Human Interpreter
+    </button>
+</div>
+</div>
+<script>
+  let currentFilter = 'medication';
+  let searchQuery = '';
+
+  function switchCategory(cat) {
+    currentFilter = cat;
+    document.querySelectorAll('.category-btn').forEach(btn => {
+      if (btn.getAttribute('data-cat') === cat) {
+        btn.classList.add('bg-primary', 'text-on-primary', 'font-bold');
+        btn.classList.remove('bg-surface-container-lowest', 'text-secondary', 'font-semibold');
+      } else {
+        btn.classList.remove('bg-primary', 'text-on-primary', 'font-bold');
+        btn.classList.add('bg-surface-container-lowest', 'text-secondary', 'font-semibold');
+      }
+    });
+    applyFilters();
+  }
+
+  function handleSearch(val) {
+    searchQuery = val.toLowerCase().trim();
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const cards = document.querySelectorAll('.prompt-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+      const cardCategory = card.getAttribute('data-category');
+      const keywords = card.getAttribute('data-keywords').toLowerCase();
+      const text = card.textContent.toLowerCase();
+
+      const matchesCat = (currentFilter === 'all' || cardCategory === currentFilter);
+      const matchesSearch = (!searchQuery || text.includes(searchQuery) || keywords.includes(searchQuery));
+
+      if (matchesCat && matchesSearch) {
+        card.classList.remove('hidden');
+        card.classList.add('flex');
+        visibleCount++;
+      } else {
+        card.classList.add('hidden');
+        card.classList.remove('flex');
+      }
+    });
+
+    const noResults = document.getElementById('no-results');
+    if (visibleCount === 0) {
+      noResults.classList.remove('hidden');
+      noResults.classList.add('flex');
+    } else {
+      noResults.classList.add('hidden');
+      noResults.classList.remove('flex');
+    }
+  }
+
+  function projectPrompt(englishText, translatedText, id, el) {
+    // Subtle tactile card highlight
+    el.classList.add('bg-secondary-container');
+    setTimeout(() => {
+      el.classList.remove('bg-secondary-container');
+    }, 400);
+
+    const toast = document.getElementById('telemetry-toast');
+    const toastLabel = document.getElementById('telemetry-label');
+    
+    toastLabel.textContent = `Projecting: "${englishText}"`;
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+
+    // Bedside Haptic sound emulation / Auto dismissal
+    clearTimeout(window._toastTimeout);
+    window._toastTimeout = setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0', 'pointer-events-none');
+    }, 3200);
+  }
+
+  function escalateHumanInterpreter() {
+    const toast = document.getElementById('telemetry-toast');
+    const toastLabel = document.getElementById('telemetry-label');
+    toastLabel.textContent = "Calling Live Certified Medical ISL Interpreter...";
+    toast.classList.remove('opacity-0', 'pointer-events-none');
+    toast.classList.add('opacity-100');
+
+    setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0', 'pointer-events-none');
+    }, 3500);
+  }
+
+  function requestClarificationCustom() {
+    const input = document.getElementById('clinical-search');
+    input.focus();
+    input.placeholder = "Type custom phrase to synthesize into ISL...";
+  }
+
+  // Initial category trigger
+  document.addEventListener('DOMContentLoaded', () => {
+    switchCategory('medication');
+  });
+</script></main></body></html>
