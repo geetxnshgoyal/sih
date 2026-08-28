@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, Download, Dot, Square } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { SEQ_LEN, type PointFrame } from "../lib/features";
 
@@ -23,7 +24,7 @@ import { SEQ_LEN, type PointFrame } from "../lib/features";
 const COUNTDOWN = 3;
 const CAPTURE_MS = 2200;
 
-type Take = { gloss: string; frames: PointFrame[]; at: number };
+type Take = { gloss: string; frames: PointFrame[]; at: number; aspect: number };
 
 export default function Recorder() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -120,7 +121,12 @@ export default function Recorder() {
         const frames = bufRef.current.slice();
         setPhase("idle");
         if (frames.length >= SEQ_LEN) {
-          setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now() }]);
+          // Record the camera's aspect ratio with the take. MediaPipe's
+          // coordinates are aspect-dependent, so frames without it cannot be
+          // put into the model's coordinate space later — see features.ts.
+          const v = videoRef.current;
+          const aspect = v && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9;
+          setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now(), aspect }]);
         } else {
           setCamError(
             `Only ${frames.length} frames captured (need ${SEQ_LEN}). Keep both hands in frame for the whole take.`
@@ -134,12 +140,15 @@ export default function Recorder() {
     // Frames are already in the unit coordinate space that to_unit() produces,
     // so train/preprocess.py can read this directly.
     const payload = {
-      format: "setu-recordings-v1",
+      format: "setu-recordings-v2",
       points: 65,
-      note: "unit coordinates, pose 0-22 + left hand 23-43 + right hand 44-64",
+      note: "unit coordinates, pose 0-22 + left hand 23-43 + right hand 44-64; "
+        + "per-take `aspect` is the camera's width/height, required to map "
+        + "these into the model's isotropic space (v2 added this field)",
       takes: takes.map((t) => ({
         gloss: t.gloss,
         recorded_at: new Date(t.at).toISOString(),
+        aspect: t.aspect,
         frames: t.frames.map((f) => f.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)])),
       })),
     };
@@ -158,16 +167,20 @@ export default function Recorder() {
 
   return (
     <section className="recorder">
+      <div className="record-lead">
+        <p className="eyebrow">Community data collection</p>
+        <h2>Collect clean examples from the same camera used in the demo.</h2>
+      </div>
       <div className="card">
         <div className="card-h">
-          <span>Record your own signs</span>
+          <span>Collect signs</span>
           <span className="mono">{takes.length} takes</span>
         </div>
 
         <div className="stage rec-stage">
           <video ref={videoRef} playsInline muted />
           <canvas ref={canvasRef} />
-          {!live && <div className="idle">Camera off — press Start to begin recording.</div>}
+          {!live && <div className="idle"><b>Camera is off.</b><span>Start, enter a sign label, then record a take.</span></div>}
           {phase === "counting" && <div className="countdown">{count}</div>}
           {phase === "capturing" && <div className="capturing">RECORDING</div>}
           {live && (
@@ -181,15 +194,15 @@ export default function Recorder() {
           <div className="row">
             {!live ? (
               <button className="go" onClick={start} disabled={state !== "ready"}>
-                {state === "ready" ? "Start camera" : "Loading…"}
+                <Camera size={17} /> {state === "ready" ? "Start camera" : "Preparing..."}
               </button>
             ) : (
-              <button onClick={stop}>Stop camera</button>
+              <button onClick={stop}><Square size={16} /> Stop camera</button>
             )}
             <input
               className="say"
               value={gloss}
-              placeholder="sign label, e.g. Hello"
+              placeholder="Sign label, e.g. Hello"
               onChange={(e) => setGloss(e.target.value)}
             />
             <button
@@ -197,10 +210,10 @@ export default function Recorder() {
               onClick={record}
               disabled={!live || !gloss.trim() || phase !== "idle"}
             >
-              Record take
+              <Dot size={20} /> Record take
             </button>
             <button onClick={download} disabled={!takes.length}>
-              Download {takes.length ? `(${takes.length})` : ""}
+              <Download size={17} /> Download {takes.length ? `(${takes.length})` : ""}
             </button>
           </div>
 
@@ -208,10 +221,8 @@ export default function Recorder() {
           {camError && <div className="err-box">{camError}</div>}
 
           <p className="note" style={{ marginTop: 14 }}>
-            Aim for <b>30–50 takes per sign</b> across 20–30 signs. Vary your
-            distance, angle and lighting between takes — that variety is what the
-            INCLUDE data lacks, and it is what makes the model survive your demo
-            room instead of one classroom in Chennai.
+            Aim for <b>30-50 takes per sign</b>. Vary distance, angle and lighting
+            so the demo learns the room it will be shown in.
           </p>
 
           {Object.keys(counts).length > 0 && (
