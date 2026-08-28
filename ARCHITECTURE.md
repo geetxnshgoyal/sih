@@ -1,10 +1,10 @@
-# Setu — architecture and system state
+# Setu: architecture and system state
 
 Two-way bridge between Indian Sign Language and India's spoken languages.
-Target: **SIH 2026, Student Innovation** — submitted under **two themes**,
+Target: **SIH 2026, Student Innovation**, submitted under **two themes**,
 **MedTech** (SIH26196) and **Travel & Tourism**.
 
-> **One system, two settings — not two products.** The recognition stack is
+> **One system, two settings: not two products.** The recognition stack is
 > entirely domain-neutral: one 264-sign classifier, one feature contract, one
 > segmenter. INCLUDE is a general lexicon, and "Doctor" and "Train Station" are
 > the same kind of sign to the model. Everything below the UI is unaware of which
@@ -12,7 +12,7 @@ Target: **SIH 2026, Student Innovation** — submitted under **two themes**,
 
 This document is the precise reference: where every artefact lives, what shape it
 has, and what is verified versus assumed. `HANDOFF.md` covers *why* decisions were
-made and which bugs cost time — read that for rationale, this for facts.
+made and which bugs cost time, read that for rationale, this for facts.
 
 Last audited: **2 September 2026**.
 
@@ -23,12 +23,12 @@ Last audited: **2 September 2026**.
 ```
 ~/sih/
 ├── data/                   8.5 GB   all corpora and the preprocessed tensor
-│   ├── Pose_Signs/         640 MB   INCLUDE pose release — TRAINS THE CURRENT MODEL
-│   ├── video_landmarks/    231 MB   468-pt face-mesh re-extraction — IN PROGRESS
+│   ├── Pose_Signs/         640 MB   INCLUDE pose release, TRAINS THE CURRENT MODEL
+│   ├── video_landmarks/    231 MB   468-pt face-mesh re-extraction, IN PROGRESS
 │   ├── video/              143 MB   raw INCLUDE video, transient (deleted after extract)
-│   ├── poses/              5.0 GB   AUTSL, MS-ASL, WLASL, GSL, LSA64 — NOT ISL, unused
+│   ├── poses/              5.0 GB   AUTSL, MS-ASL, WLASL, GSL, LSA64, NOT ISL, unused
 │   ├── INCLUDE-poses.zip   632 MB   original archive of Pose_Signs
-│   ├── cislr/              1.5 GB   CISLR v1.5-a — SECOND CORPUS, gated (§2.2)
+│   ├── cislr/              1.5 GB   CISLR v1.5-a, SECOND CORPUS, gated (§2.2)
 │   ├── cislr_landmarks/    319 MB   612 CISLR clips re-extracted to landmarks
 │   ├── dataset.npz          83 MB   preprocessed training tensor (INCLUDE only)
 │   ├── dataset_merged.npz   98 MB   INCLUDE + CISLR, carries a `corpus` array
@@ -49,11 +49,11 @@ Last audited: **2 September 2026**.
 |---|---|---|---|
 | `.venv` | 3.14 | data work, numpy 2.5.2 only | ✅ |
 | `.venv-tf` | 3.11 | TensorFlow 2.19 has no 3.14 wheels | ✅ |
-| `.venv-mp` | 3.11 | MediaPipe pinned **0.10.14** — 1.x's Python `HolisticLandmarker` raises `Check failed: service_ Service is unavailable` | ✅ |
+| `.venv-mp` | 3.11 | MediaPipe pinned **0.10.14**, 1.x's Python `HolisticLandmarker` raises `Check failed: service_ Service is unavailable` | ✅ |
 
 `.venv-mp` prints a harmless `MessageFactory has no attribute GetPrototype`
 protobuf warning on import; `run_extract_loop.sh` filters it. `mp.solutions.holistic.Holistic`
-constructs correctly — confirmed 30 Aug.
+constructs correctly: confirmed 30 Aug.
 
 ---
 
@@ -61,7 +61,7 @@ constructs correctly — confirmed 30 Aug.
 
 ### 2.1 What actually trains the model
 
-**`data/Pose_Signs/`** — the OpenHands INCLUDE pose release. This is the *only*
+**`data/Pose_Signs/`**: the OpenHands INCLUDE pose release. This is the *only*
 ISL data in the project. CC BY 4.0.
 
 - **4,284 clips, 264 classes, 15 categories**
@@ -88,11 +88,11 @@ Per-clip pickle schema (verified):
   0.25 → dropped. Keeps 0–22.
 
 > These are third-party pickles. Load them only with the restricted unpickler used
-> throughout `train/` — arbitrary pickles execute code on load.
+> throughout `train/`: arbitrary pickles execute code on load.
 
-### 2.2 CISLR — the second corpus (added 5 Sept)
+### 2.2 CISLR: the second corpus (added 5 Sept)
 
-**`data/cislr/`** — CISLR v1.5-a, Exploration-Lab. Gated on Hugging Face,
+**`data/cislr/`**: CISLR v1.5-a, Exploration-Lab. Gated on Hugging Face,
 AFL-3.0, licence accepted per-account. `data/fetch_cislr.sh` (`FETCH_ALL=1`)
 pulls the 1.1 GB video zip; `data/` is gitignored, so the fetch script is the
 reproduction path.
@@ -100,8 +100,8 @@ reproduction path.
 - **7,050 clips, 4,765 glosses, 58 categories**
 - **clips per gloss: min 1, median 1, max 13**
 
-That median is the whole constraint. CISLR is a *retrieval* corpus — "is this
-sign in that video?" — not a classification corpus. A 4,765-class model cannot
+That median is the whole constraint. CISLR is a *retrieval* corpus, "is this
+sign in that video?": not a classification corpus. A 4,765-class model cannot
 be trained on one example each, and adding 4,545 single-example glosses to
 `labels.json` would manufacture words the model claims to know and cannot
 recognise. We import **none** of them.
@@ -114,8 +114,8 @@ What we do import is the overlap:
 
 Two ingestion details that are load-bearing:
 
-**Trimming.** CISLR is framed tighter than INCLUDE — hands at rest sit *below
-the crop* — and clips run longer, so roughly half of each is lead-in and
+**Trimming.** CISLR is framed tighter than INCLUDE, hands at rest sit *below
+the crop*: and clips run longer, so roughly half of each is lead-in and
 lead-out at rest. `features.resample` strides over the whole clip, so untrimmed
 CISLR spends half its 32 frames on stillness where INCLUDE spends almost none,
 and the model would learn "long still lead-in" as a corpus tell rather than a
@@ -127,13 +127,13 @@ sign. `preprocess_cislr.py` cuts to the hand-visible span:
 | hand-present fraction | 0.44 | 0.79 | 0.89 |
 
 Hand presence rather than motion energy, because the target is hands *out of
-frame*, not stillness — motion energy would also cut the hold at the end of a
+frame*, not stillness: motion energy would also cut the hold at the end of a
 sign, which carries meaning.
 
 **Signer IDs.** CISLR clips take groups 3-6, recovered by `signers.py`
 proportions and never merged into INCLUDE's 0-2. Held-out-group evaluation is
 only honest if a group is one set of people; letting a CISLR clip land in
-INCLUDE group 0 would put the same corpus on both sides of the split — the same
+INCLUDE group 0 would put the same corpus on both sides of the split, the same
 class of error as the 99.8% calibration run (§12).
 
 A `corpus` array rides along in `dataset_merged.npz` so evaluation can train on
@@ -142,10 +142,10 @@ measurement in this document.
 
 ### 2.3 The face-mesh re-extraction (blocks FULL_FACE)
 
-INCLUDE's pose release carries **no face mesh** — only 11 coarse pose landmarks
+INCLUDE's pose release carries **no face mesh**, only 11 coarse pose landmarks
 (nose, 6 eye, 2 ear, 2 mouth-corner). That is enough for head nod/shake/tilt and
 nothing else. ISL marks **yes/no questions with raised eyebrows, wh-questions with
-furrowed brows, and negation with a head shake** — a hands-only model renders a
+furrowed brows, and negation with a head shake**, a hands-only model renders a
 question as a statement, which is a correctness failure, not a polish one.
 
 So the raw video (Zenodo 4010759, **56.8 GB, 46 parts**) is being re-extracted with
@@ -155,33 +155,33 @@ full Holistic to recover the 468-point mesh.
 
 | | |
 |---|---|
-| Downloaded | **56.8 / 56.8 GB — all 44 archives** |
+| Downloaded | **56.8 / 56.8 GB, all 44 archives** |
 | Clips with face mesh | **~4,280 of 4,284** (a couple of source videos are unreadable) |
 | Categories | all 15 |
 
 Having finished it, the honest note is that it did not change the answer: §9
 shows the face mesh does not improve recognition. The extraction was still worth
-doing — the question could not be settled without it — but `FACE_MODE` stays
+doing: the question could not be settled without it, but `FACE_MODE` stays
 `HEAD_ONLY`.
 
 Disk is safe: `run_extract_loop.sh` deletes each ~1.3 GB archive immediately after
 pulling landmarks (104 clips → ~38 MB), so peak usage stays at roughly one part.
 **69 GB free** at audit time, against a transient footprint of ~2 GB.
 
-### 2.4 Other sign languages — present but unused
+### 2.4 Other sign languages: present but unused
 
 `data/poses/` holds AUTSL, MS-ASL, WLASL, GSL, LSA64 (5.0 GB). These are *not*
 ISL. They are kept for a possible cross-lingual pretraining experiment and are
 not part of any current result. Do not cite them as ISL data.
 
-### 2.5 What does not exist — do not promise these
+### 2.5 What does not exist: do not promise these
 
 - **Dialect labels.** No published ISL corpus tags dialect.
 - **A conversation vocabulary.** INCLUDE is a *lexicon*: "Actor", "Election",
   "Monsoon". It has no *yes*, *no*, *please*, *help*, *where*. This is why the
   demo's conversation mode uses a separate curated phrase set.
-- **FDMSE-ISL** (40k clips) — no public download, author request only.
-- **CISLR** — gated on Hugging Face (`gated: auto`, AFL-3.0). **71 signers**,
+- **FDMSE-ISL** (40k clips): no public download, author request only.
+- **CISLR**: gated on Hugging Face (`gated: auto`, AFL-3.0). **71 signers**,
   ~4,700 words, only 1.59 GB, and it ships pre-extracted I3D features alongside
   the video. This is the single most valuable dataset available to this project,
   because §9 concluded the bottleneck is signer diversity and CISLR is ~10x
@@ -189,11 +189,11 @@ not part of any current result. Do not cite them as ISL data.
   accept the licence once (which includes agreeing to share contact details) and
   supply `HF_TOKEN`.
 
-### 2.6 Known bias — state this in the pitch
+### 2.6 Known bias: state this in the pitch
 
 INCLUDE is **7 signers from one school in Chennai, one room, one camera distance**.
 `data/signer_index.json` groups are **body-type clusters recovered from pose-stable
-ratios**, not identified individuals — the official split is offline (Google Drive
+ratios**, not identified individuals, the official split is offline (Google Drive
 404). This is stricter than a random split and weaker than a true signer-disjoint
 one. Say exactly that.
 
@@ -206,7 +206,7 @@ If they drift, the model trains on one representation and runs on another; offli
 accuracy stays high while live accuracy collapses with no visible cause.
 
 ```bash
-.venv/bin/python train/test_parity.py    # 8/8, exact zero difference — MUST pass
+.venv/bin/python train/test_parity.py    # 8/8, exact zero difference, MUST pass
 ```
 
 The test is verified to catch real drift: injecting a z-term into the shoulder
@@ -226,19 +226,19 @@ FEATURE_SIZE = 32 * 65 * 3      # 6,240 floats per clip
 
 ### The transform, in order
 
-1. **`select_points`** — `(T,75,3) → (T,65,3)`, dropping legs.
-2. **`to_unit`** *(dataset only)* — divide `x` by `vid_shape[0]`, `y` by `vid_shape[1]`.
+1. **`select_points`**, `(T,75,3) → (T,65,3)`, dropping legs.
+2. **`to_unit`** *(dataset only)*, divide `x` by `vid_shape[0]`, `y` by `vid_shape[1]`.
    The browser's MediaPipe already returns unit coordinates, so this step only
    brings the dataset into the same space. **Everything below is the shared contract.**
-3. **`anchor`** — subtract the **shoulder midpoint** (landmarks 11, 12), then divide
+3. **`anchor`**: subtract the **shoulder midpoint** (landmarks 11, 12), then divide
    by 2-D shoulder span. Position- and scale-invariant.
    *Anchoring at the shoulders rather than the head is deliberate: head nod, shake,
    and tilt survive normalisation and stay visible to the model.*
-4. **`resample`** — any `T` → exactly 32 frames by nearest-index striding.
-5. **`standardise`** — flatten, then `(v - mean) / std` over the whole clip.
+4. **`resample`**: any `T` → exactly 32 frames by nearest-index striding.
+5. **`standardise`**: flatten, then `(v - mean) / std` over the whole clip.
 
 Scale is provably a no-op after standardisation (verified to 4e-16). **Perspective
-is not** — see §5.
+is not**: see §5.
 
 ### FULL_FACE subset (`train/face.py`)
 
@@ -249,7 +249,7 @@ Using all 468 mesh points would swamp 65 body points, so FULL_FACE adds a curate
 
 ## 4. Model
 
-1-D CNN over the temporal axis. **Not** a transformer — TFLite and TF.js have no
+1-D CNN over the temporal axis. **Not** a transformer, TFLite and TF.js have no
 native `MultiHeadAttention`, and at 264 classes attention buys little over
 convolutions.
 
@@ -281,24 +281,24 @@ version overwrote a single file and destroyed the best model across three runs.
 
 ---
 
-## 5. Results — and which number to report
+## 5. Results: and which number to report
 
 | split | far camera | close (laptop) |
 |---|---|---|
 | random (same signers both sides) | 90.3% top-1 / 97.4% top-5 | 88.4% |
 | **held-out group (mean)** | **52.0% top-1 / 75.7% top-5** | **51.6% / 76.2%** |
 
-Per-group held-out top-1: **42.7% / 67.4% / 45.8%** — the spread across body-type
+Per-group held-out top-1: **42.7% / 67.4% / 45.8%**, the spread across body-type
 groups is itself a finding worth showing.
 
 264 classes, chance **0.4%**.
 
 > **Report the held-out number, not the random split.** The random split inflates
 > by ~38 points because the same person appears on both sides. Explaining that gap
-> is the most credible thing the team can say — most competing projects quote the
+> is the most credible thing the team can say, most competing projects quote the
 > inflated figure.
 
-**Which held-out number, though — they are not interchangeable.** Three figures
+**Which held-out number, though, they are not interchangeable.** Three figures
 appear in this document and they measure different things:
 
 | figure | scope | what it is |
@@ -308,11 +308,11 @@ appear in this document and they measure different things:
 | **40.4%** | 264 classes, **group 0 only** | the calibration model, §14 |
 
 Higher class count is harder, and group 0 is the hardest of the three groups
-for every arm ever run. So 40.4% is not a contradiction of 52.0% — it is the
+for every arm ever run. So 40.4% is not a contradiction of 52.0%, it is the
 worst group at the full class count. Quote **52%** as the headline and say
 which protocol produced it.
 
-### 5.1 Cross-corpus — the number that reframes the other numbers (5 Sept)
+### 5.1 Cross-corpus: the number that reframes the other numbers (5 Sept)
 
 Every figure above is **within-corpus**. INCLUDE's held-out signer is a
 different person in the same room, on the same camera, under the same
@@ -320,8 +320,8 @@ recording protocol, at the same school. Holding out the signer removes one of
 the five things that vary in the field.
 
 CISLR is the first data we have where all five differ. `train/eval_cislr.py`
-runs four arms — same model, same augmentation, same 60-epoch budget, same
-validation signer — differing only in which clips train:
+runs four arms: same model, same augmentation, same 60-epoch budget, same
+validation signer: differing only in which clips train:
 
 | arm | train -> test | close top-1 | top-5 |
 |---|---|---|---|
@@ -333,7 +333,7 @@ validation signer — differing only in which clips train:
 264 classes; chance is 0.38% top-1, 1.9% top-5.
 
 **Arm C is the finding.** A model trained on INCLUDE scores 2.1% on a different
-corpus — about five times chance, and functionally nothing. Set against the
+corpus: about five times chance, and functionally nothing. Set against the
 28.2% of arm A and the ~100% of a random split, the ladder is:
 
     held-out clip, same signers      ~100%
@@ -341,8 +341,8 @@ corpus — about five times chance, and functionally nothing. Set against the
     held-out corpus                    2.1%
 
 Most of what the model knows is INCLUDE, not ISL. That single fact explains
-why three independent architecture experiments — face mesh (§9), SL-GCN (§9),
-calibration (§12) — all failed to move the number: none of them addressed what
+why three independent architecture experiments, face mesh (§9), SL-GCN (§9),
+calibration (§12): all failed to move the number: none of them addressed what
 the model is actually keying on.
 
 **Arm B says more signers do help, and quantifies how slowly.** 610 CISLR
@@ -362,7 +362,7 @@ noise.
 `train.py:118` passes the **test set** as `validation_data` with
 `restore_best_weights=True`, so the stopping epoch is selected on the test set.
 Every figure `train.py` and `train_ablation.py` have printed is optimistic by an
-unmeasured amount — 52.0%, 56.8% and 40.4% included.
+unmeasured amount: 52.0%, 56.8% and 40.4% included.
 
 `eval_cislr.py` carves validation out of TRAIN instead and touches the test set
 once, at the end. That, plus training on group 2 alone (group 1 is held for
@@ -373,7 +373,7 @@ validation), is why arm A reads 28.2% where §5 reads 40.4% for a similar split.
 
 Quote the ladder, not a single number. "52% on held-out signers within one
 corpus, 2% across corpora, and here is why that gap exists" is a stronger and
-more defensible claim than any single figure — and it is the claim the evidence
+more defensible claim than any single figure, and it is the claim the evidence
 supports.
 
 ### Three bugs that made the live camera path fail
@@ -381,7 +381,7 @@ supports.
 Each was hidden behind the previous one. All fixed; do not reintroduce them.
 
 1. **Two landmarkers, incompatible z conventions.** The app ran `PoseLandmarker` +
-   `HandLandmarker` separately, but INCLUDE was extracted with *Holistic* — one
+   `HandLandmarker` separately, but INCLUDE was extracted with *Holistic*, one
    unified depth frame. Hand `z` is wrist-relative, pose `z` torso-relative, and
    `z` carries roughly a third of the signal (pose z std 1.32, hand z std 0.75,
    against x,y std 1.24 / 2.32). Fixed by switching to `HolisticLandmarker`.
@@ -408,7 +408,7 @@ Each was hidden behind the previous one. All fixed; do not reintroduce them.
    | rolling window + 10 rest frames | 54.8% |
    | rolling window + 40 rest frames | **23.2%** |
 
-   Fixed by `app/src/lib/segment.ts` — motion-energy segmentation that starts on a
+   Fixed by `app/src/lib/segment.ts`, motion-energy segmentation that starts on a
    movement burst, ends after 6 still frames, trims trailing stillness, and
    classifies once per sign.
 
@@ -430,7 +430,7 @@ Each was hidden behind the previous one. All fixed; do not reintroduce them.
 .venv/bin/python    train/ingest_recordings.py setu-recordings-*.json
 .venv-tf/bin/python train/eval_on_takes.py     setu-recordings-*.json
 
-# CISLR — second corpus (§2.2). Needs a HF account with the licence accepted.
+# CISLR: second corpus (§2.2). Needs a HF account with the licence accepted.
 FETCH_ALL=1 HF_TOKEN=... ./data/fetch_cislr.sh   # 1.1 GB video zip
 .venv-mp/bin/python train/extract_cislr.py       # 612 clips -> landmarks, ~2 h
 .venv/bin/python    train/preprocess_cislr.py    # -> data/dataset_merged.npz
@@ -453,7 +453,7 @@ other:
 ```
 X      (4894, 32, 65, 3) float32
 y      (4894,)           int32
-signer (4894,)           int32     0-2 INCLUDE, 3-6 CISLR — never mixed
+signer (4894,)           int32     0-2 INCLUDE, 3-6 CISLR, never mixed
 corpus (4894,)           int32
 labels (264,)            <U16
 ```
@@ -480,8 +480,8 @@ cd app && npx vite --port 5174     # http://localhost:5174
 
 | mode | file | state |
 |---|---|---|
-| **Conversation** | `HearingSide.tsx` | works reliably, no camera — **this is the demo** |
-| **Record signs** | `Recorder.tsx` | works — capture your own vocabulary |
+| **Conversation** | `HearingSide.tsx` | works reliably, no camera, **this is the demo** |
+| **Record signs** | `Recorder.tsx` | works, capture your own vocabulary |
 | **Signs to speech** | `SignBridge.tsx` | works, ~52% over 264 classes |
 
 ### Runtime chain
@@ -491,7 +491,7 @@ webcam → HolisticLandmarker (GPU, VIDEO mode, CDN wasm 0.10.14)
        → segment.ts        motion-energy: burst starts, 6 still frames end
        → features.ts       the §3 contract, mirrored from Python
        → classifier.ts     tf.loadGraphModel, input [1, 32, 195]
-       → gate.ts           StabilityGate.once() — one decision per segment
+       → gate.ts           StabilityGate.once(), one decision per segment
        → sentence.ts       UtteranceBuilder, 2600 ms pause closes an utterance
        → speech.ts         TTS in hi/ta/te/bn/mr/en-IN
 ```
@@ -518,7 +518,7 @@ and load with `tf.loadGraphModel`. `tensorflowjs` needs **`protobuf==6.31.1`** a
 These are real and should be stated rather than hidden:
 
 1. **`reverse.ts` is word matching, not translation.** It keeps spoken word order.
-   ISL has its own grammar — "STATION GO WHERE", not "where do I go for the
+   ISL has its own grammar, "STATION GO WHERE", not "where do I go for the
    station". The code says so in its own comments and the UI labels output as a
    *gloss sequence*.
 2. **`sentence.ts` does not reorder either.** It speaks known multi-word phrases
@@ -534,7 +534,7 @@ These are real and should be stated rather than hidden:
    *signer* accuracy overstates field accuracy by more than an order of
    magnitude, because a held-out INCLUDE signer still shares the room, camera,
    protocol and school. Recognition must be presented as experimental. The
-   phrase board — 100% correct, offline, every time — is the surface that
+   phrase board: 100% correct, offline, every time, is the surface that
    actually works, and the UI already treats it as primary.
 6. **Published figures were selected on the test set.** `train.py` uses the test
    set as validation with `restore_best_weights` (§5.1), so 52.0%, 56.8% and
@@ -542,7 +542,7 @@ These are real and should be stated rather than hidden:
 
 ---
 
-## 9. The ablation — three arms, two settled questions
+## 9. The ablation: three arms, two settled questions
 
 Two architecture changes were proposed and both were measured against the same
 baseline, on the same clips, signers, classes, seed and augmentation draws. Only
@@ -558,8 +558,8 @@ the thing under test varied.
 
 **FULL_FACE: inconclusive, and that is now a strong signal.** The delta is
 smaller than the 2.0 pp between-group spread, so three groups cannot separate
-the arms. But this run *includes* Pronouns and Society — the categories where
-ISL marks questions and negation — so it is no longer a vocabulary gap. Across
+the arms. But this run *includes* Pronouns and Society, the categories where
+ISL marks questions and negation, so it is no longer a vocabulary gap. Across
 three runs as data grew 685 -> 1,441 -> 3,003 clips the close delta went
 **+1.5 -> -1.4 -> -0.3 pp**: the sign flipped twice and the magnitude shrank.
 A real effect does not behave that way. **Do not set `FACE_MODE = "FULL_FACE"`.**
@@ -580,11 +580,11 @@ measurement kept pointing at the data.
 
 ---
 
-### Original scope note — FULL_FACE
+### Original scope note: FULL_FACE
 
 `FACE_MODE = "FULL_FACE"` widens the input 65 → 113 points. There is a
 linguistic reason to expect a gain (eyebrows and mouth carry ISL's question and
-negation marking), but that is an argument, not evidence — and `HANDOFF.md` §6
+negation marking), but that is an argument, not evidence, and `HANDOFF.md` §6
 records what happens when a change like this is judged by a metric that cannot
 see it.
 
@@ -609,17 +609,17 @@ then trains both with the same architecture, seed, augmentation draws, and
 held-out-group protocol. The only difference between the arms is the face block,
 so the delta is attributable to it.
 
-> **Scope.** 685 clips, 51 classes, chance 2.0% — the Adjectives categories only.
+> **Scope.** 685 clips, 51 classes, chance 2.0%, the Adjectives categories only.
 > This is **not** the 264-class result and must never be quoted as one. It answers
 > the narrower question of whether the face block earns its place, early enough to
 > act on. Note also that adjectives carry relatively little non-manual grammar; the
 > question-heavy categories (Pronouns, Society) are still downloading, so a null
 > result here is weak evidence, not a refutation.
 
-### Result (31 Aug) — the decisive re-run, and it does not support FULL_FACE
+### Result (31 Aug): the decisive re-run, and it does not support FULL_FACE
 
 Ran on **1,441 clips / 98 classes** across Adjectives, Animals, **Pronouns** and
-**Society** — the question-heavy categories the first run lacked. Chance 1.0%.
+**Society**: the question-heavy categories the first run lacked. Chance 1.0%.
 
 | arm | far camera | close (laptop) |
 |---|---|---|
@@ -627,7 +627,7 @@ Ran on **1,441 clips / 98 classes** across Adjectives, Animals, **Pronouns** and
 | FULL_FACE (113 pt) | 59.7% | 57.1% |
 | delta | −0.4 pp | −1.4 pp |
 
-Per-group close delta: `g0 +2.1pp`, `g1 −1.3pp`, `g2 −5.1pp` — spread 3.0 pp
+Per-group close delta: `g0 +2.1pp`, `g1 −1.3pp`, `g2 −5.1pp`, spread 3.0 pp
 against a mean of 1.4 pp. Still formally **INCONCLUSIVE**: three signer groups
 cannot resolve a difference this small.
 
@@ -638,7 +638,7 @@ cannot resolve a difference this small.
 | 30 Aug | 685 clips, 51 cls, Adjectives | −2.4 pp | **+1.5 pp** |
 | 31 Aug | 1,441 clips, 98 cls, **+Pronouns/Society** | −0.4 pp | **−1.4 pp** |
 
-**The close-range delta flipped sign** — the direction that looked promising
+**The close-range delta flipped sign**, the direction that looked promising
 reversed once the categories that should *favour* the face block were added. A
 real effect does not invert when you strengthen the conditions for it. This is
 noise, not signal.
@@ -648,7 +648,7 @@ perspective-augmentation shape from `HANDOFF.md` §6, where far lost and close
 gained; FULL_FACE now loses on both arms.
 
 **Conclusion: do not set `FACE_MODE = "FULL_FACE"`.** Not because it is proven
-harmful — it is not — but because two runs, the second on the categories designed
+harmful: it is not, but because two runs, the second on the categories designed
 to show its benefit, produce no measurable gain. The 48 face points cost 74% more
 input width for nothing detectable.
 
@@ -657,13 +657,13 @@ input width for nothing detectable.
 1. **More signer groups.** The blocker is now power, not vocabulary: 3 groups
    against a ~1 pp effect. Recording your own signers adds groups directly.
 2. **The 48-point subset may be wrong.** Eyebrow height varies 0.077 within a
-   clip, so signal exists — but a 32-frame resample may simply smear a brief
+   clip, so signal exists: but a 32-frame resample may simply smear a brief
    eyebrow raise away. Worth testing temporal resolution before discarding the
    face entirely.
 3. **Augmentation was tuned for body landmarks.** Perspective warping may be
    actively damaging face points.
 
-### Result (30 Aug) — the first run, superseded above
+### Result (30 Aug): the first run, superseded above
 
 | arm | far camera | close (laptop) |
 |---|---|---|
@@ -671,7 +671,7 @@ input width for nothing detectable.
 | FULL_FACE (113 pt) | 67.3% | **64.1%** |
 | delta | **−2.4 pp** | **+1.5 pp** |
 
-Per-group close delta: `g0 +0.8pp`, `g1 −4.8pp`, `g2 +8.6pp` — **spread 5.5 pp
+Per-group close delta: `g0 +0.8pp`, `g1 −4.8pp`, `g2 +8.6pp`, **spread 5.5 pp
 against a mean of 1.5 pp.**
 
 **The mean is smaller than the spread, so this subset cannot separate the two
@@ -681,12 +681,12 @@ else. `train_ablation.py` prints `INCONCLUSIVE` for this reason.
 
 What *is* worth noting is the **direction**: FULL_FACE loses on far camera and
 gains at close range. That is the same shape as the perspective-augmentation
-result in §5 — and the same trap. Judged on the far-camera number alone,
+result in §5: and the same trap. Judged on the far-camera number alone,
 FULL_FACE looks like a 2.4-point regression and would be rejected. The app runs
 at close range.
 
 So: do not switch `FACE_MODE` on this evidence, and do not discard the change
-either. Re-run when Pronouns and Society are extracted — those are the categories
+either. Re-run when Pronouns and Society are extracted, those are the categories
 where non-manual grammar actually lives.
 
 Full numbers in `models/ablation_face.json` (`conclusive: false`).
@@ -694,7 +694,7 @@ Full numbers in `models/ablation_face.json` (`conclusive: false`).
 ### Fetch order was the hidden blocker (fixed 30 Aug)
 
 Zenodo lists the 46 parts alphabetically, which put **Pronouns at 39–40 and
-Society at 43–45** — the decisive categories arriving only after ~50 GB. The
+Society at 43–45**: the decisive categories arriving only after ~50 GB. The
 ablation could not be settled until essentially the whole corpus was down, by
 which point the decision would have been made by default.
 
@@ -708,7 +708,7 @@ Same 46 files, same total bytes; only the order changes, and `.done` /
 `.extracted` markers make it safe to reorder mid-run. This moves a conclusive
 ablation from ~35 parts away to ~5.
 
-**Re-run the ablation once Pronouns and Society are extracted** — that is the
+**Re-run the ablation once Pronouns and Society are extracted**, that is the
 result worth quoting, and it is the one that decides `FACE_MODE`.
 
 This is automated. `run_ablation_when_ready.sh` waits for the five decisive parts
@@ -720,7 +720,7 @@ and then runs both stages unattended:
 
 It polls once a minute with an 8-hour ceiling, prints a progress line every 15
 minutes, and fails loudly naming the missing parts rather than hanging if the
-fetcher dies. Safe to re-run — `preprocess_face.py` globs whatever is in
+fetcher dies. Safe to re-run, `preprocess_face.py` globs whatever is in
 `data/video_landmarks`, so it always uses everything extracted so far.
 
 Started 30 Aug alongside the reordered fetch; 6.3 GB of decisive data at roughly
@@ -728,7 +728,7 @@ Started 30 Aug alongside the reordered fetch; 6.3 GB of decisive data at roughly
 
 ---
 
-## 10. Gloss reordering — implemented, offline
+## 10. Gloss reordering: implemented, offline
 
 ISL word order is not spoken word order. This is now handled, and the design
 constraint that shaped it is worth stating: **the stage demo must never depend on
@@ -737,14 +737,14 @@ a live network call**, and **an API key must never reach the browser**.
 Both are satisfied by generating the reorderings ahead of time.
 
 ```bash
-# once, with your own key — never the browser's
+# once, with your own key: never the browser's
 ANTHROPIC_API_KEY=sk-... node --experimental-strip-types app/tools/buildGlossTable.ts
 ```
 
 | file | role |
 |---|---|
 | `app/tools/glossCorpus.ts` | 73 gloss sequences (medical / travel / civic / social) |
-| `app/tools/buildGlossTable.ts` | generator — Claude Opus 5, structured output, batched, resumable |
+| `app/tools/buildGlossTable.ts` | generator, Claude Opus 5, structured output, batched, resumable |
 | `app/public/model/_utterances.json` | the shipped table |
 | `app/src/lib/glossTranslate.ts` | runtime lookup + provenance |
 
@@ -760,7 +760,7 @@ The runtime returns *where the sentence came from*, and the UI shows it:
 |---|---|---|
 | `reordered` | precomputed reordering | **yes** |
 | `phrasebook` | hand-verified phrase table | as a phrase |
-| `gloss-order` | signs read in signed order | **no** — badged amber |
+| `gloss-order` | signs read in signed order | **no**, badged amber |
 
 This preserves the original caution rather than discarding it. Reordering happens
 only where a verified entry exists; everywhere else the app still refuses to
@@ -768,23 +768,23 @@ pretend, and says so on screen.
 
 ### What the vocabulary cannot express
 
-Validation surfaced this concretely — `UNREACHABLE` in `glossCorpus.ts`:
+Validation surfaced this concretely, `UNREACHABLE` in `glossCorpus.ts`:
 
 > **water · help · yes · no · where · please · pain · name**
 
 None of these are INCLUDE classes, so no amount of translation work makes them
 reachable. "I need water" is not a hard sentence; it is simply unsayable with this
 lexicon. That is the checkable form of "INCLUDE is a lexicon, not a conversation
-vocabulary" — and the strongest argument for recording your own signs.
+vocabulary": and the strongest argument for recording your own signs.
 
 ---
 
-## 11. Deployment domains — Healthcare and Travel & Tourism
+## 11. Deployment domains: Healthcare and Travel & Tourism
 
 The app ships both SIH themes from one codebase. A switch in the top bar changes
 the setting; the choice persists per device (`setu.domain`).
 
-**What a domain is allowed to change — and nothing else:**
+**What a domain is allowed to change, and nothing else:**
 
 1. which phrases lead in the tap-to-say rail
 2. what spoken words map onto (`platform` → Train Station, `ward` → Hospital)
@@ -810,21 +810,21 @@ into a silent no-op that still renders and still looks tappable.
 
 ### Direction matters, and the two are not symmetric
 
-- **Quick phrases run FORWARD** — tapped by the Deaf user, spoken aloud. They
+- **Quick phrases run FORWARD**: tapped by the Deaf user, spoken aloud. They
   need only to be things a person wants to say; no pose frames required.
-- **Synonyms run REVERSE** — spoken word → played ISL skeleton. These *do* need
+- **Synonyms run REVERSE**: spoken word → played ISL skeleton. These *do* need
   bundled pose frames.
 
 `checkDomains.ts` reports 19 warnings for glosses that are recognisable but not
-playable — most importantly **`Location`**, the stand-in for WHERE that appears
+playable: most importantly **`Location`**, the stand-in for WHERE that appears
 in nearly every "where is X" phrase. `textToGlosses` already guards on the
 library, so an unplayable match is reported as *skipped* rather than queueing a
-sign that renders as an empty player. The warnings are informational, not bugs —
+sign that renders as an empty player. The warnings are informational, not bugs , 
 but they are the list of signs worth recording first for the reverse direction.
 
 ---
 
-## 12. Confidence calibration — the app was confidently wrong
+## 12. Confidence calibration: the app was confidently wrong
 
 Softmax confidence on this model is **not a probability**. Measured on 1,566
 clips from a signer group the model never trained on, at close range:
@@ -835,7 +835,7 @@ clips from a signer group the model never trained on, at close range:
 | 0.99 | **70%** |
 
 Expected Calibration Error: **34.1 pp**. At the old gate (`FLOOR = 0.75`,
-uncalibrated) 54% of segments passed and only 57.9% of those were correct — so
+uncalibrated) 54% of segments passed and only 57.9% of those were correct, so
 **42% of everything spoken aloud was wrong**, stated confidently, to a patient.
 
 ### Temperature scaling
@@ -847,7 +847,7 @@ minimising NLL on held-out data. `T = 2.69`.
 |---|---|---|
 | ECE | 34.1 pp | **5.0 pp** |
 | says 0.90, is right | 48% | **91%** |
-| top-1 | 40.4% | **40.4%** — unchanged |
+| top-1 | 40.4% | **40.4%**: unchanged |
 
 Accuracy cannot change: dividing every logit by the same positive number
 preserves their order. **The model is no better; it now admits it.** That is
@@ -864,13 +864,13 @@ confidence error 7.3e-3 (float32 quantisation) and **zero argmax mismatches**.
 | calibrated conf | behaviour | speaks | and is right |
 |---|---|---|---|
 | >= 0.70 | spoken aloud | ~10% | 84.3% |
-| >= 0.40 | shown, "please confirm" | — | — |
-| < 0.40 | "unclear — sign again" | — | — |
+| >= 0.40 | shown, "please confirm" |, |, |
+| < 0.40 | "unclear: sign again" |, |, |
 
 A single floor forces a bad trade: high enough to trust and the app is silent
 nine times in ten; low enough to feel responsive and two in five are wrong.
 
-`app/src/lib/calibrate.ts`. **Refit `T` after any retrain** — it is a property of
+`app/src/lib/calibrate.ts`. **Refit `T` after any retrain**, it is a property of
 the trained weights, not of the architecture.
 
 ---
@@ -880,13 +880,13 @@ the trained weights, not of the architecture.
 Reordered 5 Sept. §5.1 changed the priorities: the bottleneck is not the model,
 and it is not the face mesh. It is that the model has learned one corpus.
 
-### Do now — highest value per hour
+### Do now: highest value per hour
 
 1. **Record your own signs, in the room the app will run in.** This is now
    unambiguously first. Arm C says a model trained elsewhere scores 2.1% here;
    the only data guaranteed to match deployment conditions is data recorded in
    them. Everything downstream already works (`ingest_recordings.py` ->
-   `eval_on_takes.py`). Prioritise the eight `UNREACHABLE` glosses — they are
+   `eval_on_takes.py`). Prioritise the eight `UNREACHABLE` glosses, they are
    what a patient actually needs, and CISLR has clips of all eight to check
    against.
 2. **Label recognition as experimental in the UI.** At 2.1% cross-corpus, a
@@ -900,7 +900,7 @@ and it is not the face mesh. It is that the model has learned one corpus.
 
 Arm B: 610 new clips, +36% training data, **+1.4 points**. Extrapolating, closing
 the gap to a deployable score needs thousands of clips from many signers in many
-rooms — not a weekend of recording. Options, cheapest first:
+rooms: not a weekend of recording. Options, cheapest first:
 
 - **More corpora.** ISLTranslate/iSign are continuous ISL; segmenting them into
   isolated signs is work but they are free and already identified (§2.4).
@@ -922,11 +922,11 @@ rooms — not a weekend of recording. Options, cheapest first:
 
 - Confirm with the SPOC: the 2026 per-college nomination quota, **whether one team
   may submit more than one idea** (this gates reusing the idea for Travel & Tourism),
-  and the real deadline — the portal says 20 Sept, secondary sources say 30 Sept.
+  and the real deadline: the portal says 20 Sept, secondary sources say 30 Sept.
 
 ---
 
-## 14. Invariants — breaking these silently destroys accuracy
+## 14. Invariants: breaking these silently destroys accuracy
 
 1. **`train/features.py` ↔ `app/src/lib/features.ts` stay bit-identical.**
    Run `test_parity.py` after touching either.
@@ -934,10 +934,10 @@ rooms — not a weekend of recording. Options, cheapest first:
 3. **If you change augmentation, verify a metric exists that can detect the change.**
    Perspective augmentation was once built, evaluated on the *far-camera* held-out
    set (which contains no close-range footage), measured as a regression, and
-   reverted — the correct fix was thrown away using a metric structurally incapable
+   reverted: the correct fix was thrown away using a metric structurally incapable
    of seeing it.
 4. **Devanagari needs `\p{M}`** in any tokeniser. Every Indic vowel sign is a
    combining mark; without it `नमस्ते` becomes `नमस त` and matches nothing.
-5. **Zenodo is unreliable** — expect stalls, failed resumes, and at least one
+5. **Zenodo is unreliable**: expect stalls, failed resumes, and at least one
    archive that silently truncated. All fetchers retry indefinitely; two curls
    writing one path once collapsed 1.1 GB into 14 MB, hence the single-instance lock.
