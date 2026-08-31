@@ -1,0 +1,133 @@
+{
+  "classes": 38,
+  "labels": [
+    "I",
+    "you",
+    "he",
+    "she",
+    "we",
+    "they",
+    "Hello",
+    "Thank you",
+    "How are you",
+    "Alright",
+    "Pleased",
+    "good",
+    "bad",
+    "sick",
+    "healthy",
+    "weak",
+    "strong",
+    "alive",
+    "Death",
+    "Doctor",
+    "Hospital",
+    "Medicine",
+    "Patient",
+    "Deaf",
+    "Blind",
+    "hot",
+    "cold",
+    "warm",
+    "cool",
+    "Today",
+    "Tomorrow",
+    "Yesterday",
+    "Time",
+    "Morning",
+    "Evening",
+    "Night",
+    "Bathroom",
+    "Bedroom"
+  ],
+  "clips": 740,
+  "encoder": "encoder_stacked.weights.h5",
+  "held_out_group": [
+    {
+      "group": 0,
+      "corpus": "INCLUDE",
+      "clips": 188,
+      "top1": 0.7287234042553191,
+      "top5": 0.9361702127659575
+    },
+    {
+      "group": 1,
+      "corpus": "INCLUDE",
+      "clips": 221,
+      "top1": 0.8054298642533937,
+      "top5": 0.9773755656108597
+    },
+    {
+      "group": 2,
+      "corpus": "INCLUDE",
+      "clips": 233,
+      "top1": 0.6824034334763949,
+      "top5": 0.9742489270386266
+    },
+    {
+      "group": 4,
+      "corpus": "CISLR",
+      "clips": 20,
+      "top1": 0.35,
+      "top5": 0.65
+    },
+    {
+      "group": 5,
+      "corpus": "CISLR",
+      "clips": 33,
+      "top1": 0.18181818181818182,
+      "top5": 0.48484848484848486
+    },
+    {
+      "group": 6,
+      "corpus": "CISLR",
+      "clips": 26,
+      "top1": 0.4230769230769231,
+      "top5": 0.7692307692307693
+    }
+  ],
+  "held_out_mean": {
+    "top1": 0.738852233995036,
+    "top5": 0.9625982351384813
+  },
+  "temperature": 1.3500000000000008,
+  "ece_before": 0.09701568514480671,
+  "ece_after": 0.06524116391943828,
+  "bands": [
+    {
+      "floor": 0.3,
+      "speaks": 0.9112343966712899,
+      "accuracy": 0.7336377473363774
+    },
+    {
+      "floor": 0.4,
+      "speaks": 0.8210818307905686,
+      "accuracy": 0.7668918918918919
+    },
+    {
+      "floor": 0.5,
+      "speaks": 0.7226074895977809,
+      "accuracy": 0.8157389635316699
+    },
+    {
+      "floor": 0.7,
+      "speaks": 0.5464632454923717,
+      "accuracy": 0.8984771573604061
+    },
+    {
+      "floor": 0.9,
+      "speaks": 0.32038834951456313,
+      "accuracy": 0.935064935064935
+    }
+  ],
+  "cannot_say": [
+    "pain",
+    "water",
+    "help",
+    "yes",
+    "no",
+    "please",
+    "fever",
+    "breathe"
+  ]
+}
