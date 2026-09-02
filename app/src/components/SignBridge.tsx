@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, Info, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { GlossClassifier } from "../lib/classifier";
 import { StabilityGate, FLOOR, NEEDED } from "../lib/gate";
@@ -21,7 +22,7 @@ type Entry = {
   text: string;
   conf: number;
   at: string;
-  /** Where the spoken text came from — shown so the UI never overstates it. */
+  /** Where the spoken text came from, shown so the UI never overstates it. */
   source: TranslationSource;
 };
 
@@ -36,13 +37,32 @@ export default function SignBridge({
   lang: langProp,
   onLang,
   compact = false,
+  showDetails = false,
+  onRecognized,
 }: {
   lang?: LangCode;
   onLang?: (l: LangCode) => void;
   compact?: boolean;
+  showDetails?: boolean;
+  onRecognized?: (text: string) => void;
 } = {}) {
+  const recognizedRef = useRef(onRecognized);
+  useEffect(() => { recognizedRef.current = onRecognized; }, [onRecognized]);
+  const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  /** Size the preview box to the stream's real shape.
+   *
+   * Cameras hand back whatever they like -- 1280x720 is requested, 640x480 is
+   * common -- and the same number feeds the model as `aspect`, so the picture
+   * and the classifier stay in agreement about what is being looked at. */
+  const setStageAspect = useCallback((w: number, h: number) => {
+    if (stageRef.current && w > 0 && h > 0) {
+      stageRef.current.style.setProperty("--stage-aspect", `${w} / ${h}`);
+    }
+  }, []);
   const bufferRef = useRef<PointFrame[]>([]);
   const gateRef = useRef(new StabilityGate());
   const clfRef = useRef(new GlossClassifier());
@@ -57,6 +77,14 @@ export default function SignBridge({
   const { state: lmState, error: lmError, detect } = useLandmarkers();
   const [modelState, setModelState] = useState<"loading" | "ready" | "error">("loading");
   const [modelError, setModelError] = useState<string | null>(null);
+  const [vocabSize, setVocabSize] = useState(0);
+  // The list, not just the count. A fluent signer sitting down in front of this
+  // will sign naturally and get nothing, because they will sign words outside
+  // an 83-sign vocabulary and in connected sentences rather than one citation
+  // form at a time. Showing "83 signs available" without showing WHICH 83 makes
+  // that look like a broken detector instead of a stated limit.
+  const [vocab, setVocab] = useState<string[]>([]);
+  const [showVocab, setShowVocab] = useState(false);
   const [running, setRunning] = useState(false);
   const [ownLang, setOwnLang] = useState<LangCode>("hi-IN");
   const lang = langProp ?? ownLang;
@@ -64,11 +92,11 @@ export default function SignBridge({
   /**
    * Candidates for the sign just segmented, when the top one is not certain.
    *
-   * Measured on a held-out signer group: top-1 is right 40.4% of the time, but
-   * the correct answer is in the TOP FIVE 65.1% of the time (84% when
-   * confidence >= 0.40). Refusing to show anything below a threshold throws
-   * that away — and with the calibrated bands it meant showing nothing for 65%
-   * of signs, which reads as "the app cannot detect".
+   * Measured on a held-out signer group: top-1 is right 68.3% of the time, but
+   * the correct answer is in the TOP FIVE 89.7% of the time. That gap IS the
+   * product. Refusing to show anything below a threshold
+   * throws away the 22 points between them, and reads as "the app cannot
+   * detect" when in fact it knows and is merely unsure which.
    *
    * So: never refuse. Offer the shortlist and let a person choose. That turns a
    * 40%-accurate model into a 65%-useful one without ever claiming certainty.
@@ -92,12 +120,28 @@ export default function SignBridge({
   const langRef = useRef(lang);
   useEffect(() => { langRef.current = lang; }, [lang]);
 
-  // load the trained classifier
+  // Load the classifier.
+  //
+  // One model, 83 signs, covering both the clinical and the travel setting.
+  // Two models shipped briefly and it was a mistake: two temperatures, two
+  // label sets and two caches to invalidate, and the first release pinned
+  // returning users to a stale one through exactly that complexity.
+  //
+  // It cannot say pain, water, help, yes or no. Those are absent from every
+  // ISL corpus available, so they live on the phrase board, which is exact and
+  // needs no model at all.
   useEffect(() => {
     let cancelled = false;
     clfRef.current
-      .load("/model/model.json", "/model/labels.json")
-      .then(() => { if (!cancelled) setModelState("ready"); })
+      .load(asset("/model/model.json"), asset("/model/labels.json"))
+      .then(() => {
+        if (!cancelled) {
+          setVocabSize(clfRef.current.vocabulary.length);
+          setVocab([...clfRef.current.vocabulary].sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" })));
+          setModelState("ready");
+        }
+      })
       .catch((e) => {
         if (cancelled) return;
         setModelError(e instanceof Error ? e.message : String(e));
@@ -106,7 +150,7 @@ export default function SignBridge({
     fetch(asset("/model/_framing.json")).then((r) => r.json())
       .then((f) => { framingRef.current = f; })
       .catch(() => { /* diagnostics are optional */ });
-    // Precomputed gloss reorderings. A missing table is a supported state —
+    // Precomputed gloss reorderings. A missing table is a supported state , 
     // every utterance then falls back to the phrasebook, as it did before.
     void loadGlossTable();
     refreshVoices();
@@ -117,7 +161,24 @@ export default function SignBridge({
     };
   }, []);
 
-  const draw = useCallback((pose: unknown, left: unknown, right: unknown) => {
+  /**
+   * Draw what MediaPipe is actually tracking.
+   *
+   * The face mesh is drawn even though the MODEL does not consume it. Two
+   * different questions get confused otherwise: "is the tracker seeing me"
+   * and "is the tracker using my face". Holistic returns 468 face points every
+   * frame and always has; they were simply never rendered, so the tracking
+   * looked dead when it was working perfectly.
+   *
+   * What the model consumes is 65 points: pose 0-22, which INCLUDES the nose,
+   * eyes, ears and mouth corners, plus both hands. So head position and
+   * orientation do reach it. The 468-point mesh does not: FACE_MODE is
+   * HEAD_ONLY because the FULL_FACE ablation measured no gain from it
+   * (ARCHITECTURE.md 9), and INCLUDE's pose release carries no mesh to train
+   * on in the first place.
+   */
+  const draw = useCallback((pose: unknown, left: unknown, right: unknown,
+                            face: unknown) => {
     const cv = canvasRef.current;
     const ctx = cv?.getContext("2d");
     if (!cv || !ctx) return;
@@ -153,6 +214,21 @@ export default function SignBridge({
         ctx.fill();
       }
     }
+
+    // Face mesh, drawn faintly: it is confirmation that tracking is alive, not
+    // a claim that the model reads expression. Every 4th point keeps 468 dots
+    // from becoming a solid mask over the signer's face.
+    const mesh = face as { x: number; y: number }[] | null;
+    if (mesh && mesh.length) {
+      ctx.fillStyle = "rgba(72,207,171,.34)";
+      for (let i = 0; i < mesh.length; i += 4) {
+        const p = mesh[i];
+        if (!p) continue;
+        ctx.beginPath();
+        ctx.arc(p.x * w, p.y * h, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }, []);
 
   /** Compare this camera's framing to what the model trained on.
@@ -166,9 +242,9 @@ export default function SignBridge({
     if (!f) return { shoulder, verdict: "" };
     const { p5, p95 } = f.shoulder_width;
     const verdict =
-      shoulder > p95 * 1.6 ? "close range — model handles this"
-      : shoulder > p95 ? "slightly close — fine"
-      : shoulder < p5 * 0.5 ? "very far — hands may be too small to track"
+      shoulder > p95 * 1.6 ? "close range, model handles this"
+      : shoulder > p95 ? "slightly close, fine"
+      : shoulder < p5 * 0.5 ? "very far, hands may be too small to track"
       : "matches training framing";
     return { shoulder, verdict };
   }, []);
@@ -179,6 +255,7 @@ export default function SignBridge({
       if (!glosses.length) return;
       const { text, source } = assembleWithSource(glosses, l);
       speak(text, l);
+      recognizedRef.current?.(text);
       setLog((prev) => [
         { gloss: glosses.join(" · "), text, conf, at, source },
         ...prev,
@@ -187,13 +264,19 @@ export default function SignBridge({
     []
   );
 
-  const loop = useCallback(() => {
+  const loop = useCallback(function loop() {
     if (!runningRef.current) return;
     const video = videoRef.current;
     if (video && video.readyState >= 2) {
+      // MediaPipe's coordinates are normalised by frame width and height
+      // separately, so they carry the camera's aspect ratio. The model was
+      // trained in an isotropic space; feeding it raw MediaPipe output means
+      // classifying a body stretched by whatever shape this webcam happens to
+      // be. Read it live rather than assuming 16:9, see lib/features.ts.
+      const aspect = video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
       const res = detect(video, performance.now());
       if (res) {
-        draw(res.pose, res.left, res.right);
+        draw(res.pose, res.left, res.right, res.face);
         tickRef.current++;
         const hasHands = !!res.left || !!res.right;
 
@@ -203,19 +286,16 @@ export default function SignBridge({
         // segmenter watches hand motion and hands over only the sign itself.
         const segment = segRef.current.push(res.frame, hasHands);
         const seg = segRef.current;
+        const reject = seg.lastReject;
 
-        // A window thrown out for having no hands is worth saying out loud —
+        // A window thrown out for having no hands is worth saying out loud , 
         // it is the difference between "the app is broken" and "you are framed
         // wrong", and the user cannot tell those apart from silence.
-        if (segRef.current.lastReject === "no-hands") {
+        if (reject === "no-hands") {
           setLive({ gloss: "", conf: 0, progress: 0 });
-          setNotice("no hands detected — step back so both hands are in frame");
-        } else if (segRef.current.lastReject === "one-hand") {
-          // Every training clip is two-handed, so a one-handed window is out of
-          // distribution and the model answers confidently anyway (Truck, Car,
-          // Mouse at ~0.76). Say what to fix rather than announce a guess.
-          setLive({ gloss: "", conf: 0, progress: 0 });
-          setNotice("only one hand visible — bring both hands into frame");
+          setNotice("no hands detected. Step back so both hands are in frame");
+        } else if (reject === "one-hand") {
+          setNotice("only one hand visible. Confirm the sign below or bring both hands into frame");
         } else if (hasHands) {
           setNotice(null);
         }
@@ -225,22 +305,23 @@ export default function SignBridge({
           setDiag({
             pose: !!res.pose, left: !!res.left, right: !!res.right,
             shoulder, verdict,
-            top: segment ? clfRef.current.predictTop(segment, 3) : [],
+            top: segment ? clfRef.current.predictTop(segment, aspect, 3) : [],
           });
         }
 
         if (segment) {
-          const pred = clfRef.current.predict(segment);
-          const g = gateRef.current.once(pred);
+          const pred = clfRef.current.predict(segment, aspect);
+          const confirmOnly = reject === "one-hand";
+          const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
           setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
 
           // Below the confident band, show what else it considered rather than
           // discarding the sign. The right answer is in this list far more often
           // than it is the top entry.
           setCandidates(
-            certainty(pred.conf) === "confident"
+            certainty(pred.conf) === "confident" && !confirmOnly
               ? []
-              : clfRef.current.predictTop(segment, 5)
+              : clfRef.current.predictTop(segment, aspect, 5)
           );
 
           if (g.fire) {
@@ -275,21 +356,25 @@ export default function SignBridge({
 
   /**
    * Replay real ISL clips from the held-out group through the exact same
-   * pipeline the camera uses — same buffer, same classifier, same gate, same
+   * pipeline the camera uses: same buffer, same classifier, same gate, same
    * speech. Only the frame source differs. Doubles as the stage fallback.
    */
   async function replayDemo() {
     const clips: {
       true: string; pred: string; conf: number; correct: boolean;
-      frames: number[][][];
+      frames: number[][][]; aspect?: number;
     }[] = await (await fetch(asset("/model/_demo.json"))).json();
 
     const cv = canvasRef.current!;
     cv.width = 960; cv.height = 540;
+    setStageAspect(960, 540);       // demo clips are INCLUDE's 16:9
     gateRef.current.reset();
     bufferRef.current = [];
 
     for (const clip of clips) {
+      // These are INCLUDE clips, uniformly 1920x1080. Clips written after the
+      // isotropic fix carry the field; older ones predate it and were 16:9.
+      const aspect = clip.aspect ?? 16 / 9;
       setReplaying(clip.true);
       bufferRef.current = [];
       gateRef.current.reset();
@@ -302,13 +387,14 @@ export default function SignBridge({
         drawFrame(frame);
 
         if (bufferRef.current.length >= SEQ_LEN) {
-          const pred = clfRef.current.predict(bufferRef.current);
+          const pred = clfRef.current.predict(bufferRef.current, aspect);
           const g = gateRef.current.push(pred);
           setLive({ gloss: pred.gloss, conf: pred.conf, progress: g.progress });
           if (g.fire) {
             const l = langRef.current;
             const text = phraseFor(g.fire, l);
             speak(text, l);
+      recognizedRef.current?.(text);
             setLog((prev) => [{
               gloss: g.fire!, text, conf: g.conf,
               at: new Date().toLocaleTimeString(), source: "phrasebook" as const,
@@ -320,16 +406,17 @@ export default function SignBridge({
 
       // The clip has ended but the sign is complete in the buffer. Live, the
       // signer holds the final position and the gate keeps sampling; here we
-      // do the same so the stability window can fill. Same gate, same floor —
+      // do the same so the stability window can fill. Same gate, same floor , 
       // not lowering the bar, just giving it the frames it expects.
       for (let i = 0; i < NEEDED + 4 && bufferRef.current.length >= SEQ_LEN; i++) {
-        const pred = clfRef.current.predict(bufferRef.current);
+        const pred = clfRef.current.predict(bufferRef.current, aspect);
         const g = gateRef.current.push(pred);
         setLive({ gloss: pred.gloss, conf: pred.conf, progress: g.progress });
         if (g.fire) {
           const l = langRef.current;
           const text = phraseFor(g.fire, l);
           speak(text, l);
+      recognizedRef.current?.(text);
           setLog((prev) => [{
             gloss: g.fire!, text, conf: g.conf,
             at: new Date().toLocaleTimeString(), source: "phrasebook" as const,
@@ -388,10 +475,14 @@ export default function SignBridge({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: false,
       });
-      const video = videoRef.current!;
+      if (!videoRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
+      const video = videoRef.current;
       video.srcObject = stream;
       await video.play();
-      const cv = canvasRef.current!;
+      if (!canvasRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      const cv = canvasRef.current;
+      setStageAspect(video.videoWidth, video.videoHeight);
       cv.width = video.videoWidth || 1280;
       cv.height = video.videoHeight || 720;
       runningRef.current = true;
@@ -399,7 +490,7 @@ export default function SignBridge({
       rafRef.current = requestAnimationFrame(loop);
     } catch (e) {
       setCamError(
-        `${e instanceof Error ? e.message : String(e)} — the page must be served over http://localhost or https://, and the browser needs camera permission.`
+        `${e instanceof Error ? e.message : String(e)}. The page must be served over http://localhost or https://, and the browser needs camera permission.`
       );
     }
   }
@@ -421,13 +512,13 @@ export default function SignBridge({
     setFps(0);
   }
 
-  useEffect(() => () => { runningRef.current = false; cancelAnimationFrame(rafRef.current); }, []);
+  useEffect(() => () => { runningRef.current = false; cancelAnimationFrame(rafRef.current); streamRef.current?.getTracks().forEach(t => t.stop()); }, []);
 
   const ready = lmState === "ready" && modelState === "ready";
   const status =
     lmState === "error" ? `Landmarker failed: ${lmError}` :
     modelState === "error" ? `Model failed: ${modelError}` :
-    !ready ? "Loading models…" :
+    !ready ? "Preparing camera tools..." :
     running ? "Listening for signs" : "Ready";
 
   const voice = voiceFor(lang);
@@ -438,8 +529,15 @@ export default function SignBridge({
         <div className="brand">
           <div className="mark">से</div>
           <div>
-            <h1>Setu — ISL to Regional Speech</h1>
-            <p>Phase 1 · {clfRef.current.vocabulary.length || "…"} signs · trained model</p>
+            <h1>Setu</h1>
+            <button
+              className="vocab-toggle"
+              onClick={() => setShowVocab((v) => !v)}
+              aria-expanded={showVocab}
+              disabled={!vocabSize}
+            >
+              {vocabSize || "..."} signs available{vocabSize ? (showVocab ? " (hide)" : " (see the list)") : ""}
+            </button>
           </div>
         </div>
         <span className={`status ${lmState === "error" || modelState === "error" ? "err" : ready ? "ok" : "busy"}`}>
@@ -447,28 +545,49 @@ export default function SignBridge({
         </span>
       </header>
 
-      <main>
+      {showVocab && (
+        <section className="vocab-list" aria-label="Signs this model knows">
+          <p className="vocab-note">
+            These are the only signs recognition can produce. Anything else,
+            and any sentence signed continuously rather than one sign at a
+            time, will not be recognised. For everything else, use the phrase
+            board below, which is exact.
+          </p>
+          <div className="vocab-grid">
+            {vocab.map((v) => <span key={v}>{v}</span>)}
+          </div>
+        </section>
+      )}
+
+      <div className="bridge-content">
         <section className="card stage-card">
-          <div className="card-h"><span>Live camera</span><span className="mono">{fps ? `${fps} fps` : "—"}</span></div>
-          <div className="stage">
+          <div className="card-h">
+            <span>Signs to speech</span>
+            {showDetails && <span className="mono">{fps ? `${fps} fps` : "-"}</span>}
+          </div>
+          <div className="stage" ref={stageRef}>
             <video ref={videoRef} playsInline muted />
             <canvas ref={canvasRef} />
             {!running && !replaying && (
               <div className="idle">
-                Camera is off.<br />Press <b>Start camera</b> and sign into the lens.
+                <b>{ready ? "Ready to start" : status}</b>
+                <span>Start when the signer is framed from face to hands.</span>
               </div>
             )}
             {(running || replaying) && (
               <div className="hud">
                 <div>
-                  <div className="hud-k">Detecting</div>
+                  {/* "Current sign" rather than "Detecting": it names what the
+                      reader is looking at instead of what the machine is doing. */}
+                  <div className="hud-k">Current sign</div>
                   {/* Three bands, not one floor. The classifier no longer drops
                       low-confidence reads silently, so an uncertain one is shown
-                      AND marked — the clinician can confirm it instead of the
-                      app either announcing a guess or going mysteriously quiet. */}
-                  {/* Always show the best guess. Hiding it below a threshold
-                      meant showing nothing for 65% of signs, which reads as a
-                      broken detector rather than an uncertain one. */}
+                      AND marked: the clinician can confirm it instead of the
+                      app either announcing a guess or going mysteriously quiet.
+                      Hiding it below a threshold meant showing nothing for 65%
+                      of signs, which reads as a broken detector rather than an
+                      uncertain one. The certainty class is what colours it, so
+                      it must survive any restyling. */}
                   <div className={`gloss ${live.gloss ? "" : "none"} ${
                     live.gloss ? certainty(live.conf) : ""
                   }`}>
@@ -477,7 +596,7 @@ export default function SignBridge({
                   </div>
                   {live.gloss && certainty(live.conf) !== "confident" && (
                     <div className="hud-confirm">
-                      {Math.round(live.conf * 100)}% — not certain, pick below if wrong
+                      {Math.round(live.conf * 100)}% confident. Pick below if this is wrong
                     </div>
                   )}
                   <div className="meter">
@@ -523,19 +642,27 @@ export default function SignBridge({
                   </div>
                 )}
                 <div className="ring" style={{ ["--p" as string]: live.progress }}>
-                  <span>{live.progress >= 1 ? "✓" : "HOLD"}</span>
+                  <span>{live.progress >= 1 ? "OK" : "HOLD"}</span>
                 </div>
               </div>
             )}
           </div>
           <div className="card-b">
             <div className="row">
-              <button className="go" onClick={start} disabled={!ready || running}>Start camera</button>
-              <button onClick={stop} disabled={!running}>Stop</button>
-              <button onClick={replayDemo} disabled={!ready || running || !!replaying}>
-                {replaying ? `Replaying: ${replaying}` : "Replay held-out clips"}
+              <button className="go" onClick={start} disabled={!ready || running}>
+                <Camera size={17} /> Start camera
               </button>
-              <button onClick={() => setLog([])}>Clear</button>
+              <button onClick={stop} disabled={!running}>
+                <Square size={16} /> Stop
+              </button>
+              {showDetails && (
+                <button onClick={replayDemo} disabled={!ready || running || !!replaying}>
+                  <Play size={16} /> {replaying ? replaying : "Play sample"}
+                </button>
+              )}
+              <button onClick={() => setLog([])} disabled={!log.length}>
+                <RotateCcw size={16} /> Clear
+              </button>
             </div>
             {camError && <div className="err-box">{camError}</div>}
           </div>
@@ -543,82 +670,96 @@ export default function SignBridge({
 
         <div className="side">
           <section className="card">
-            <div className="card-h">Output</div>
+            <div className="card-h">
+              <span>Spoken output</span>
+              <Volume2 size={15} />
+            </div>
             <div className="card-b">
               <label className="field">
-                <span>Speak to the hearing person in</span>
+                <span>Language</span>
                 <select value={lang} onChange={(e) => setLang(e.target.value as LangCode)}>
                   {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
                 </select>
               </label>
-              <p className="note">
-                {voice
-                  ? <>Voice: <code>{voice.name}</code></>
-                  : <>No <code>{lang}</code> voice installed — the browser will use its default.</>}
-              </p>
-            </div>
-          </section>
-
-          <section className="card">
-            <div className="card-h">Diagnostics</div>
-            <div className="card-b">
-              {!diag && <p className="note">Start the camera to see what the model sees.</p>}
-              {diag && (
-                <div className="diag">
-                  <div className="drow">
-                    <span className={diag.pose ? "on" : "off"}>pose</span>
-                    <span className={diag.left ? "on" : "off"}>left hand</span>
-                    <span className={diag.right ? "on" : "off"}>right hand</span>
-                  </div>
-                  <div className="dline">
-                    <span>shoulder span</span>
-                    <b>{diag.shoulder.toFixed(3)}</b>
-                    <em>trained on 0.12–0.15</em>
-                  </div>
-                  {diag.verdict && (
-                    <p className={`verdict ${diag.verdict.includes("matches") ? "good" : "bad"}`}>
-                      {diag.verdict}
-                    </p>
-                  )}
-                  <div className="dtop">
-                    {diag.top.map((t) => (
-                      <div key={t.gloss}>
-                        <span>{t.gloss}</span>
-                        <i style={{ width: `${Math.round(t.conf * 100)}%` }} />
-                        <b>{Math.round(t.conf * 100)}%</b>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {showDetails && (
+                <p className="note">
+                  {voice
+                    ? <>Voice: <code>{voice.name}</code></>
+                    : <>No <code>{lang}</code> voice installed. The browser will use its default.</>}
+                </p>
               )}
             </div>
           </section>
+
+          {showDetails && (
+            <section className="card details-card">
+              <div className="card-h">
+                <span>Demo details</span>
+                <Info size={15} />
+              </div>
+              <div className="card-b">
+                {!diag && <p className="note">Start the camera to see recognition diagnostics.</p>}
+                {diag && (
+                  <div className="diag">
+                    <div className="drow">
+                      <span className={diag.pose ? "on" : "off"}>pose</span>
+                      <span className={diag.left ? "on" : "off"}>left hand</span>
+                      <span className={diag.right ? "on" : "off"}>right hand</span>
+                    </div>
+                    <div className="dline">
+                      <span>shoulder span</span>
+                      <b>{diag.shoulder.toFixed(3)}</b>
+                      <em>training range 0.12-0.15</em>
+                    </div>
+                    {diag.verdict && (
+                      <p className={`verdict ${diag.verdict.includes("matches") ? "good" : "bad"}`}>
+                        {diag.verdict}
+                      </p>
+                    )}
+                    <div className="dtop">
+                      {diag.top.map((t) => (
+                        <div key={t.gloss}>
+                          <span>{t.gloss}</span>
+                          <i style={{ width: `${Math.round(t.conf * 100)}%` }} />
+                          <b>{Math.round(t.conf * 100)}%</b>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           <section className="card">
             <div className="card-h">Transcript</div>
             <div className="card-b">
               <div className="log">
-                {log.length === 0 && <p className="empty">Recognised signs appear here.</p>}
+                {log.length === 0 && <p className="empty">Spoken translations appear here.</p>}
                 {log.map((e, i) => (
                   <div className="msg" key={`${e.at}-${i}`}>
-                    <div className="k">{e.gloss}</div>
                     <div className="t">{e.text}</div>
+                    <div className="k">{e.gloss}</div>
                     <div className="m">
                       <span>{Math.round(e.conf * 100)}%</span>
-                      <span
-                        className={e.source === "gloss-order" ? "prov warn" : "prov"}
-                        title={
-                          e.source === "reordered"
-                            ? "Reordered into natural spoken word order"
-                            : e.source === "phrasebook"
-                              ? "From the hand-verified phrase table"
-                              : "Signs read in the order they were made — not reordered"
-                        }
-                      >
-                        {sourceLabel(e.source)}
-                      </span>
+                      {showDetails && (
+                        <span
+                          className={e.source === "gloss-order" ? "prov warn" : "prov"}
+                          title={
+                            e.source === "reordered"
+                              ? "Reordered into natural spoken word order"
+                              : e.source === "phrasebook"
+                                ? "From the hand-verified phrase table"
+                                : "Signs read in the order they were made - not reordered"
+                          }
+                        >
+                          {sourceLabel(e.source)}
+                        </span>
+                      )}
                       <span>{e.at}</span>
-                      <button className="replay" onClick={() => speak(e.text, lang)}>replay</button>
+                      <button className="replay" onClick={() => speak(e.text, lang)}>
+                        <Volume2 size={13} /> Replay
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -626,7 +767,7 @@ export default function SignBridge({
             </div>
           </section>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
