@@ -1,0 +1,124 @@
+{
+  "scope": {
+    "clips": 3003,
+    "classes": 188,
+    "groups": [
+      1108,
+      759,
+      1136
+    ],
+    "categories": [
+      "Adjectives",
+      "Animals",
+      "Clothes",
+      "Colours",
+      "Days_and_Time",
+      "Electronics",
+      "Greetings",
+      "Home",
+      "Jobs",
+      "Means_of_Transportation",
+      "People",
+      "Places",
+      "Pronouns",
+      "Society"
+    ],
+    "parts_extracted": 43,
+    "note": "43 of 46 Zenodo parts \u2014 Adjectives, Animals, Clothes, Colours, Days_and_Time, Electronics, Greetings, Home, Jobs, Means_of_Transportation, People, Places, Pronouns, Society. NOT the 264-class result."
+  },
+  "head_only": {
+    "per_group": [
+      {
+        "group": 0,
+        "top1": 0.4675090252707581,
+        "top5": 0.7138989169675091,
+        "close_top1": 0.453971119133574,
+        "close_top5": 0.7373646209386282
+      },
+      {
+        "group": 1,
+        "top1": 0.7127799736495388,
+        "top5": 0.8959156785243741,
+        "close_top1": 0.6811594202898551,
+        "close_top5": 0.8919631093544137
+      },
+      {
+        "group": 2,
+        "top1": 0.5677816901408451,
+        "top5": 0.8098591549295775,
+        "close_top1": 0.5686619718309859,
+        "close_top5": 0.8327464788732394
+      }
+    ],
+    "mean_far": 0.5826902296870474,
+    "mean_close": 0.5679308370848051
+  },
+  "full_face": {
+    "per_group": [
+      {
+        "group": 0,
+        "top1": 0.4711191335740072,
+        "top5": 0.7138989169675091,
+        "close_top1": 0.4666064981949459,
+        "close_top5": 0.7463898916967509
+      },
+      {
+        "group": 1,
+        "top1": 0.696969696969697,
+        "top5": 0.9117259552042161,
+        "close_top1": 0.6903820816864296,
+        "close_top5": 0.8972332015810277
+      },
+      {
+        "group": 2,
+        "top1": 0.5184859154929577,
+        "top5": 0.8063380281690141,
+        "close_top1": 0.5369718309859155,
+        "close_top5": 0.8221830985915493
+      }
+    ],
+    "mean_far": 0.5621915820122206,
+    "mean_close": 0.564653470289097
+  },
+  "sl_gcn": {
+    "per_group": [
+      {
+        "group": 0,
+        "top1": 0.44945848375451264,
+        "top5": 0.6913357400722022,
+        "close_top1": 0.41787003610108303,
+        "close_top5": 0.6994584837545126
+      },
+      {
+        "group": 1,
+        "top1": 0.6442687747035574,
+        "top5": 0.8722002635046113,
+        "close_top1": 0.6086956521739131,
+        "close_top5": 0.8629776021080369
+      },
+      {
+        "group": 2,
+        "top1": 0.4454225352112676,
+        "top5": 0.7262323943661971,
+        "close_top1": 0.45774647887323944,
+        "close_top5": 0.7323943661971831
+      }
+    ],
+    "mean_far": 0.5130499312231125,
+    "mean_close": 0.49477072238274517,
+    "delta_close_pp": -7.316011470205991,
+    "spread_pp": 3.0546823697858114,
+    "conclusive": true
+  },
+  "delta_pp": {
+    "far": -2.0498647674826787,
+    "close": -0.32773667957081143
+  },
+  "per_group_close_delta_pp": {
+    "0": 1.2635379061371854,
+    "1": 0.9222661396574461,
+    "2": -3.169014084507038
+  },
+  "between_group_spread_pp": 2.013911546137672,
+  "conclusive": false
+}
