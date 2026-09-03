@@ -14,7 +14,7 @@ const RIGHT_BASE = 44;
  * Draws a sign as an animated skeleton.
  *
  * The frame index lives in state and an interval advances it, rather than a
- * requestAnimationFrame closure. The RAF version drew nothing in practice —
+ * requestAnimationFrame closure. The RAF version drew nothing in practice , 
  * the callback's captured canvas context went stale across the re-renders that
  * the parent triggers while stepping through a sentence. Driving from state
  * means every frame change is an ordinary render and the draw always runs
@@ -76,7 +76,7 @@ export default function SignPlayer({
     }
 
     for (const base of [LEFT_BASE, RIGHT_BASE]) {
-      // an undetected hand is stored as zeros — do not draw a collapsed claw
+      // an undetected hand is stored as zeros, do not draw a collapsed claw
       const present = frame.slice(base, base + 21).some((p) => p[0] !== 0 || p[1] !== 0);
       if (!present) continue;
       ctx.strokeStyle = "rgba(229,140,85,.95)";
