@@ -10,6 +10,12 @@ import { extractFeatures, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame } from "./f
 import type { Prediction } from "./gate";
 import { calibrate, TEMPERATURE } from "./calibrate";
 
+// The exported graph has two outputs and tfjs does not promise their order, so
+// they are executed by name. Identity is the 83-way softmax, Identity_1 the
+// 256-d embedding feeding it. See train/export_tfjs.py.
+const OUT_PROBS = "Identity";
+const OUT_EMBED = "Identity_1";
+
 export class GlossClassifier {
   private model: tf.GraphModel | null = null;
   private labels: string[] = [];
@@ -33,9 +39,11 @@ export class GlossClassifier {
     // Warm up: the first predict() compiles shaders and can take ~100ms.
     // Doing it now means the first real sign is not the slow one.
     tf.tidy(() => {
-      (this.model as tf.GraphModel).predict(
-        tf.zeros([1, SEQ_LEN, N_POINTS * N_DIMS])
-      ) as tf.Tensor;
+      const warm = (this.model as tf.GraphModel).execute(
+        tf.zeros([1, SEQ_LEN, N_POINTS * N_DIMS]),
+        [OUT_PROBS, OUT_EMBED]
+      ) as tf.Tensor[];
+      warm.forEach(t => t.dispose());
     });
   }
 
@@ -51,7 +59,8 @@ export class GlossClassifier {
     const probs = tf.tidy(() => {
       const feats = extractFeatures(frames, aspect);
       const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
-      return (this.model!.predict(input) as tf.Tensor).dataSync();
+      const [p] = this.model!.execute(input, [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
+      return p.dataSync();
     });
     return Array.from(calibrate(probs, this.temperature))
       .map((conf, i) => ({ gloss: this.labels[i], conf }))
@@ -66,7 +75,8 @@ export class GlossClassifier {
     const probs = tf.tidy(() => {
       const feats = extractFeatures(frames, aspect);
       const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
-      return (this.model!.predict(input) as tf.Tensor).dataSync();
+      const [p] = this.model!.execute(input, [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
+      return p.dataSync();
     });
 
     // Calibrate before reading a confidence off this. Raw softmax here is not a
@@ -85,6 +95,37 @@ export class GlossClassifier {
     // and is surfaced in the UI, so an uncertain read is shown as uncertain
     // rather than silently discarded or confidently announced.
     return { gloss: this.labels[bestIdx], conf };
+  }
+
+  /**
+   * The 256-d embedding for a clip, L2-normalised.
+   *
+   * This is what the classifier sees just before it commits to one of its 83
+   * answers. Two clips of the same sign land near each other here even when
+   * the sign is not one of the 83, which is what lets lib/bank.ts recognise
+   * words the softmax has no output for. `aspect` = width / height, as ever.
+   */
+  embed(frames: PointFrame[], aspect: number): Float32Array | null {
+    if (!this.model || frames.length === 0) return null;
+    // not tf.tidy: it can only return tensors and containers, and this returns
+    // a plain array or null, so the two tensors are disposed by hand
+    const feats = extractFeatures(frames, aspect);
+    const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
+    let outs: tf.Tensor[] | null = null;
+    try {
+      outs = this.model.execute(input, [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
+      const v = outs[1].dataSync() as Float32Array;
+      let n = 0;
+      for (let i = 0; i < v.length; i++) n += v[i] * v[i];
+      n = Math.sqrt(n);
+      if (!(n > 1e-9)) return null;
+      const out = new Float32Array(v.length);
+      for (let i = 0; i < v.length; i++) out[i] = v[i] / n;
+      return out;
+    } finally {
+      input.dispose();
+      outs?.forEach(t => t.dispose());
+    }
   }
 
   dispose() { this.model?.dispose(); this.model = null; }
