@@ -105,6 +105,28 @@ part restarts from zero. The fetchers verify each file against the exact byte
 count from the API before promoting it, because a truncated archive otherwise
 fails much later, in unzip, after the download cost is already paid.
 
+## Deploying
+
+Two targets, one source. `app/src/lib/assetUrl.ts` resolves model paths against
+`import.meta.env.BASE_URL`, so the same code works at a domain root and under a
+subpath — absolute `/model/...` paths silently 404 under a subpath, and the
+symptom looks like a broken model rather than a broken path.
+
+**Vercel** — `vercel.json` at the repo root. The project's Root Directory is
+`app/`, so every command in it already runs from there: the build is
+`npm run build` and the output is `dist`, NOT `app/dist`. Two things that cost
+a deploy each and are easy to repeat:
+
+- a `cd app` in the build command fails with "No such file or directory",
+  because Vercel is already inside `app/`
+- `vercel.json` rejects unknown keys outright, including `"//"` comment keys —
+  the schema validation error is `should NOT have additional property`
+
+**GitHub Pages** — `.github/workflows/deploy.yml`, builds with
+`DEPLOY_BASE=/<repo>/` and copies `index.html` to `404.html` so client-side
+routes survive a hard refresh. Enable once under Settings -> Pages -> Source:
+GitHub Actions.
+
 ## Where to read next
 
 - **`ARCHITECTURE.md`** — every artefact, shape, and measured number
