@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import SignPlayer from "./SignPlayer";
 import { createRecogniser, textToGlosses, type SignLibrary } from "../lib/reverse";
 import { LANGUAGES, type LangCode } from "../lib/speech";
+import { asset } from "../lib/assetUrl";
 
 /**
  * Direction B — the hearing person's half of the conversation.
@@ -31,7 +32,7 @@ export default function HearingSide({
   const timerRef = useRef<number>(0);
 
   useEffect(() => {
-    fetch("/model/_signs.json")
+    fetch(asset("/model/_signs.json"))
       .then((r) => r.json())
       .then(setLibrary)
       .catch(() => setLibrary({}));

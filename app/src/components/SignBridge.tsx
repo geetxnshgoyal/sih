@@ -7,6 +7,7 @@ import { SignSegmenter } from "../lib/segment";
 import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
+import { asset } from "../lib/assetUrl";
 
 /** Replay still fills a buffer; the live path is driven by the segmenter. */
 const BUFFER = SEQ_LEN * 2;
@@ -88,7 +89,7 @@ export default function SignBridge({
         setModelError(e instanceof Error ? e.message : String(e));
         setModelState("error");
       });
-    fetch("/model/_framing.json").then((r) => r.json())
+    fetch(asset("/model/_framing.json")).then((r) => r.json())
       .then((f) => { framingRef.current = f; })
       .catch(() => { /* diagnostics are optional */ });
     // Precomputed gloss reorderings. A missing table is a supported state —
@@ -261,7 +262,7 @@ export default function SignBridge({
     const clips: {
       true: string; pred: string; conf: number; correct: boolean;
       frames: number[][][];
-    }[] = await (await fetch("/model/_demo.json")).json();
+    }[] = await (await fetch(asset("/model/_demo.json"))).json();
 
     const cv = canvasRef.current!;
     cv.width = 960; cv.height = 540;

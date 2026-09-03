@@ -4,6 +4,12 @@ import { defineConfig } from 'vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Served from a subpath on GitHub Pages (/<repo>/), from the root in dev and
+  // on a root-domain host. Vite bakes this into import.meta.env.BASE_URL, which
+  // lib/assetUrl.ts uses to resolve the model files — so the same source builds
+  // correctly for either without a code change.
+  base: process.env.DEPLOY_BASE ?? "/",
+
   // HTTPS is not optional here, even on a LAN.
   //
   // getUserMedia only runs in a "secure context". Browsers exempt localhost, so

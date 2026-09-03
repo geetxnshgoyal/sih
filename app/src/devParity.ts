@@ -9,12 +9,13 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import { extractFeatures, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame } from "./lib/features";
+import { asset } from "./lib/assetUrl";
 
 export async function checkModelParity() {
   try {
     const [ref, labels, model] = await Promise.all([
-      fetch("/model/_ref.json").then((r) => r.json()),
-      fetch("/model/labels.json").then((r) => r.json()) as Promise<string[]>,
+      fetch(asset("/model/_ref.json")).then((r) => r.json()),
+      fetch(asset("/model/labels.json")).then((r) => r.json()) as Promise<string[]>,
       tf.loadGraphModel("/model/model.json"),
     ]);
 
@@ -50,8 +51,8 @@ export async function checkModelParity() {
 export async function checkClipParity() {
   try {
     const [clips, labels, model] = await Promise.all([
-      fetch("/model/_demo.json").then((r) => r.json()),
-      fetch("/model/labels.json").then((r) => r.json()) as Promise<string[]>,
+      fetch(asset("/model/_demo.json")).then((r) => r.json()),
+      fetch(asset("/model/labels.json")).then((r) => r.json()) as Promise<string[]>,
       tf.loadGraphModel("/model/model.json"),
     ]);
     console.log("[clip] name              py-pred          ts-pred          py-conf ts-conf");
