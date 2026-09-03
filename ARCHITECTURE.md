@@ -985,6 +985,96 @@ human-written English, comparable in size to the German benchmark the field is
 built on, assembled from a source nobody appears to have used this way. It is
 gitignored because it derives from ISH News's work; see `docs/outreach-ish.md`.
 
+## 12.6 One-shot retrieval: recognising words with one clip each
+
+The classifier ships 83 answers. Pain, please, help, water, blood, bandage and
+injection are not among them, and could not be added by training: every source
+that has those words has exactly one clip of each, and a class with a single
+example cannot be both taught and examined.
+
+### The data that closed the gap
+
+NCERT, the school curriculum body, publishes two single-word ISL series under
+two title formats, `<word> | ISL` and `ISL <word>`. 406 clips, 400 words, about
+four seconds each. `train/fetch_ncert.py` ingests both formats and rejects the
+lesson recordings on the same channel, which run 20 to 60 minutes and are whole
+school periods rather than single signs.
+
+It supplies body pain, please, help, water, blood, bandage, injection, sorry,
+stop, food, nurse, emergency, operation and intensive care unit. Every one of
+those had been checked for and not found in INCLUDE, CISLR, the Government
+dictionary, MS-ASL, WLASL, AUTSL, ISH News and ISH Shiksha.
+
+Being NCERT also settles provenance: a public education release from a
+government body, rather than a private channel scraped without asking.
+
+### The shape of the problem
+
+Two kinds of corpus exist here and neither is sufficient alone:
+
+| | vocabulary | clips per word |
+|---|---|---|
+| INCLUDE + CISLR | 264 | about 15 |
+| Government dictionary | 13,331 | 1 |
+| NCERT | 400 | 1 |
+| ISH Shiksha | 448 | 1 |
+
+Deep and narrow trains a classifier. Shallow and wide cannot, but it does not
+have to: retrieval needs one reference per word, not fifteen. Embed the
+reference, embed the live sign, take the nearest neighbour by cosine.
+
+### Result
+
+`train/eval_deployed_bank.py`, leave-one-clip-out with each query removed from
+its own reference vector, over the 116-word bank that ships:
+
+| query | top-1 | top-5 | n |
+|---|---|---|---|
+| any source | 56.6% | 82.4% | 244 |
+| from a corpus no reference is in | 46.0% | 72.0% | 100 |
+
+against a 0.86% chance rate. The second row is the one to quote.
+
+Bank size dominates, which is why the bank is curated rather than the whole
+dictionary. Same embedding, `train/retrieval_eval.py`:
+
+| bank | top-1 | top-5 |
+|---|---|---|
+| 13,648 words | 20.8% | 30.2% |
+| 105 words | 46.5% | 64.5% |
+
+### Two negative results
+
+**ArcFace metric learning made it worse where it counts.** Training the
+embedding with an additive angular margin on INCLUDE and CISLR
+(`train/train_metric.py`) reached 56.3% top-1 on 44 classes held out entirely
+from training, well above what the classifier embedding manages within that
+corpus. On the dictionary corpora the same encoder scored 29.6% top-1 against
+the classifier embedding's 48.1%. Holding out words is not holding out
+recording conditions, and only the second is what deployment faces. The margin
+sharpened the embedding into its training domain. Do not repeat this without
+cross-domain positive pairs in the objective.
+
+**The first measurement was small-sample optimism.** Government-dictionary
+references against NCERT queries read 73.9% top-1 on n=23. The leave-one-out
+run over n=100 says 46.0%. The first number is superseded and should not be
+quoted.
+
+### Limits that the UI does not show
+
+1. Every reference is a studio clip from a government or education channel. A
+   live webcam in a hospital corridor is a fourth domain that none of these
+   measurements cover, and it is likely worse than they suggest.
+2. The cross-source figures lean on NCERT queries against Government dictionary
+   references. Both are official productions and may share studio conditions.
+3. 53 of the 116 banked words exist as a single clip in the world, including
+   pain, yes, no, fever, emergency and injury. They are retrievable in principle
+   and were not tested at all.
+
+Which is why `lib/bank.ts` renders a dashed shortlist labelled as a dictionary
+match, runs only when the classifier is not confident, and never speaks on its
+own. The phrase board remains the exact path.
+
 ## 13. Remaining work
 
 Reordered 7 Sept. Most of what this section used to list has since been done or
@@ -993,10 +1083,15 @@ still a modelling problem.
 
 ### Do now: highest value per hour
 
-1. **Record `pain`, `yes`, `no` and `please`.** These four exist in NO public
-   source. Checked: INCLUDE, CISLR, the Government of India dictionary, MS-ASL,
-   WLASL, AUTSL, ISH News and ISH Shiksha. They are the words a patient needs
-   most, and recording is the only route. The path is now proven end to end,
+1. **Record `pain`, `yes` and `no`.** Partly overtaken by NCERT (see 12.6),
+   which supplied `please`, `help`, `water`, `blood`, `bandage`, `injection`
+   and seven more, and by retrieval, which needs one clip per word rather than
+   fifteen. What remains is that `pain`, `yes` and `no` have exactly one clip
+   each in existence, so they are in the bank, retrievable in principle, and
+   have never been tested even once. Recording is what turns them from
+   plausible into measured, and it is the only route: checked in INCLUDE,
+   CISLR, the Government dictionary, MS-ASL, WLASL, AUTSL, ISH News, ISH
+   Shiksha and NCERT. The path is proven end to end,
    not merely wired: a simulated export of 36 takes reached
    `dataset_merged.npz` as its own signer group, so leave-one-group-out reports
    accuracy on the person who recorded rather than the corpus average.
@@ -1016,6 +1111,7 @@ still a modelling problem.
 | tried | result |
 |---|---|
 | Cutting the vocabulary, 264 to 83 | **the only large win: +8.4** |
+| ArcFace metric learning for retrieval | better within corpus, **worse across it: 29.6% vs 48.1%** |
 | Borrowed ASL pretraining | **+18.4 over no pretraining** |
 | Stacking SSL then ASL encoders | +3.1 |
 | CISLR, 610 new clips | +3.4 |
