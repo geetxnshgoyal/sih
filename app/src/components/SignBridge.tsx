@@ -8,6 +8,7 @@ import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
 import { asset } from "../lib/assetUrl";
+import { certainty, UNCERTAIN } from "../lib/calibrate";
 
 /** Replay still fills a buffer; the live path is driven by the segmenter. */
 const BUFFER = SEQ_LEN * 2;
@@ -442,13 +443,29 @@ export default function SignBridge({
               <div className="hud">
                 <div>
                   <div className="hud-k">Detecting</div>
-                  <div className={`gloss ${live.gloss ? "" : "none"}`}>
-                    {live.gloss ?? (diag && !diag.left && !diag.right ? "hands not visible" : "no sign")}
+                  {/* Three bands, not one floor. The classifier no longer drops
+                      low-confidence reads silently, so an uncertain one is shown
+                      AND marked — the clinician can confirm it instead of the
+                      app either announcing a guess or going mysteriously quiet. */}
+                  <div className={`gloss ${live.gloss ? "" : "none"} ${
+                    live.gloss ? certainty(live.conf) : ""
+                  }`}>
+                    {live.gloss
+                      ? (certainty(live.conf) === "unusable" ? "unclear — sign again" : live.gloss)
+                      : (diag && !diag.left && !diag.right ? "hands not visible" : "no sign")}
                   </div>
+                  {live.gloss && certainty(live.conf) === "uncertain" && (
+                    <div className="hud-confirm">
+                      {Math.round(live.conf * 100)}% — please confirm before acting
+                    </div>
+                  )}
                   <div className="meter">
                     <i style={{
                       width: `${Math.round(live.conf * 100)}%`,
-                      background: live.conf >= FLOOR ? "var(--sign)" : "var(--warn)",
+                      background:
+                        live.conf >= FLOOR ? "var(--sign)"
+                        : live.conf >= UNCERTAIN ? "var(--warn)"
+                        : "var(--line-2)",
                     }} />
                   </div>
                   {notice && <div className="hud-notice">{notice}</div>}
