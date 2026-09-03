@@ -6,7 +6,29 @@
  * this logic is model-independent by design.
  */
 
-export const FLOOR = 0.75;      // below this, say nothing
+/**
+ * Below this, say nothing aloud.
+ *
+ * This is now a CALIBRATED confidence (see lib/calibrate.ts), which changes
+ * what the number means. Measured on a held-out signer group, after
+ * calibration:
+ *
+ *   floor   speaks    and is right
+ *    0.30     49%        60.2%
+ *    0.50     23%        75.8%
+ *    0.70     10%        84.3%
+ *    0.90      2%        97.4%
+ *
+ * 0.70 is chosen deliberately: it speaks about one segment in ten and is right
+ * roughly five times in six. The same 0.75 applied to UNCALIBRATED confidence
+ * let 54% of segments through at 57.9% correct — i.e. 42% of everything spoken
+ * aloud was wrong. In a room where symptoms are being recorded, being quiet is
+ * cheap and being confidently wrong is not.
+ *
+ * Readings between UNCERTAIN and this are not discarded — the UI shows them
+ * marked for confirmation rather than speaking them.
+ */
+export const FLOOR = 0.70;
 export const WINDOW = 14;       // frames considered
 export const NEEDED = 10;       // of WINDOW that must agree
 export const COOLDOWN = 1800;   // ms before the same gloss may repeat
