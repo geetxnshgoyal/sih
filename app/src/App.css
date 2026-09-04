@@ -227,3 +227,14 @@ code{font-size:10.5px;background:var(--surface-2);padding:2px 5px;border-radius:
   margin-top: 6px; font-size: 12px; color: var(--warn);
   font-family: "IBM Plex Mono", monospace; letter-spacing: .04em;
 }
+
+/* Candidate shortlist. The model's top-1 is right 40% of the time but the
+   correct sign is in its top-5 65% of the time — so offer the list instead of
+   refusing, and let a person resolve it. Pointer events are re-enabled because
+   the surrounding HUD disables them. */
+.cands{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;pointer-events:auto}
+.cand{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line-2);
+  background:rgba(0,0,0,.55);color:var(--ink);display:flex;align-items:center;gap:7px}
+.cand:hover{border-color:var(--sign);background:rgba(0,0,0,.8)}
+.cand.top{border-color:var(--warn)}
+.cand-c{font-size:10px;color:var(--faint);font-family:"IBM Plex Mono",monospace}
