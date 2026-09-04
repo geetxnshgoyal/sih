@@ -32,9 +32,16 @@ Accuracy is ~90% when the same people appear in training and test, and **56.8%**
 when they do not. That gap is the whole problem, and it is a data problem:
 INCLUDE is 7 signers from one school in Chennai, one room, one camera distance.
 
-We measured what would close it. Two architecture experiments (a 468-point face
-mesh, and an SL-GCN graph network) both came back negative, and the ablation's
-own conclusion was:
+We measured what would close it. Two architecture experiments both came back
+negative, on identical clips, signers, seed and protocol:
+
+| arm | close | vs baseline |
+|---|---|---|
+| Conv1D, 65pt (baseline) | **56.8%** | — |
+| + 468-point face mesh | 56.5% | -0.3 pp, inconclusive |
+| SL-GCN graph network | 49.5% | **-7.3 pp, loses on all 3 groups** |
+
+The ablation's own conclusion was:
 
 > *More GROUPS, not more categories, is what would settle it.*
 

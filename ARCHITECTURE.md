@@ -14,7 +14,7 @@ This document is the precise reference: where every artefact lives, what shape i
 has, and what is verified versus assumed. `HANDOFF.md` covers *why* decisions were
 made and which bugs cost time — read that for rationale, this for facts.
 
-Last audited: **30 August 2026**.
+Last audited: **2 September 2026**.
 
 ---
 
@@ -97,13 +97,18 @@ question as a statement, which is a correctness failure, not a polish one.
 So the raw video (Zenodo 4010759, **56.8 GB, 46 parts**) is being re-extracted with
 full Holistic to recover the 468-point mesh.
 
-**Status as of 30 Aug:**
+**Status: COMPLETE.**
 
 | | |
 |---|---|
-| Parts extracted | **8 of 46** (all Adjectives) |
-| Clips with face mesh | **687 of 4,284 — 16%** |
-| Currently downloading | `Adjectives_1of8.zip` (partial), then `Animals_1of2.zip` |
+| Downloaded | **56.8 / 56.8 GB — all 44 archives** |
+| Clips with face mesh | **~4,280 of 4,284** (a couple of source videos are unreadable) |
+| Categories | all 15 |
+
+Having finished it, the honest note is that it did not change the answer: §9
+shows the face mesh does not improve recognition. The extraction was still worth
+doing — the question could not be settled without it — but `FACE_MODE` stays
+`HEAD_ONLY`.
 
 Disk is safe: `run_extract_loop.sh` deletes each ~1.3 GB archive immediately after
 pulling landmarks (104 clips → ~38 MB), so peak usage stays at roughly one part.
@@ -122,7 +127,13 @@ not part of any current result. Do not cite them as ISL data.
   "Monsoon". It has no *yes*, *no*, *please*, *help*, *where*. This is why the
   demo's conversation mode uses a separate curated phrase set.
 - **FDMSE-ISL** (40k clips) — no public download, author request only.
-- **CISLR** — gated on Hugging Face, requires accepting terms.
+- **CISLR** — gated on Hugging Face (`gated: auto`, AFL-3.0). **71 signers**,
+  ~4,700 words, only 1.59 GB, and it ships pre-extracted I3D features alongside
+  the video. This is the single most valuable dataset available to this project,
+  because §9 concluded the bottleneck is signer diversity and CISLR is ~10x
+  INCLUDE's. `data/fetch_cislr.sh` is written and tested; it needs a human to
+  accept the licence once (which includes agreeing to share contact details) and
+  supply `HF_TOKEN`.
 
 ### 2.5 Known bias — state this in the pitch
 
@@ -228,9 +239,24 @@ groups is itself a finding worth showing.
 
 264 classes, chance **0.4%**.
 
-> **Report 52%, not 90%.** The random split inflates by ~38 points because the same
-> person appears on both sides. Explaining that gap is the most credible thing the
-> team can say — most competing projects quote the inflated figure.
+> **Report the held-out number, not the random split.** The random split inflates
+> by ~38 points because the same person appears on both sides. Explaining that gap
+> is the most credible thing the team can say — most competing projects quote the
+> inflated figure.
+
+**Which held-out number, though — they are not interchangeable.** Three figures
+appear in this document and they measure different things:
+
+| figure | scope | what it is |
+|---|---|---|
+| **52.0%** | 264 classes, 4,284 clips, mean of 3 groups | the headline model, §5 |
+| **56.8%** | 188 classes, 3,003 clips, mean of 3 groups | the ablation baseline, §9 |
+| **40.4%** | 264 classes, **group 0 only** | the calibration model, §14 |
+
+Higher class count is harder, and group 0 is the hardest of the three groups
+for every arm ever run. So 40.4% is not a contradiction of 52.0% — it is the
+worst group at the full class count. Quote **52%** as the headline and say
+which protocol produced it.
 
 ### Three bugs that made the live camera path fail
 
@@ -370,7 +396,45 @@ These are real and should be stated rather than hidden:
 
 ---
 
-## 9. FULL_FACE — the ablation
+## 9. The ablation — three arms, two settled questions
+
+Two architecture changes were proposed and both were measured against the same
+baseline, on the same clips, signers, classes, seed and augmentation draws. Only
+the thing under test varied.
+
+### Final result (3,003 clips, 188 classes, chance 0.5%)
+
+| arm | far | close | vs baseline (close) |
+|---|---|---|---|
+| **HEAD_ONLY** Conv1D, 65pt | 58.2% | **56.8%** | baseline |
+| **FULL_FACE** Conv1D, 113pt | 56.2% | 56.5% | **-0.3 pp** |
+| **SL-GCN** graph, 65pt | 51.3% | 49.5% | **-7.3 pp** |
+
+**FULL_FACE: inconclusive, and that is now a strong signal.** The delta is
+smaller than the 2.0 pp between-group spread, so three groups cannot separate
+the arms. But this run *includes* Pronouns and Society — the categories where
+ISL marks questions and negation — so it is no longer a vocabulary gap. Across
+three runs as data grew 685 -> 1,441 -> 3,003 clips the close delta went
+**+1.5 -> -1.4 -> -0.3 pp**: the sign flipped twice and the magnitude shrank.
+A real effect does not behave that way. **Do not set `FACE_MODE = "FULL_FACE"`.**
+
+**SL-GCN: conclusive, and it loses.** -7.3 pp against a 3.1 pp spread, and it
+lost on *every* group (-3.6, -7.2, -11.1 pp). Held at 0.90x the baseline's
+parameters, so this is not a capacity artefact. AI4Bharat report 93.5% for
+SL-GCN on INCLUDE, but on a same-signer split; under a signer-disjoint protocol
+on this data the graph architecture does not transfer. **Keep the Conv1D.**
+
+Both arms point the same way, and the harness says so itself:
+
+> *More GROUPS, not more categories, is what would settle it.*
+
+That is the finding of this whole section: the bottleneck is signer diversity,
+not architecture. Two independent attempts to improve the model failed; the
+measurement kept pointing at the data.
+
+---
+
+### Original scope note — FULL_FACE
 
 `FACE_MODE = "FULL_FACE"` widens the input 65 → 113 points. There is a
 linguistic reason to expect a gain (eyebrows and mouth carry ISL's question and
@@ -614,7 +678,58 @@ but they are the list of signs worth recording first for the reverse direction.
 
 ---
 
-## 12. Remaining work
+## 12. Confidence calibration — the app was confidently wrong
+
+Softmax confidence on this model is **not a probability**. Measured on 1,566
+clips from a signer group the model never trained on, at close range:
+
+| the model says | it is actually right |
+|---|---|
+| 0.90 | **48%** |
+| 0.99 | **70%** |
+
+Expected Calibration Error: **34.1 pp**. At the old gate (`FLOOR = 0.75`,
+uncalibrated) 54% of segments passed and only 57.9% of those were correct — so
+**42% of everything spoken aloud was wrong**, stated confidently, to a patient.
+
+### Temperature scaling
+
+Divide the logits by a single scalar `T` before softmax, fitted offline by
+minimising NLL on held-out data. `T = 2.69`.
+
+| | before | after |
+|---|---|---|
+| ECE | 34.1 pp | **5.0 pp** |
+| says 0.90, is right | 48% | **91%** |
+| top-1 | 40.4% | **40.4%** — unchanged |
+
+Accuracy cannot change: dividing every logit by the same positive number
+preserves their order. **The model is no better; it now admits it.** That is
+what makes a threshold meaningful.
+
+The shipped graph model has softmax baked into its final layer, so raw logits
+are unavailable at runtime. `log(p)` recovers them up to a constant and softmax
+is invariant to that constant, so re-softmaxing `log(p)/T` is exactly
+equivalent. Verified against the Python implementation on 200 samples: max
+confidence error 7.3e-3 (float32 quantisation) and **zero argmax mismatches**.
+
+### Three bands, not one floor
+
+| calibrated conf | behaviour | speaks | and is right |
+|---|---|---|---|
+| >= 0.70 | spoken aloud | ~10% | 84.3% |
+| >= 0.40 | shown, "please confirm" | — | — |
+| < 0.40 | "unclear — sign again" | — | — |
+
+A single floor forces a bad trade: high enough to trust and the app is silent
+nine times in ten; low enough to feel responsive and two in five are wrong.
+
+`app/src/lib/calibrate.ts`. **Refit `T` after any retrain** — it is a property of
+the trained weights, not of the architecture.
+
+---
+
+## 13. Remaining work
 
 ### Running in background (started 30 Aug)
 
@@ -656,7 +771,7 @@ but they are the list of signs worth recording first for the reverse direction.
 
 ---
 
-## 13. Invariants — breaking these silently destroys accuracy
+## 14. Invariants — breaking these silently destroys accuracy
 
 1. **`train/features.py` ↔ `app/src/lib/features.ts` stay bit-identical.**
    Run `test_parity.py` after touching either.
