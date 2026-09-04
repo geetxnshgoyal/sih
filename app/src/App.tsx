@@ -2,9 +2,8 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import SignBridge from "./components/SignBridge";
 import HearingSide from "./components/HearingSide";
 import Recorder from "./components/Recorder";
-import QuickPhrases from "./components/QuickPhrases";
+import PhraseBoard from "./components/PhraseBoard";
 import { LANGUAGES, speak, type LangCode } from "./lib/speech";
-import { assembleWithSource } from "./lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "./lib/glossTranslate";
 import {
   DOMAIN_LIST,
@@ -14,7 +13,6 @@ import {
   saveDomain,
   subscribeDomain,
   type DomainId,
-  type QuickPhrase,
 } from "./lib/domains";
 import "./App.css";
 
@@ -37,12 +35,11 @@ export default function App() {
 
   const pickDomain = useCallback((id: DomainId) => saveDomain(id), []);
 
-  /** Speak a tapped phrase through the same path a recognised sign takes. */
+  /** Speak a tapped phrase. No recognition, no threshold, no guessing. */
   const say = useCallback(
-    (q: QuickPhrase) => {
-      const { text, source } = assembleWithSource(q.glosses, lang);
+    (text: string) => {
       speak(text, lang);
-      setSpoken({ text, source });
+      setSpoken({ text, source: "phrasebook" });
     },
     [lang]
   );
@@ -96,7 +93,7 @@ export default function App() {
       ) : mode === "sign" ? (
         <>
           <SignBridge lang={lang} onLang={setLang} />
-          <QuickPhrases domain={domain} onSay={say} />
+          <PhraseBoard domain={domainId} lang={lang} onSay={say} />
           {spoken && (
             <p className="spoken-note">
               spoke: “{spoken.text}”
@@ -110,7 +107,7 @@ export default function App() {
         <div className="conversation">
           <div className="half deaf">
             <SignBridge lang={lang} onLang={setLang} compact />
-            <QuickPhrases domain={domain} onSay={say} />
+            <PhraseBoard domain={domainId} lang={lang} onSay={say} />
             {spoken && (
             <p className="spoken-note">
               spoke: “{spoken.text}”

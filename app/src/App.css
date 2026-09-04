@@ -238,3 +238,29 @@ code{font-size:10.5px;background:var(--surface-2);padding:2px 5px;border-radius:
 .cand:hover{border-color:var(--sign);background:rgba(0,0,0,.8)}
 .cand.top{border-color:var(--warn)}
 .cand-c{font-size:10px;color:var(--faint);font-family:"IBM Plex Mono",monospace}
+
+/* Phrase board — the reliable path. Sized for one-handed tapping on a tablet
+   while the other hand is holding something, or shaking. */
+.phraseboard{margin-top:14px}
+.pb-search{display:flex;gap:8px;padding:12px 14px 4px}
+.pb-search input{flex:1;font:inherit;font-size:14px;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line-2);border-radius:9px;padding:10px 12px}
+.pb-search input::placeholder{color:var(--faint)}
+.pb-clear{font-size:11px;padding:6px 12px}
+.pb-cat{border-top:1px solid var(--line)}
+.pb-cat.always{border-top:none}
+.pb-cat-h{display:flex;width:100%;justify-content:space-between;align-items:center;
+  padding:12px 16px;background:transparent;border:none;border-radius:0;
+  font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  font-family:"IBM Plex Mono",monospace}
+.pb-cat-h:hover{background:var(--surface-2);color:var(--muted)}
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:8px;padding:4px 14px 14px}
+.pb-item{min-height:54px;padding:10px 12px;text-align:left;font-size:13.5px;
+  font-weight:600;line-height:1.3;border-radius:10px;
+  border:1px solid var(--line-2);background:var(--surface-2)}
+.pb-item:hover{border-color:var(--sign);background:#1E2A25}
+/* Urgent phrases must be findable without reading. Colour AND weight, because
+   colour alone fails for a signer who is also colour-blind. */
+.pb-item.urgent{border-color:#5A3320;background:#20160F;color:#F0C68A}
+.pb-item.urgent:hover{border-color:#E0A21C;background:#2A1D12}
