@@ -12,6 +12,10 @@
  * build works at the root and another at a subpath with no code change.
  */
 export function asset(path: string): string {
-  const base = import.meta.env.BASE_URL || "/";
+  // import.meta.env is substituted by Vite at build time and is always present
+  // in the browser. It is NOT present under plain Node, so guard it — otherwise
+  // this module cannot be unit-tested without a bundler, and a helper that can
+  // only run inside the app is a helper nobody tests.
+  const base = import.meta.env?.BASE_URL || "/";
   return `${base.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
 }

@@ -17,6 +17,7 @@
  * and no network call ever reaches the browser. See that file for why.
  */
 import { phraseFor, type LangCode } from "./speech";
+import { asset } from "./assetUrl";
 
 export type TranslationSource =
   /** Precomputed reordering. Real translation — safe to present as one. */
@@ -56,7 +57,11 @@ let loadFailed = false;
  * every lookup degrades to the phrasebook path if the table is missing, which
  * is exactly the pre-existing behaviour.
  */
-export async function loadGlossTable(url = "/model/_utterances.json"): Promise<boolean> {
+// asset() is required here, not a plain absolute path. Under a subpath deploy
+// (GitHub Pages serves from /<repo>/) "/model/..." resolves to the domain root
+// and 404s — the table silently never loads and every phrase falls back to
+// gloss order, which looks like the generator failed rather than the path.
+export async function loadGlossTable(url = asset("/model/_utterances.json")): Promise<boolean> {
   if (table) return true;
   if (loadFailed) return false;
   try {
