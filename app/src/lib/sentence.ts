@@ -28,6 +28,15 @@ export type Utterance = {
   glosses: string[];
   text: string;
   at: string;
+  /**
+   * Confidence of the LEAST certain sign in the utterance.
+   *
+   * Minimum, not mean: an utterance is only as trustworthy as its weakest
+   * component. "I need PARACETAMOL" where the drug name was a 35% guess is a
+   * 35% utterance, however sure the model was about "I" and "need". Averaging
+   * would hide exactly the sign that matters most.
+   */
+  conf: number;
 };
 
 /**
@@ -101,17 +110,27 @@ export function assemble(glosses: string[], lang: LangCode): string {
  */
 export class UtteranceBuilder {
   private glosses: string[] = [];
+  private confs: number[] = [];
   private lastAt = 0;
 
   get pending(): string[] { return [...this.glosses]; }
 
-  /** Returns a completed utterance if this sign started a new one. */
-  add(gloss: string, now: number): Utterance | null {
+  /**
+   * Returns a completed utterance if this sign started a new one.
+   *
+   * `conf` is required. It used to be dropped here, and the closing path then
+   * emitted a hardcoded 1 — so every finished utterance displayed 100% no
+   * matter how uncertain its signs were, while the live readout showed the
+   * honest number. That is the worst possible combination: the transient view
+   * was truthful and the permanent record was not.
+   */
+  add(gloss: string, now: number, conf: number): Utterance | null {
     let finished: Utterance | null = null;
     if (this.glosses.length && now - this.lastAt > UTTERANCE_GAP_MS) {
       finished = this.flushAt(new Date(this.lastAt));
     }
     this.glosses.push(gloss);
+    this.confs.push(conf);
     this.lastAt = now;
     return finished;
   }
@@ -125,12 +144,15 @@ export class UtteranceBuilder {
 
   private flushAt(when: Date): Utterance {
     const glosses = this.glosses;
+    const conf = this.confs.length ? Math.min(...this.confs) : 0;
     this.glosses = [];
-    return { glosses, text: "", at: when.toLocaleTimeString() };
+    this.confs = [];
+    return { glosses, text: "", at: when.toLocaleTimeString(), conf };
   }
 
   reset() {
     this.glosses = [];
+    this.confs = [];
     this.lastAt = 0;
   }
 }
