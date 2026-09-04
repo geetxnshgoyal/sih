@@ -2,7 +2,7 @@
  * Stability gate. Silence beats a wrong word.
  *
  * A prediction only fires when it has held steady across a window of frames
- * AND cleared the confidence floor. Carried over unchanged from Phase 0 —
+ * AND cleared the confidence floor. Carried over unchanged from Phase 0 , 
  * this logic is model-independent by design.
  */
 
@@ -21,11 +21,11 @@
  *
  * 0.70 is chosen deliberately: it speaks about one segment in ten and is right
  * roughly five times in six. The same 0.75 applied to UNCALIBRATED confidence
- * let 54% of segments through at 57.9% correct — i.e. 42% of everything spoken
+ * let 54% of segments through at 57.9% correct, i.e. 42% of everything spoken
  * aloud was wrong. In a room where symptoms are being recorded, being quiet is
  * cheap and being confidently wrong is not.
  *
- * Readings between UNCERTAIN and this are not discarded — the UI shows them
+ * Readings between UNCERTAIN and this are not discarded, the UI shows them
  * marked for confirmation rather than speaking them.
  */
 export const FLOOR = 0.70;
@@ -42,7 +42,7 @@ export class StabilityGate {
    *
    * The N-of-M window below exists to reject flicker when classifying a rolling
    * buffer many times a second. Once a segmenter hands over a single trimmed
-   * sign, that job is already done — requiring ten agreeing frames would mean
+   * sign, that job is already done, requiring ten agreeing frames would mean
    * nothing ever fires, since there is only one prediction per sign. The
    * confidence floor and the repeat cooldown still apply.
    */
