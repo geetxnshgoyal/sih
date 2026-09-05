@@ -22,17 +22,21 @@ Last audited: **2 September 2026**.
 
 ```
 ~/sih/
-├── data/                   6.6 GB   all corpora and the preprocessed tensor
+├── data/                   8.5 GB   all corpora and the preprocessed tensor
 │   ├── Pose_Signs/         640 MB   INCLUDE pose release — TRAINS THE CURRENT MODEL
 │   ├── video_landmarks/    231 MB   468-pt face-mesh re-extraction — IN PROGRESS
 │   ├── video/              143 MB   raw INCLUDE video, transient (deleted after extract)
 │   ├── poses/              5.0 GB   AUTSL, MS-ASL, WLASL, GSL, LSA64 — NOT ISL, unused
 │   ├── INCLUDE-poses.zip   632 MB   original archive of Pose_Signs
-│   ├── dataset.npz          83 MB   preprocessed training tensor
+│   ├── cislr/              1.5 GB   CISLR v1.5-a — SECOND CORPUS, gated (§2.2)
+│   ├── cislr_landmarks/    319 MB   612 CISLR clips re-extracted to landmarks
+│   ├── dataset.npz          83 MB   preprocessed training tensor (INCLUDE only)
+│   ├── dataset_merged.npz   98 MB   INCLUDE + CISLR, carries a `corpus` array
 │   ├── signer_index.json   384 KB   clip -> {class, signer group}
 │   └── signer_profiles.npz 504 KB   body-ratio clusters used to derive groups
 ├── models/                  39 MB   checkpoints, labels, metrics, holistic .task
-├── train/                  156 KB   the Python pipeline (13 scripts)
+├── run/                             job state and results (cislr_eval.json)
+├── train/                  180 KB   the Python pipeline (21 scripts)
 ├── app/                    438 MB   Vite + React 19 front end (node_modules included)
 ├── phase0/                          early spike, superseded
 ├── HANDOFF.md                       rationale, bug history, pitch framing
@@ -86,7 +90,57 @@ Per-clip pickle schema (verified):
 > These are third-party pickles. Load them only with the restricted unpickler used
 > throughout `train/` — arbitrary pickles execute code on load.
 
-### 2.2 The face-mesh re-extraction (blocks FULL_FACE)
+### 2.2 CISLR — the second corpus (added 5 Sept)
+
+**`data/cislr/`** — CISLR v1.5-a, Exploration-Lab. Gated on Hugging Face,
+AFL-3.0, licence accepted per-account. `data/fetch_cislr.sh` (`FETCH_ALL=1`)
+pulls the 1.1 GB video zip; `data/` is gitignored, so the fetch script is the
+reproduction path.
+
+- **7,050 clips, 4,765 glosses, 58 categories**
+- **clips per gloss: min 1, median 1, max 13**
+
+That median is the whole constraint. CISLR is a *retrieval* corpus — "is this
+sign in that video?" — not a classification corpus. A 4,765-class model cannot
+be trained on one example each, and adding 4,545 single-example glosses to
+`labels.json` would manufacture words the model claims to know and cannot
+recognise. We import **none** of them.
+
+What we do import is the overlap:
+
+- **612 clips carry 220 of our 264 labels** (median 2 clips per class)
+- all eight `UNREACHABLE` glosses of §2.4 are present in CISLR
+- 610 survive preprocessing -> **4,894 clips total, 7 signer groups**
+
+Two ingestion details that are load-bearing:
+
+**Trimming.** CISLR is framed tighter than INCLUDE — hands at rest sit *below
+the crop* — and clips run longer, so roughly half of each is lead-in and
+lead-out at rest. `features.resample` strides over the whole clip, so untrimmed
+CISLR spends half its 32 frames on stillness where INCLUDE spends almost none,
+and the model would learn "long still lead-in" as a corpus tell rather than a
+sign. `preprocess_cislr.py` cuts to the hand-visible span:
+
+| | untrimmed | trimmed | INCLUDE |
+|---|---|---|---|
+| frames per clip | 86 | 48 | 61 |
+| hand-present fraction | 0.44 | 0.79 | 0.89 |
+
+Hand presence rather than motion energy, because the target is hands *out of
+frame*, not stillness — motion energy would also cut the hold at the end of a
+sign, which carries meaning.
+
+**Signer IDs.** CISLR clips take groups 3-6, recovered by `signers.py`
+proportions and never merged into INCLUDE's 0-2. Held-out-group evaluation is
+only honest if a group is one set of people; letting a CISLR clip land in
+INCLUDE group 0 would put the same corpus on both sides of the split — the same
+class of error as the 99.8% calibration run (§12).
+
+A `corpus` array rides along in `dataset_merged.npz` so evaluation can train on
+one corpus and test on the other. That is §5.1, and it is the most important
+measurement in this document.
+
+### 2.3 The face-mesh re-extraction (blocks FULL_FACE)
 
 INCLUDE's pose release carries **no face mesh** — only 11 coarse pose landmarks
 (nose, 6 eye, 2 ear, 2 mouth-corner). That is enough for head nod/shake/tilt and
@@ -114,13 +168,13 @@ Disk is safe: `run_extract_loop.sh` deletes each ~1.3 GB archive immediately aft
 pulling landmarks (104 clips → ~38 MB), so peak usage stays at roughly one part.
 **69 GB free** at audit time, against a transient footprint of ~2 GB.
 
-### 2.3 Other sign languages — present but unused
+### 2.4 Other sign languages — present but unused
 
 `data/poses/` holds AUTSL, MS-ASL, WLASL, GSL, LSA64 (5.0 GB). These are *not*
 ISL. They are kept for a possible cross-lingual pretraining experiment and are
 not part of any current result. Do not cite them as ISL data.
 
-### 2.4 What does not exist — do not promise these
+### 2.5 What does not exist — do not promise these
 
 - **Dialect labels.** No published ISL corpus tags dialect.
 - **A conversation vocabulary.** INCLUDE is a *lexicon*: "Actor", "Election",
@@ -135,7 +189,7 @@ not part of any current result. Do not cite them as ISL data.
   accept the licence once (which includes agreeing to share contact details) and
   supply `HF_TOKEN`.
 
-### 2.5 Known bias — state this in the pitch
+### 2.6 Known bias — state this in the pitch
 
 INCLUDE is **7 signers from one school in Chennai, one room, one camera distance**.
 `data/signer_index.json` groups are **body-type clusters recovered from pose-stable
@@ -258,6 +312,70 @@ for every arm ever run. So 40.4% is not a contradiction of 52.0% — it is the
 worst group at the full class count. Quote **52%** as the headline and say
 which protocol produced it.
 
+### 5.1 Cross-corpus — the number that reframes the other numbers (5 Sept)
+
+Every figure above is **within-corpus**. INCLUDE's held-out signer is a
+different person in the same room, on the same camera, under the same
+recording protocol, at the same school. Holding out the signer removes one of
+the five things that vary in the field.
+
+CISLR is the first data we have where all five differ. `train/eval_cislr.py`
+runs four arms — same model, same augmentation, same 60-epoch budget, same
+validation signer — differing only in which clips train:
+
+| arm | train -> test | close top-1 | top-5 |
+|---|---|---|---|
+| A | INCLUDE -> INCLUDE group 0 | 28.2% | 51.0% |
+| B | INCLUDE + CISLR -> INCLUDE group 0 | **29.6%** | 53.8% |
+| C | INCLUDE -> **CISLR** | **2.1%** | 7.4% |
+| D | INCLUDE + CISLR -> CISLR group 6 | 4.0% | 21.5% |
+
+264 classes; chance is 0.38% top-1, 1.9% top-5.
+
+**Arm C is the finding.** A model trained on INCLUDE scores 2.1% on a different
+corpus — about five times chance, and functionally nothing. Set against the
+28.2% of arm A and the ~100% of a random split, the ladder is:
+
+    held-out clip, same signers      ~100%
+    held-out signer, same corpus      28.2%
+    held-out corpus                    2.1%
+
+Most of what the model knows is INCLUDE, not ISL. That single fact explains
+why three independent architecture experiments — face mesh (§9), SL-GCN (§9),
+calibration (§12) — all failed to move the number: none of them addressed what
+the model is actually keying on.
+
+**Arm B says more signers do help, and quantifies how slowly.** 610 CISLR
+clips, a 36% increase in training data, bought +1.4 points. Reaching a
+deployable score is not a few hundred more clips; on this slope it is thousands,
+from many more people and many more rooms.
+
+**Arm D is weak evidence, and is labelled as such.** Training on some CISLR
+roughly doubles top-1 on held-out CISLR (2.1% -> 4.0%) and triples top-5
+(7.4% -> 21.5%), so the domain gap is at least partly learnable. But its test
+set is 149 clips with only 100 of 264 classes represented in training, and it
+early-stopped at 22 epochs. Treat the direction as real and the magnitude as
+noise.
+
+#### A protocol correction that applies to every number above
+
+`train.py:118` passes the **test set** as `validation_data` with
+`restore_best_weights=True`, so the stopping epoch is selected on the test set.
+Every figure `train.py` and `train_ablation.py` have printed is optimistic by an
+unmeasured amount — 52.0%, 56.8% and 40.4% included.
+
+`eval_cislr.py` carves validation out of TRAIN instead and touches the test set
+once, at the end. That, plus training on group 2 alone (group 1 is held for
+validation), is why arm A reads 28.2% where §5 reads 40.4% for a similar split.
+**Arm A is the honest re-measurement; compare B against A, never against 40.4%.**
+
+#### What to say publicly
+
+Quote the ladder, not a single number. "52% on held-out signers within one
+corpus, 2% across corpora, and here is why that gap exists" is a stronger and
+more defensible claim than any single figure — and it is the claim the evidence
+supports.
+
 ### Three bugs that made the live camera path fail
 
 Each was hidden behind the previous one. All fixed; do not reintroduce them.
@@ -311,6 +429,12 @@ Each was hidden behind the previous one. All fixed; do not reintroduce them.
 # your own recordings
 .venv/bin/python    train/ingest_recordings.py setu-recordings-*.json
 .venv-tf/bin/python train/eval_on_takes.py     setu-recordings-*.json
+
+# CISLR — second corpus (§2.2). Needs a HF account with the licence accepted.
+FETCH_ALL=1 HF_TOKEN=... ./data/fetch_cislr.sh   # 1.1 GB video zip
+.venv-mp/bin/python train/extract_cislr.py       # 612 clips -> landmarks, ~2 h
+.venv/bin/python    train/preprocess_cislr.py    # -> data/dataset_merged.npz
+.venv-tf/bin/python train/eval_cislr.py          # 4 arms, ~9 h -> run/cislr_eval.json
 ```
 
 `data/dataset.npz` currently holds:
@@ -319,6 +443,18 @@ Each was hidden behind the previous one. All fixed; do not reintroduce them.
 X      (4284, 32, 65, 3) float32
 y      (4284,)           int32
 signer (4284,)           int32
+labels (264,)            <U16
+```
+
+`data/dataset_merged.npz` adds CISLR (§2.2). Same layout plus a `corpus` array,
+`0 = INCLUDE, 1 = CISLR`, which is what lets §5.1 train on one and test on the
+other:
+
+```
+X      (4894, 32, 65, 3) float32
+y      (4894,)           int32
+signer (4894,)           int32     0-2 INCLUDE, 3-6 CISLR — never mixed
+corpus (4894,)           int32
 labels (264,)            <U16
 ```
 
@@ -393,6 +529,16 @@ These are real and should be stated rather than hidden:
    questions and negation are invisible to the model. This is what FULL_FACE fixes.
 4. **52% is a lexicon score on 264 isolated signs**, not continuous sentence
    translation.
+5. **The model does not generalise across corpora.** Trained on INCLUDE and
+   tested on CISLR it scores **2.1%** against 0.38% chance (§5.1). Held-out
+   *signer* accuracy overstates field accuracy by more than an order of
+   magnitude, because a held-out INCLUDE signer still shares the room, camera,
+   protocol and school. Recognition must be presented as experimental. The
+   phrase board — 100% correct, offline, every time — is the surface that
+   actually works, and the UI already treats it as primary.
+6. **Published figures were selected on the test set.** `train.py` uses the test
+   set as validation with `restore_best_weights` (§5.1), so 52.0%, 56.8% and
+   40.4% are all optimistic by an unmeasured amount.
 
 ---
 
@@ -731,37 +877,46 @@ the trained weights, not of the architecture.
 
 ## 13. Remaining work
 
-### Running in background (started 30 Aug)
-
-- **Face-mesh extraction** — 8/46 parts. `fetch_video.sh` + `run_extract_loop.sh`
-  relaunched. Logs: `/tmp/setu-fetch.log`, `/tmp/setu-extract.log`.
-  Expect stalls: Zenodo returns 200 instead of 206 on resume, so curl truncates
-  and restarts a part. It does make net progress, but slowly and not monotonically.
-
-### Blocked on that
-
-- **Full FULL_FACE retrain.** When most parts are through: set
-  `FACE_MODE = "FULL_FACE"` in `train/features.py`, **mirror it in
-  `app/src/lib/features.ts`**, re-run `test_parity.py`, then `preprocess.py` →
-  `train.py` → `export_tfjs.py`. Signal is verified present: eyebrow height varies
-  by **0.077 within a single clip**, which 11 coarse pose points cannot represent.
+Reordered 5 Sept. §5.1 changed the priorities: the bottleneck is not the model,
+and it is not the face mesh. It is that the model has learned one corpus.
 
 ### Do now — highest value per hour
 
-1. **Record 20–30 of your own signs** in the demo room, camera, and distance.
-   Per `HANDOFF.md` this is the single largest gap between 52% and something
-   stage-worthy, and everything downstream already works
-   (`ingest_recordings.py` → `eval_on_takes.py`). Prioritise the eight
-   `UNREACHABLE` glosses above — they are what a patient actually needs.
-2. **Generate the gloss table** with your API key (one command, above).
-3. **Bhashini** for coverage beyond the table. Free tier is PoC-only — cache
-   everything demo-critical.
+1. **Record your own signs, in the room the app will run in.** This is now
+   unambiguously first. Arm C says a model trained elsewhere scores 2.1% here;
+   the only data guaranteed to match deployment conditions is data recorded in
+   them. Everything downstream already works (`ingest_recordings.py` ->
+   `eval_on_takes.py`). Prioritise the eight `UNREACHABLE` glosses — they are
+   what a patient actually needs, and CISLR has clips of all eight to check
+   against.
+2. **Label recognition as experimental in the UI.** At 2.1% cross-corpus, a
+   confident-looking transcript is a liability in a hospital. The phrase board
+   is already primary; the recognition panel should say what it is.
+3. **Fix the evaluation protocol before running any more experiments.** Move
+   `train.py`'s validation off the test set (§5.1). Until that is done, no
+   ablation this repo runs can be trusted to the precision it reports.
 
-### Admin
+### The real fix, and its size
 
-- Confirm with the SPOC: the 2026 per-college nomination quota, **whether one team
-  may submit more than one idea** (this gates reusing the idea for Travel & Tourism),
-  and the real deadline — the portal says 20 Sept, secondary sources say 30 Sept.
+Arm B: 610 new clips, +36% training data, **+1.4 points**. Extrapolating, closing
+the gap to a deployable score needs thousands of clips from many signers in many
+rooms — not a weekend of recording. Options, cheapest first:
+
+- **More corpora.** ISLTranslate/iSign are continuous ISL; segmenting them into
+  isolated signs is work but they are free and already identified (§2.4).
+- **Domain-adversarial or corpus-balanced training.** Arm D shows the gap is at
+  least partly learnable. A model penalised for predicting *which corpus* a clip
+  came from is the standard remedy and costs no new data.
+- **Self-recorded data at scale.** Highest quality per clip, lowest throughput.
+
+### Deprioritised by §5.1
+
+- **FULL_FACE retrain.** Face-mesh extraction stalled at 8/46 Zenodo parts, and
+  §9 already measured FULL_FACE as a 2.4-point regression on the honest split.
+  The signal is real (eyebrow height varies 0.077 within a clip) but it is not
+  what is limiting the model. Do not spend the compute until cross-corpus
+  accuracy is off the floor.
+- **SL-GCN.** Same reasoning. §9 settled that capacity is not the constraint.
 
 ### Admin
 
