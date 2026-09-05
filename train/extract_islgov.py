@@ -41,6 +41,7 @@ import argparse
 import json
 import multiprocessing as mp_proc
 import os
+import signal
 import sys
 import tempfile
 import urllib.parse
@@ -174,6 +175,20 @@ def main() -> int:
     # chunks and its memory returns to the system.
     chunks = [todo[i:i + CHUNK] for i in range(0, len(todo), CHUNK)]
     with mp_proc.Pool(args.workers, maxtasksperchild=2) as pool:
+        # Kill the pool if this process is asked to stop.
+        #
+        # Without this, the default SIGTERM handling kills the parent outright
+        # and every worker is reparented to init and keeps running. Measured
+        # here: restarting the extractor a few times over one day left 21
+        # orphaned MediaPipe workers alive for 12+ hours, which drove the load
+        # average to 104 and free memory to 81 MB on a 16 GB machine. The
+        # extraction it was competing with was its own.
+        def _stop(signum, _frame):
+            pool.terminate()
+            raise SystemExit(128 + signum)
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            signal.signal(sig, _stop)
+
         results = []
         for k, r in enumerate(pool.imap_unordered(
                 worker, [(c, args.complexity, args.target_fps) for c in chunks]), 1):
