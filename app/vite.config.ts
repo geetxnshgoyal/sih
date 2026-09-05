@@ -9,7 +9,7 @@ const useHttps = process.env.VITE_DEV_HTTPS === '1'
 export default defineConfig({
   // Served from a subpath on GitHub Pages (/<repo>/), from the root in dev and
   // on a root-domain host. Vite bakes this into import.meta.env.BASE_URL, which
-  // lib/assetUrl.ts uses to resolve the model files — so the same source builds
+  // lib/assetUrl.ts uses to resolve the model files, so the same source builds
   // correctly for either without a code change. Dropping this silently breaks
   // the Pages deploy: the app loads and the model 404s.
   base: process.env.DEPLOY_BASE ?? "/",

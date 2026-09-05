@@ -9,8 +9,8 @@
  *   1. reorder and inflect     "I Doctor"  ->  "I need to see a doctor"
  *   2. translate to 5 languages                 -> hi, ta, te, bn, mr
  *
- * Job 1 needs judgement about what the signer MEANS — "I Doctor" is a request,
- * not a statement — and it is short, English, and reviewable by anyone on the
+ * Job 1 needs judgement about what the signer MEANS, "I Doctor" is a request,
+ * not a statement: and it is short, English, and reviewable by anyone on the
  * team. So it is written by hand, here, where it can be argued with.
  *
  * Job 2 is mechanical and is done by NLLB-200 running locally
@@ -26,7 +26,7 @@
  * So: complete sentences, no telegraphic shorthand, polite but not florid, and
  * "I need" rather than "I want" where something is genuinely needed.
  *
- * "I am Deaf" is capitalised deliberately — Deaf as cultural identity. It is
+ * "I am Deaf" is capitalised deliberately, Deaf as cultural identity. It is
  * usually the first thing a Deaf person must establish before anything else can
  * happen, and it should not read as a medical deficit.
  */

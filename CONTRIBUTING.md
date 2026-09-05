@@ -13,16 +13,16 @@ npx vite --port 5174
 ```
 
 Open `https://localhost:5174`. **The trained model is committed**, so the app
-works immediately — no dataset download, no training, no API key. Three modes:
+works immediately: no dataset download, no training, no API key. Three modes:
 
 | mode | needs a camera? |
 |---|---|
-| **Signs to speech** | yes — or click *Replay held-out clips* to run real clips through the live pipeline |
-| **Conversation** | no — there is a text box beside the mic |
-| **Record signs** | yes — this is how you contribute data |
+| **Signs to speech** | yes, or click *Replay held-out clips* to run real clips through the live pipeline |
+| **Conversation** | no: there is a text box beside the mic |
+| **Record signs** | yes: this is how you contribute data |
 
 To use the camera from a phone you need HTTPS on your LAN address, which the
-dev server already provides — use the `Network:` URL it prints, not localhost.
+dev server already provides, use the `Network:` URL it prints, not localhost.
 
 ## The one thing that would help most
 
@@ -37,7 +37,7 @@ negative, on identical clips, signers, seed and protocol:
 
 | arm | close | vs baseline |
 |---|---|---|
-| Conv1D, 65pt (baseline) | **56.8%** | — |
+| Conv1D, 65pt (baseline) | **56.8%** |, |
 | + 468-point face mesh | 56.5% | -0.3 pp, inconclusive |
 | SL-GCN graph network | 49.5% | **-7.3 pp, loses on all 3 groups** |
 
@@ -50,7 +50,7 @@ distance, angle and lighting between takes, and send the downloaded JSON. One
 new signer is worth more than any model change we have been able to measure.
 
 Highest value are the eight things a patient needs that INCLUDE simply cannot
-express — there is no gloss for them in the 264, so the classifier can never
+express: there is no gloss for them in the 264, so the classifier can never
 emit them (`app/tools/glossCorpus.ts`, `UNREACHABLE`):
 
 > **Water · Help · Yes · No · Pain · Name · Please · Hotel**
@@ -107,7 +107,7 @@ cd data && ./fetch_video.sh      # INCLUDE video, 56.8 GB, CC BY 4.0
 HF_TOKEN=hf_xxx ./data/fetch_cislr.sh   # CISLR, 71 signers, gated AFL-3.0
 ```
 
-Zenodo does not honour byte ranges, so there is no resume — every interrupted
+Zenodo does not honour byte ranges, so there is no resume, every interrupted
 part restarts from zero. The fetchers verify each file against the exact byte
 count from the API before promoting it, because a truncated archive otherwise
 fails much later, in unzip, after the download cost is already paid.
@@ -116,28 +116,28 @@ fails much later, in unzip, after the download cost is already paid.
 
 Two targets, one source. `app/src/lib/assetUrl.ts` resolves model paths against
 `import.meta.env.BASE_URL`, so the same code works at a domain root and under a
-subpath — absolute `/model/...` paths silently 404 under a subpath, and the
+subpath: absolute `/model/...` paths silently 404 under a subpath, and the
 symptom looks like a broken model rather than a broken path.
 
-**Vercel** — `vercel.json` at the repo root. The project's Root Directory is
+**Vercel**, `vercel.json` at the repo root. The project's Root Directory is
 `app/`, so every command in it already runs from there: the build is
 `npm run build` and the output is `dist`, NOT `app/dist`. Two things that cost
 a deploy each and are easy to repeat:
 
 - a `cd app` in the build command fails with "No such file or directory",
   because Vercel is already inside `app/`
-- `vercel.json` rejects unknown keys outright, including `"//"` comment keys —
+- `vercel.json` rejects unknown keys outright, including `"//"` comment keys , 
   the schema validation error is `should NOT have additional property`
 
-**GitHub Pages** — `.github/workflows/deploy.yml`, builds with
+**GitHub Pages**, `.github/workflows/deploy.yml`, builds with
 `DEPLOY_BASE=/<repo>/` and copies `index.html` to `404.html` so client-side
 routes survive a hard refresh. Enable once under Settings -> Pages -> Source:
 GitHub Actions.
 
 ## Where to read next
 
-- **`ARCHITECTURE.md`** — every artefact, shape, and measured number
-- **`HANDOFF.md`** — why decisions were made, and which bugs cost real time
+- **`ARCHITECTURE.md`**: every artefact, shape, and measured number
+- **`HANDOFF.md`**: why decisions were made, and which bugs cost real time
 
 Both are kept honest about what does not work. Please keep them that way:
 a negative result recorded clearly is worth more here than an optimistic claim.

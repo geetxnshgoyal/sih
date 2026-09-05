@@ -6,7 +6,7 @@
 # On 31 Aug both jobs were found dead with /tmp wiped (reboot or tmp cleanup),
 # and nothing noticed. The corpus is 56.8 GB over ~30 hours of wall clock, so a
 # silent death costs however long it takes a human to look. The scripts are
-# individually robust — resumable, idempotent, single-instance — but nothing was
+# individually robust: resumable, idempotent, single-instance, but nothing was
 # responsible for noticing they had stopped.
 #
 # This does exactly that and nothing more: every 2 minutes, if a job is not
@@ -27,7 +27,7 @@ trap 'rmdir "$LOCK" 2>/dev/null' EXIT
 alive() { pgrep -f "$1" >/dev/null 2>&1; }
 
 # The fetcher runs PARALLEL workers as background subshells, and those inherit
-# the parent's command line — so `pgrep -f fetch_video.sh` counts N+1 processes
+# the parent's command line: so `pgrep -f fetch_video.sh` counts N+1 processes
 # for one healthy fetcher. On 31 Aug that made this supervisor mistake its own
 # workers for duplicates and kill them, then restart, then fight itself.
 #
@@ -39,13 +39,13 @@ fetcher_alive() {
 }
 extracted() { ls data/video/*.extracted 2>/dev/null | wc -l | tr -d ' '; }
 
-echo "supervisor up $(date '+%F %T') — $(extracted)/46 extracted"
+echo "supervisor up $(date '+%F %T'), $(extracted)/46 extracted"
 
 while true; do
   n=$(extracted)
 
   if [ "$n" -ge 46 ]; then
-    echo "[$(date +%H:%M)] all 46 parts extracted — supervisor exiting"
+    echo "[$(date +%H:%M)] all 46 parts extracted, supervisor exiting"
     exit 0
   fi
 
@@ -53,7 +53,7 @@ while true; do
   #
   # A false negative here is far more expensive than a slow recovery: two
   # fetchers write the same .part file and clobber each other, and because
-  # Zenodo does not honour range requests there is no resume — the part starts
+  # Zenodo does not honour range requests there is no resume, the part starts
   # again from zero. That is exactly how ~1 GB of People_1of5 was lost on
   # 31 Aug, and it is the same class of failure HANDOFF.md records ("two curls
   # writing the same path truncated each other, 1.1 GB collapsed to 14 MB").
@@ -72,7 +72,7 @@ while true; do
     rm -f $STATE/fetch.pid
     # Re-check after clearing: the lock going away can let a racing starter in.
     if ! fetcher_alive; then
-      echo "[$(date +%H:%M)] fetcher down at ${n}/46 — restarting"
+      echo "[$(date +%H:%M)] fetcher down at ${n}/46, restarting"
       ( cd data && PARALLEL=${PARALLEL:-3} nohup ./fetch_video.sh >> $STATE/fetch.log 2>&1 & )
     fi
   fi
@@ -80,7 +80,7 @@ while true; do
   if confirm_down extract_alive; then
     rmdir $STATE/extract.lock.d 2>/dev/null
     if ! alive "run_extract_loop"; then
-      echo "[$(date +%H:%M)] extract loop down at ${n}/46 — restarting"
+      echo "[$(date +%H:%M)] extract loop down at ${n}/46, restarting"
       nohup ./run_extract_loop.sh >> $STATE/extract.log 2>&1 &
     fi
   fi

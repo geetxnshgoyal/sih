@@ -29,7 +29,7 @@ app/.vite/
 
 # ------------------------------------------------------------- pipeline state
 # Locks, PIDs and logs for the long-running fetch/extract jobs. Machine-local
-# by definition — and the reason these live in the repo rather than /tmp is
+# by definition: and the reason these live in the repo rather than /tmp is
 # that macOS wiping /tmp killed the pipeline twice.
 run/
 
@@ -48,7 +48,7 @@ models/holistic_landmarker.task
 setu-recordings-*.json
 
 # ------------------------------------------------------------ editor/agent
-# Local tooling config — machine-specific, not part of the project.
+# Local tooling config: machine-specific, not part of the project.
 .claude/
 CLAUDE.md
 AGENTS.md

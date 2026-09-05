@@ -5,7 +5,7 @@
 # -----------------------------------
 # The first ablation (ARCHITECTURE.md §9) came back INCONCLUSIVE: mean delta
 # 1.5 pp against a per-group spread of 5.5 pp. It ran on Adjectives, which carry
-# almost no non-manual grammar — so it was structurally weak evidence about a
+# almost no non-manual grammar, so it was structurally weak evidence about a
 # change whose whole purpose is capturing eyebrows and mouth shape.
 #
 # Pronouns and Society are where ISL's question and negation marking actually
@@ -40,7 +40,7 @@ echo
 # fails loudly rather than hanging forever if the fetcher dies.
 for i in $(seq 1 480); do
   if ready; then
-    echo "=== all five extracted after ~${i} min — running ablation ==="
+    echo "=== all five extracted after ~${i} min, running ablation ==="
     break
   fi
   if [ $((i % 15)) -eq 0 ]; then
@@ -52,7 +52,7 @@ for i in $(seq 1 480); do
 done
 
 if ! ready; then
-  echo "TIMED OUT — decisive parts still missing. Fetcher may have stalled:"
+  echo "TIMED OUT: decisive parts still missing. Fetcher may have stalled:"
   for p in "${NEED[@]}"; do
     [ -f "data/video/${p}.zip.extracted" ] && echo "  have $p" || echo "  MISSING $p"
   done
@@ -69,4 +69,4 @@ echo "=== train_ablation.py ==="
   | grep -vE "WARNING|absl|oneDNN|cpu_feature|W0000|I0000" | tail -40
 
 echo
-echo "=== ABLATION COMPLETE — see models/ablation_face.json ==="
+echo "=== ABLATION COMPLETE: see models/ablation_face.json ==="

@@ -8,7 +8,7 @@
  * Every quick phrase and every synonym target in `domains.ts` names a gloss the
  * classifier is supposed to be able to produce. Nothing at runtime checks that.
  * A typo, or a retrain that drops a class, turns a demo button into a silent
- * no-op — it renders, it is tappable, and it plays nothing.
+ * no-op: it renders, it is tappable, and it plays nothing.
  *
  * `glossCorpus.ts` is already protected this way by the generator, which refuses
  * to run on an unknown gloss. This gives `domains.ts` the same guarantee, and
@@ -38,7 +38,7 @@ let playable: Set<string> | null = null;
 try {
   playable = new Set(Object.keys(JSON.parse(fs.readFileSync(SIGNS, "utf8"))));
 } catch {
-  console.log("note: _signs.json unreadable — skipping playability checks\n");
+  console.log("note: _signs.json unreadable, skipping playability checks\n");
 }
 
 let errors = 0;
@@ -79,7 +79,7 @@ for (const domain of DOMAIN_LIST) {
 console.log(`${errors} error(s), ${warnings} warning(s)`);
 if (errors) {
   console.log("\nUnknown glosses cannot be produced by the classifier. Fix them or");
-  console.log("remove the entry — a phrase naming a gloss that does not exist is a");
+  console.log("remove the entry: a phrase naming a gloss that does not exist is a");
   console.log("button that silently does nothing.");
 }
 process.exit(errors ? 1 : 0);

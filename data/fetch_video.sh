@@ -1,6 +1,6 @@
 #!/bin/bash
 # INCLUDE raw video, 46 parts (Zenodo 4010759, CC BY 4.0, 56.8 GB).
-# Needed only to re-extract the 468-point face mesh the pose release lacks —
+# Needed only to re-extract the 468-point face mesh the pose release lacks , 
 # ISL marks questions and negation on the face, and 11 coarse pose points
 # cannot capture eyebrows or mouth shape.
 #
@@ -18,15 +18,15 @@ mkdir -p video
 #
 # The point of re-extracting video is the 468-point face mesh, and the only
 # question that matters is whether it earns its place (ARCHITECTURE.md §9). That
-# question is decided by the categories carrying non-manual grammar — ISL marks
-# questions with the eyebrows and negation with a head shake — which means
+# question is decided by the categories carrying non-manual grammar, ISL marks
+# questions with the eyebrows and negation with a head shake, which means
 # Pronouns and Society. Adjectives, where the first ablation ran, carry almost
 # none, which is exactly why that run came back INCONCLUSIVE.
 #
 # Alphabetically those categories are parts 39-45 of 46: the evidence needed to
 # decide the change arrives only after ~50 GB, i.e. after the decision has
-# effectively been made by default. Pulling them forward costs nothing — the same
-# 46 parts are fetched either way — and buys a conclusive ablation days earlier.
+# effectively been made by default. Pulling them forward costs nothing, the same
+# 46 parts are fetched either way, and buys a conclusive ablation days earlier.
 #
 # Everything downstream is order-independent: .done/.extracted markers make the
 # fetcher and the extract loop idempotent, so reordering is safe mid-run.
@@ -36,9 +36,9 @@ import json, urllib.request
 # Earlier prefix = fetched sooner. Anything unlisted keeps alphabetical order
 # after these, so the set fetched is unchanged.
 PRIORITY = [
-    "Pronouns",   # I, you, we, they — question and reference marking
+    "Pronouns",   # I, you, we, they: question and reference marking
     "Society",    # question-heavy: Election, Court, Religion, Law
-    "Greetings",  # How are you / Good morning — the demo's opening phrases
+    "Greetings",  # How are you / Good morning, the demo's opening phrases
     "People",     # relations, the other place non-manual marking shows up
 ]
 
@@ -62,7 +62,7 @@ total=$(wc -l < $STATE/include_files.txt | tr -d ' ')
 #
 # `curl -C -` against a server like that is worse than useless. curl sends a
 # Range header, gets the whole file back, and in the bad case writes it at the
-# partial's offset — producing an oversized archive that is silently corrupt and
+# partial's offset: producing an oversized archive that is silently corrupt and
 # only fails later, in unzip, after the download cost has already been paid.
 #
 # So: no resume (there is nothing to resume to), download to a .part file, and
@@ -73,7 +73,7 @@ total=$(wc -l < $STATE/include_files.txt | tr -d ' ')
 # Downloads run PARALLEL. Measured 31 Aug: a second concurrent connection served
 # 1.78 MB/s while the first was already saturated, so a single stream was leaving
 # throughput on the table. Zenodo's documented limit (x-ratelimit-limit: 133) is
-# on REQUEST COUNT, not bandwidth — a whole-file download is one request, so a
+# on REQUEST COUNT, not bandwidth, a whole-file download is one request, so a
 # handful of concurrent transfers is nowhere near it.
 #
 # Each worker owns whole files, never a shared one. That matters: two writers on
@@ -93,7 +93,7 @@ fetch_one() {
   # --speed-limit/--speed-time abort a transfer that drops below 1 KB/s for 60s,
   # which --retry alone does NOT cover: a half-open socket never errors, so curl
   # waits forever. That is exactly what happened when the machine changed
-  # networks on 2 Sep — three workers sat at 0 MB/min with live PIDs and a
+  # networks on 2 Sep: three workers sat at 0 MB/min with live PIDs and a
   # reachable server, and nothing timed out or retried.
   #
   # --connect-timeout bounds the handshake separately, since a dead route stalls
@@ -110,7 +110,7 @@ fetch_one() {
     return 0
   fi
   rm -f "video/$key.part"
-  echo "FAIL $key got $((got/1048576))MB want $((want/1048576))MB — retrying next pass"
+  echo "FAIL $key got $((got/1048576))MB want $((want/1048576))MB, retrying next pass"
   return 1
 }
 
@@ -138,6 +138,6 @@ for pass in $(seq 1 60); do
   done < $STATE/include_files.txt
 
   [ "$missing" -eq 0 ] && { echo "VIDEO_ALLDONE"; break; }
-  echo "pass$pass done — $missing still missing"
+  echo "pass$pass done, $missing still missing"
   sleep 15
 done

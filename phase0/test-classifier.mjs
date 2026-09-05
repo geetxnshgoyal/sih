@@ -1,4 +1,4 @@
-/* Regression test for classify() — no camera, no browser.
+/* Regression test for classify(), no camera, no browser.
    Extracts the geometry + classifier straight out of index.html so the
    test can never drift from the shipped code.
 

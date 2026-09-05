@@ -1,7 +1,7 @@
 # Build the app and publish it to GitHub Pages.
 #
 # Why this exists: the demo needs a URL people can open from any device. A LAN
-# address only works on one network, and the camera path needs HTTPS anyway —
+# address only works on one network, and the camera path needs HTTPS anyway , 
 # Pages gives both for free.
 #
 # The trained model (2.1 MB) is committed, so the build needs no dataset, no
