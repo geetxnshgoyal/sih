@@ -12,6 +12,7 @@ import { ConsultationSummaryScreen } from "./components/stitch/ConsultationSumma
 import { DiagnosticsScreen } from "./components/stitch/DiagnosticsScreen";
 import { loadGlossTable } from "./lib/glossTranslate";
 import { DeviceReadinessScreen } from "./components/stitch/DeviceReadinessScreen";
+import InstallPrompt from "./components/InstallPrompt";
 import "./App.css";
 import { ScreenErrorBoundary } from "./components/ScreenErrorBoundary";
 
@@ -68,6 +69,7 @@ function ScreenRouter() {
       <div key={`${activeView}-${selectedRole}`} className="page-enter"><ScreenErrorBoundary>{renderActiveView()}</ScreenErrorBoundary></div>
 
       <StitchNav />
+      <InstallPrompt />
     </div>
   );
 }

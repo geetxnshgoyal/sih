@@ -999,3 +999,60 @@ code{
   margin:0;padding-top:14px;border-top:1px solid var(--line-2,rgba(128,128,128,.25));
   font-size:13.5px;opacity:.75;
 }
+
+/* ---------------------------------------------------------------------------
+   Install prompt. Fixed to the bottom, above the mobile tab bar, and out of the
+   way: it is an offer, not a gate. Never covers the phrase board, because that
+   is the surface someone may urgently need.
+   --------------------------------------------------------------------------- */
+.install-prompt{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:calc(84px + env(safe-area-inset-bottom,0px));
+  z-index:60;
+  width:min(560px,calc(100vw - 24px));
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:#0B1220;
+  color:#F3F6FF;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 18px 44px rgba(4,10,28,.45);
+  animation:install-in .28s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes install-in{from{opacity:0;transform:translateX(-50%) translateY(14px)}
+  to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@media (prefers-reduced-motion:reduce){.install-prompt{animation:none}}
+
+.install-icon img{display:block;border-radius:10px}
+.install-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.install-title{margin:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.install-text{margin:0;font-size:12.5px;line-height:1.5;opacity:.78}
+.install-text strong{opacity:1;font-weight:600}
+.install-text svg{display:inline;vertical-align:-2px;margin:0 1px}
+
+.install-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.install-yes{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 14px;border-radius:10px;border:0;cursor:pointer;
+  background:#2563EB;color:#fff;font-size:13.5px;font-weight:600;
+}
+.install-yes:hover{background:#1D4ED8}
+.install-no{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:10px;cursor:pointer;
+  background:transparent;color:#F3F6FF;border:1px solid rgba(255,255,255,.18);
+}
+.install-no:hover{background:rgba(255,255,255,.08)}
+.install-yes:focus-visible,.install-no:focus-visible{
+  outline:2px solid #93B4FF;outline-offset:2px;
+}
+
+@media (max-width:560px){
+  .install-prompt{gap:11px;padding:11px 12px;border-radius:14px}
+  .install-title{font-size:13.5px}
+  .install-text{font-size:12px}
+}
