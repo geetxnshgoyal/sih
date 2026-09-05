@@ -979,3 +979,23 @@ code{
    colour alone fails for a signer who is also colour-blind. */
 .pb-item.urgent{border-color:#5A3320;background:#20160F;color:#F0C68A}
 .pb-item.urgent:hover{border-color:#E0A21C;background:#2A1D12}
+/* ---------------------------------------------------------------------------
+   About Setu. Sits at the foot of the home screen: what the problem is, what
+   the app does, and plainly what it cannot do yet. The limits are stated in the
+   product rather than only in the docs, because the person who most needs to
+   know that recognition is unreliable is the clinician about to rely on it.
+   --------------------------------------------------------------------------- */
+.about-setu{display:flex;flex-direction:column;gap:20px;padding-top:8px}
+.about-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:20px 28px;
+}
+.about-grid h3{
+  margin:0 0 6px;font-size:15px;font-weight:600;letter-spacing:-.01em;
+}
+.about-grid p{margin:0;font-size:14px;line-height:1.65;opacity:.82}
+.about-credit{
+  margin:0;padding-top:14px;border-top:1px solid var(--line-2,rgba(128,128,128,.25));
+  font-size:13.5px;opacity:.75;
+}

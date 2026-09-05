@@ -29,7 +29,13 @@ function ScreenRouter() {
     main?.setAttribute("tabindex", "-1");
     main?.setAttribute("id", "main-content");
     main?.focus({ preventScroll: true });
-    document.title = `Setu · ${activeView === "bridge" ? "Consultation" : activeView.charAt(0).toUpperCase() + activeView.slice(1)}`;
+    // The home view keeps the full descriptive title. Crawlers render this SPA
+    // and index whatever document.title holds afterwards, so overwriting the
+    // landing page with a bare "Setu · Home" throws away every keyword the
+    // static <title> was written to carry.
+    document.title = activeView === "home"
+      ? "Setu — Indian Sign Language Bridge | Team Awaaz"
+      : `Setu · ${activeView === "bridge" ? "Consultation" : activeView.charAt(0).toUpperCase() + activeView.slice(1)}`;
   }, [activeView, selectedRole]);
 
   const renderActiveView = () => {

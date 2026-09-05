@@ -1,22 +1,69 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta
-      name="description"
-      content="Setu Medical Bridge — Two-way Indian Sign Language (ISL) and regional language communication bridge."
-    />
-    <title>Setu Medical Bridge</title>
+
+    <title>Setu — Indian Sign Language Bridge | Team Awaaz</title>
+    <meta name="description" content="Setu lets Deaf and hard-of-hearing people talk with doctors and staff without an interpreter. Indian Sign Language in, eleven Indian languages out, running entirely on the device so no video ever leaves it. Built by Team Awaaz for Smart India Hackathon 2026." />
+    <meta name="author" content="Team Awaaz" />
+    <meta name="application-name" content="Setu" />
+    <meta name="keywords" content="Indian Sign Language, ISL, sign language translation, Deaf accessibility, healthcare communication, Smart India Hackathon, SIH 2026, Team Awaaz, offline, on-device" />
+    <link rel="canonical" href="https://geetxnshgoyal.github.io/sih/" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph: what a WhatsApp or LinkedIn share looks like -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Setu" />
+    <meta property="og:title" content="Setu — Indian Sign Language Bridge" />
+    <meta property="og:description" content="Deaf and hard-of-hearing patients can talk with doctors without an interpreter. Sign language in, eleven Indian languages out, on the device and offline." />
+    <meta property="og:url" content="https://geetxnshgoyal.github.io/sih/" />
+    <meta property="og:image" content="https://geetxnshgoyal.github.io/sih/icon-512.png" />
+    <meta property="og:image:alt" content="Setu app icon: a signing hand, an arrow, and a speech bubble showing the Devanagari letter अ" />
+    <meta property="og:locale" content="en_IN" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Setu — Indian Sign Language Bridge" />
+    <meta name="twitter:description" content="Sign language in, eleven Indian languages out, on the device and offline. Built by Team Awaaz for SIH 2026." />
+    <meta name="twitter:image" content="https://geetxnshgoyal.github.io/sih/icon-512.png" />
+
+    <!-- Installable app -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#093EDD" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Setu" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="./icon-64.png" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet" />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Setu",
+      "alternateName": "Setu Indian Sign Language Bridge",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Any device with a modern web browser",
+      "description": "Two-way communication between Deaf and hard-of-hearing people and the doctors and staff they need to talk to. Indian Sign Language is recognised on the device and spoken aloud in eleven Indian languages; speech is turned back into signs and text.",
+      "inLanguage": ["en-IN", "hi-IN", "ta-IN", "te-IN", "bn-IN", "mr-IN", "gu-IN", "kn-IN", "ml-IN", "pa-IN", "or-IN"],
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" },
+      "author": { "@type": "Organization", "name": "Team Awaaz" },
+      "accessibilityFeature": ["signLanguage", "captions", "synchronizedAudioText", "highContrastDisplay"],
+      "accessibilityHazard": "none"
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

@@ -186,9 +186,9 @@ export default function SignBridge({
     if (!f) return { shoulder, verdict: "" };
     const { p5, p95 } = f.shoulder_width;
     const verdict =
-      shoulder > p95 * 1.6 ? "close range — model handles this"
-      : shoulder > p95 ? "slightly close — fine"
-      : shoulder < p5 * 0.5 ? "very far — hands may be too small to track"
+      shoulder > p95 * 1.6 ? "close range, model handles this"
+      : shoulder > p95 ? "slightly close, fine"
+      : shoulder < p5 * 0.5 ? "very far, hands may be too small to track"
       : "matches training framing";
     return { shoulder, verdict };
   }, []);
@@ -236,13 +236,13 @@ export default function SignBridge({
         // wrong", and the user cannot tell those apart from silence.
         if (segRef.current.lastReject === "no-hands") {
           setLive({ gloss: "", conf: 0, progress: 0 });
-          setNotice("no hands detected — step back so both hands are in frame");
+          setNotice("no hands detected. Step back so both hands are in frame");
         } else if (segRef.current.lastReject === "one-hand") {
           // Every training clip is two-handed, so a one-handed window is out of
           // distribution and the model answers confidently anyway (Truck, Car,
           // Mouse at ~0.76). Say what to fix rather than announce a guess.
           setLive({ gloss: "", conf: 0, progress: 0 });
-          setNotice("only one hand visible — bring both hands into frame");
+          setNotice("only one hand visible. Bring both hands into frame");
         } else if (hasHands) {
           setNotice(null);
         }
@@ -436,7 +436,7 @@ export default function SignBridge({
       rafRef.current = requestAnimationFrame(loop);
     } catch (e) {
       setCamError(
-        `${e instanceof Error ? e.message : String(e)} — the page must be served over http://localhost or https://, and the browser needs camera permission.`
+        `${e instanceof Error ? e.message : String(e)}. The page must be served over http://localhost or https://, and the browser needs camera permission.`
       );
     }
   }
@@ -521,7 +521,7 @@ export default function SignBridge({
                   </div>
                   {live.gloss && certainty(live.conf) !== "confident" && (
                     <div className="hud-confirm">
-                      {Math.round(live.conf * 100)}% — not certain, pick below if wrong
+                      {Math.round(live.conf * 100)}% confident. Pick below if this is wrong
                     </div>
                   )}
                   <div className="meter">

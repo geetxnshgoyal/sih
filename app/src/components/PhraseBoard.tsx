@@ -81,7 +81,7 @@ export default function PhraseBoard({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search — pain, water, doctor…"
+          placeholder="Search: pain, water, doctor…"
           aria-label="Search phrases"
         />
         {query && (

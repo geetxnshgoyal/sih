@@ -151,7 +151,7 @@ export default function HearingSide({
 
         {skipped.length > 0 && (
           <p className="note skipped">
-            No sign for: {skipped.join(", ")} — shown as text only.
+            No sign for: {skipped.join(", ")}. Shown as text only.
           </p>
         )}
 
