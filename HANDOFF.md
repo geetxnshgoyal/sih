@@ -1,4 +1,4 @@
-# Setu — handoff
+# Setu: handoff
 
 Two-way bridge between Indian Sign Language and India's spoken languages.
 Target: SIH 2026, Student Innovation, **SIH26196** (MedTech · Software).
@@ -18,13 +18,13 @@ Three modes in the top bar:
 
 | mode | state |
 |---|---|
-| **Conversation** | works reliably, no camera needed — this is the demo |
-| **Record signs** | works — capture your own vocabulary |
+| **Conversation** | works reliably, no camera needed, this is the demo |
+| **Record signs** | works: capture your own vocabulary |
 | **Signs to speech** | works, ~52% accuracy over 264 classes |
 
 ---
 
-## 2. Environments — three venvs, on purpose
+## 2. Environments: three venvs, on purpose
 
 | venv | Python | why |
 |---|---|---|
@@ -72,7 +72,7 @@ Each was hidden behind the previous one. All fixed.
 **1. Two landmarkers, incompatible z conventions.**
 The app ran `PoseLandmarker` + `HandLandmarker` separately. INCLUDE was
 extracted with *Holistic*, one unified depth frame. Hand z is relative to the
-wrist, pose z to the torso — and z carries about a third of the input signal
+wrist, pose z to the torso: and z carries about a third of the input signal
 (pose z std 1.32, hand z std 0.75, against x,y std 1.24 and 2.32). Fixed by
 switching to `HolisticLandmarker` in `useLandmarkers.ts`.
 
@@ -85,7 +85,7 @@ Measured by re-projecting held-out clips through a pinhole model:
 | scaled ×2.6, no perspective | 67.3% |
 | perspective at laptop distance | **2.1%** |
 
-Scale is a **no-op** — standardisation divides it out exactly (verified 4e-16).
+Scale is a **no-op**: standardisation divides it out exactly (verified 4e-16).
 Perspective is the whole gap. Fixed with perspective augmentation in
 `train/augment.py`.
 
@@ -99,7 +99,7 @@ buffer that was mostly rest position:
 | rolling window + 10 rest frames | 54.8% |
 | rolling window + 40 rest frames | **23.2%** |
 
-Fixed with `app/src/lib/segment.ts` — motion-energy segmentation that starts on
+Fixed with `app/src/lib/segment.ts`, motion-energy segmentation that starts on
 a movement burst, ends after 6 still frames, trims trailing stillness, and
 classifies once per sign. `StabilityGate.once()` replaces the N-of-M frame vote,
 which could never fire on a single prediction.
@@ -122,7 +122,7 @@ change.** Otherwise you will confidently undo the right work.
 
 ---
 
-## 7. Invariants — do not break these
+## 7. Invariants: do not break these
 
 **`train/features.py` ↔ `app/src/lib/features.ts` must stay bit-identical.**
 If they drift, the model trains on one representation and runs on another;
@@ -132,7 +132,7 @@ offline accuracy stays high and live accuracy collapses with no visible cause.
 .venv/bin/python train/test_parity.py     # 8/8, exact zero difference
 ```
 
-The test is verified to catch real drift — injecting a z-axis term into the
+The test is verified to catch real drift, injecting a z-axis term into the
 shoulder span, or a wrong anchor landmark, both fail it loudly.
 
 **Model round-trip** is checked in-browser by `app/src/devParity.ts` (dev only):
@@ -149,9 +149,9 @@ overwrote a single file and destroyed the best model across three runs.
 
 | source | what | licence |
 |---|---|---|
-| `data/Pose_Signs/` | **INCLUDE**, 4,284 clips, 264 signs — the only ISL data | CC BY 4.0 |
+| `data/Pose_Signs/` | **INCLUDE**, 4,284 clips, 264 signs, the only ISL data | CC BY 4.0 |
 | `data/video_landmarks/` | re-extracted with **468-point face mesh** | CC BY 4.0 |
-| `data/poses/` | AUTSL, MS-ASL, WLASL, GSL, LSA64 — other sign languages | CC BY 4.0 |
+| `data/poses/` | AUTSL, MS-ASL, WLASL, GSL, LSA64, other sign languages | CC BY 4.0 |
 
 Schema of the INCLUDE pickles (verified):
 
@@ -162,22 +162,22 @@ x,y are PIXEL coords -> divide by vid_shape.  z is already relative.
 Pose 23-32 are legs: extrapolated outside frame, mean confidence 0.25 -> dropped.
 ```
 
-Load them with the restricted unpickler used throughout `train/` — they are
+Load them with the restricted unpickler used throughout `train/`, they are
 third-party files and arbitrary pickles execute code.
 
 ### Things that do not exist
 
 - **Dialect labels.** No published ISL corpus tags dialect. Do not promise this.
-- **A conversation vocabulary.** INCLUDE is a *lexicon* — it has "Actor",
+- **A conversation vocabulary.** INCLUDE is a *lexicon*, it has "Actor",
   "Election", "Monsoon" and no *yes*, *no*, *please*, *help*, *where*.
-- **FDMSE-ISL** (40k clips) — no public download, author request only.
-- **CISLR** — gated on Hugging Face, someone must accept the terms.
+- **FDMSE-ISL** (40k clips): no public download, author request only.
+- **CISLR**: gated on Hugging Face, someone must accept the terms.
 
 ### Known bias
 
 INCLUDE is 7 signers from one school in Chennai, one room, one distance.
 Signer groups in `data/signer_index.json` are **body-type clusters recovered
-from pose-stable ratios**, not identified individuals — the official split is
+from pose-stable ratios**, not identified individuals, the official split is
 offline (Google Drive 404). Stricter than a random split, weaker than a true
 signer-disjoint one. Say so in the pitch.
 
@@ -197,7 +197,7 @@ processed, and the downloader skips both.
 
 When most parts are through, set `FACE_MODE = "FULL_FACE"` in
 `train/features.py` (65 → 113 points) and retrain to pick up eyebrow, eye and
-lip landmarks — the non-manual grammar ISL uses for questions and negation.
+lip landmarks: the non-manual grammar ISL uses for questions and negation.
 Verified present in the extracted data: eyebrow height varies by 0.077 within a
 single clip, which the 11-point pose release could not represent at all.
 
@@ -210,10 +210,10 @@ single clip, which the 11-point pose release could not represent at all.
   prefixes. Use `tfjs_graph_model` via SavedModel and `tf.loadGraphModel`.
 - **`tensorflowjs` needs `protobuf==6.31.1` and `setuptools<81`** (84 removed
   `pkg_resources`, which `tensorflow_hub` imports).
-- **macOS has no `flock`** — the download scripts use a `mkdir` lock.
+- **macOS has no `flock`**: the download scripts use a `mkdir` lock.
 - **Devanagari needs `\p{M}`** in tokenisers. Every Indic vowel sign is a
   combining mark; without it `नमस्ते` becomes `नमस त` and matches nothing.
-- **Zenodo is unreliable** — expect stalls, failed resumes, and at least one
+- **Zenodo is unreliable**: expect stalls, failed resumes, and at least one
   archive that silently truncated. All fetchers retry indefinitely.
 
 ---
@@ -225,7 +225,7 @@ single clip, which the 11-point pose release could not represent at all.
    stage. Everything downstream already works.
 2. **Finish the face-mesh extraction**, then `FULL_FACE` and retrain.
 3. **LLM gloss reordering.** ISL word order differs from spoken order.
-   `reverse.ts` currently does word matching and says so honestly — it is not
+   `reverse.ts` currently does word matching and says so honestly, it is not
    translation.
 4. **Bhashini** for real translation beyond the precomputed phrase table.
    Free tier is PoC-only; cache everything demo-critical.
@@ -241,10 +241,10 @@ single clip, which the 11-point pose release could not represent at all.
 > addresses the ~5 million deaf Indians whose access the RPwD Act already
 > mandates.
 
-- Google's **SL2T** shipped Aug 2026 — ASL only, Pixel 11 only, no API, no ISL,
+- Google's **SL2T** shipped Aug 2026, ASL only, Pixel 11 only, no API, no ISL,
   and it outputs text, not regional speech. It uses MediaPipe pose landmarks
   on-device, the same architecture as this. Good validation, no overlap.
 - **SignGemma** was announced May 2025 and still has not shipped; Google said
   publicly they missed their own quality bar.
-- Report **52%**, not 90%. Explain the difference — it is the most credible
+- Report **52%**, not 90%. Explain the difference, it is the most credible
   thing you can say.
