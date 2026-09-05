@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, Download, Dot, Square } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { SEQ_LEN, type PointFrame } from "../lib/features";
 
@@ -166,16 +167,20 @@ export default function Recorder() {
 
   return (
     <section className="recorder">
+      <div className="record-lead">
+        <p className="eyebrow">Community data collection</p>
+        <h2>Collect clean examples from the same camera used in the demo.</h2>
+      </div>
       <div className="card">
         <div className="card-h">
-          <span>Record your own signs</span>
+          <span>Collect signs</span>
           <span className="mono">{takes.length} takes</span>
         </div>
 
         <div className="stage rec-stage">
           <video ref={videoRef} playsInline muted />
           <canvas ref={canvasRef} />
-          {!live && <div className="idle">Camera off — press Start to begin recording.</div>}
+          {!live && <div className="idle"><b>Camera is off.</b><span>Start, enter a sign label, then record a take.</span></div>}
           {phase === "counting" && <div className="countdown">{count}</div>}
           {phase === "capturing" && <div className="capturing">RECORDING</div>}
           {live && (
@@ -189,15 +194,15 @@ export default function Recorder() {
           <div className="row">
             {!live ? (
               <button className="go" onClick={start} disabled={state !== "ready"}>
-                {state === "ready" ? "Start camera" : "Loading…"}
+                <Camera size={17} /> {state === "ready" ? "Start camera" : "Preparing..."}
               </button>
             ) : (
-              <button onClick={stop}>Stop camera</button>
+              <button onClick={stop}><Square size={16} /> Stop camera</button>
             )}
             <input
               className="say"
               value={gloss}
-              placeholder="sign label, e.g. Hello"
+              placeholder="Sign label, e.g. Hello"
               onChange={(e) => setGloss(e.target.value)}
             />
             <button
@@ -205,10 +210,10 @@ export default function Recorder() {
               onClick={record}
               disabled={!live || !gloss.trim() || phase !== "idle"}
             >
-              Record take
+              <Dot size={20} /> Record take
             </button>
             <button onClick={download} disabled={!takes.length}>
-              Download {takes.length ? `(${takes.length})` : ""}
+              <Download size={17} /> Download {takes.length ? `(${takes.length})` : ""}
             </button>
           </div>
 
@@ -216,10 +221,8 @@ export default function Recorder() {
           {camError && <div className="err-box">{camError}</div>}
 
           <p className="note" style={{ marginTop: 14 }}>
-            Aim for <b>30–50 takes per sign</b> across 20–30 signs. Vary your
-            distance, angle and lighting between takes — that variety is what the
-            INCLUDE data lacks, and it is what makes the model survive your demo
-            room instead of one classroom in Chennai.
+            Aim for <b>30-50 takes per sign</b>. Vary distance, angle and lighting
+            so the demo learns the room it will be shown in.
           </p>
 
           {Object.keys(counts).length > 0 && (

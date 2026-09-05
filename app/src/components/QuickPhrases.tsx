@@ -1,3 +1,4 @@
+import { BadgeAlert, MessageSquareText } from "lucide-react";
 import type { Domain, QuickPhrase } from "../lib/domains";
 
 /**
@@ -21,25 +22,38 @@ export default function QuickPhrases({
   onSay: (phrase: QuickPhrase) => void;
   disabled?: boolean;
 }) {
+  const priority = domain.quick.filter((q) => q.urgent);
+  const everyday = domain.quick.filter((q) => !q.urgent);
+  const renderPhrase = (q: QuickPhrase) => (
+    <button
+      key={q.glosses.join("|")}
+      className={q.urgent ? "qp urgent" : "qp"}
+      onClick={() => onSay(q)}
+      disabled={disabled}
+      title={q.glosses.join(" · ")}
+    >
+      <span className="qp-caption">{q.caption}</span>
+      <span className="qp-gloss">{q.glosses.join(" · ")}</span>
+    </button>
+  );
+
   return (
     <section className="card quick">
       <div className="card-h">
         <span>Tap to say</span>
         <span className="mono">{domain.station}</span>
       </div>
-      <div className="quick-grid">
-        {domain.quick.map((q) => (
-          <button
-            key={q.glosses.join("|")}
-            className={q.urgent ? "qp urgent" : "qp"}
-            onClick={() => onSay(q)}
-            disabled={disabled}
-            title={q.glosses.join(" · ")}
-          >
-            <span className="qp-caption">{q.caption}</span>
-            <span className="qp-gloss">{q.glosses.join(" · ")}</span>
-          </button>
-        ))}
+      <div className="phrase-groups">
+        {priority.length > 0 && (
+          <div className="phrase-group priority">
+            <div className="phrase-title"><BadgeAlert size={15} /> Priority needs</div>
+            <div className="quick-grid">{priority.map(renderPhrase)}</div>
+          </div>
+        )}
+        <div className="phrase-group">
+          <div className="phrase-title"><MessageSquareText size={15} /> Everyday phrases</div>
+          <div className="quick-grid">{everyday.map(renderPhrase)}</div>
+        </div>
       </div>
     </section>
   );
