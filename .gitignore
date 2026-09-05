@@ -6,7 +6,11 @@
 #   data/fetch_video.sh   INCLUDE raw video (Zenodo 4010759, CC BY 4.0)
 #   data/fetch_poses_all.sh
 #   data/fetch_cislr.sh   CISLR (gated, AFL-3.0)
-data/
+# `data/*` and not `data/`: git never descends into an excluded DIRECTORY, so
+# the negations below can never fire under `data/`. The existing fetch scripts
+# only survived because gitignore does not apply to already-tracked files --
+# data/fetch_islgov.sh was silently unstageable until this was fixed.
+data/*
 !data/*.sh
 !data/README*
 
