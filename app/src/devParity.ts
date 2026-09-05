@@ -60,7 +60,10 @@ export async function checkClipParity() {
       const frames: PointFrame[] = c.frames.map((f: number[][]) =>
         f.map(([x, y, z]) => ({ x, y, z }))
       );
-      const feats = extractFeatures(frames);
+      // These are INCLUDE clips, and INCLUDE is uniformly 1920x1080. Clips
+      // written after the isotropic fix carry their own aspect; older ones
+      // predate the field, and 16/9 is what they were.
+      const feats = extractFeatures(frames, c.aspect ?? 16 / 9);
       const t = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
       const probs = Array.from((model.predict(t) as tf.Tensor).dataSync());
       t.dispose();

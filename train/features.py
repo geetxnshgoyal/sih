@@ -39,6 +39,35 @@ def select_points(kp: np.ndarray) -> np.ndarray:
     return np.concatenate([kp[:, POSE], kp[:, LEFT], kp[:, RIGHT]], axis=1)
 
 
+def isotropic(seq: np.ndarray, aspect: float) -> np.ndarray:
+    """Undo MediaPipe's aspect-dependent normalisation. (T,N,3) -> (T,N,3).
+
+    MediaPipe divides x by the frame WIDTH and y by the frame HEIGHT, so its
+    "normalised" coordinates are stretched by the frame's aspect ratio. The same
+    skeleton shot at 16:9 and at 1:1 comes out geometrically different:
+
+        source            frame        nose above shoulders
+        INCLUDE           1920x1080    1.027 shoulder-widths
+        CISLR              300x300     0.552 shoulder-widths
+        true anatomy       --          ~0.55-0.70
+
+    1.027 / (1920/1080) = 0.578. The square-format corpus is the correct one;
+    INCLUDE is stretched vertically by 1.78 and the model spent its whole life
+    learning that stretch as if it were part of the sign. Measured cost: a model
+    trained on INCLUDE scores 2.1% on CISLR, barely above the 0.38% chance rate
+    (ARCHITECTURE.md 5.1).
+
+    Dividing y by the aspect ratio puts every source — either corpus, and any
+    webcam the app runs on — into one isotropic space where a shoulder-width
+    means the same thing horizontally and vertically.
+
+    z is left alone: MediaPipe already reports it on roughly the x scale.
+    """
+    seq = np.asarray(seq, dtype=np.float64).copy()
+    seq[..., 1] /= float(aspect)
+    return seq
+
+
 def anchor(seq: np.ndarray) -> np.ndarray:
     """Body-anchored and scale-invariant. Input already in unit coordinates."""
     seq = seq.astype(np.float64).copy()
@@ -82,15 +111,35 @@ def to_unit(kp: np.ndarray, vid_shape) -> np.ndarray:
     return seq
 
 
-def extract(seq: np.ndarray) -> np.ndarray:
+def extract(seq: np.ndarray, aspect: float) -> np.ndarray:
     """SHARED CONTRACT. unit-coordinate (T,65,3) -> flat float32 features.
+
+    `aspect` is the SOURCE FRAME's width / height. It is required, not
+    defaulted: a wrong aspect is silent — the model still returns a confident
+    answer, it is just answering about a differently-shaped body. Making every
+    caller state it is the only way to keep that from happening again.
 
     Mirrored exactly by extractFeatures() in app/src/lib/features.ts.
     """
-    seq = anchor(np.asarray(seq, dtype=np.float64))
+    seq = isotropic(np.asarray(seq, dtype=np.float64), aspect)
+    seq = anchor(seq)
     seq = resample(seq)
     return standardise(seq.reshape(-1)).astype(np.float32)
 
 
+def aspect_of(vid_shape) -> float:
+    """Frame width / height for an INCLUDE pose-release clip.
+
+    `vid_shape` is stored (H, W) — (1080, 1920) for every clip in the release,
+    i.e. LANDSCAPE 1920x1080. The docstring at the top of this file calls it
+    (W,H); that is the upstream naming, and to_unit's divisor order matches the
+    release's own pre-multiplication, so both are left as they are. Verified:
+    to_unit output agrees with MediaPipe run directly on the source video to
+    three decimals (1.021 vs 1.027).
+    """
+    h, w = float(vid_shape[0]), float(vid_shape[1])
+    return w / max(h, 1e-9)
+
+
 def extract_from_raw(kp: np.ndarray, vid_shape) -> np.ndarray:
-    return extract(to_unit(kp, vid_shape))
+    return extract(to_unit(kp, vid_shape), aspect_of(vid_shape))

@@ -29,6 +29,12 @@ TS_FEATURES = ROOT / "app" / "src" / "lib" / "features.ts"
 # round-half-to-even differs from naive rounding.
 CASES = [1, 7, 32, 33, 63, 64, 69, 120]
 
+# Aspect ratios the contract must agree on. 1.0 is the square CISLR format,
+# 16/9 is INCLUDE and most webcams, 4/3 is the rest of them, and 9/16 is a
+# phone held upright. A test that only ever passed 1.0 would not have caught
+# the isotropic bug at all, because y/1 is the identity.
+ASPECTS = [1.0, 16 / 9, 4 / 3, 9 / 16]
+
 NODE_HARNESS = r"""
 import { readFileSync } from "node:fs";
 const tsSrc = readFileSync(process.argv[2], "utf8");
@@ -48,18 +54,18 @@ const mod = await import("data:text/javascript," + encodeURIComponent(
   js + "\nexport { extractFeatures, N_POINTS, FEATURE_SIZE };"));
 
 const input = JSON.parse(readFileSync(process.argv[3], "utf8"));
-const frames = input.map(f => f.map(([x, y, z]) => ({ x, y, z })));
-const out = mod.extractFeatures(frames);
+const frames = input.frames.map(f => f.map(([x, y, z]) => ({ x, y, z })));
+const out = mod.extractFeatures(frames, input.aspect);
 process.stdout.write(JSON.stringify(Array.from(out)));
 """
 
 
-def run_ts(seq: np.ndarray) -> np.ndarray:
+def run_ts(seq: np.ndarray, aspect: float) -> np.ndarray:
     with tempfile.TemporaryDirectory() as tmp:
         harness = Path(tmp) / "harness.mjs"
         harness.write_text(NODE_HARNESS)
         data = Path(tmp) / "input.json"
-        data.write_text(json.dumps(seq.tolist()))
+        data.write_text(json.dumps({"frames": seq.tolist(), "aspect": aspect}))
         proc = subprocess.run(
             ["node", str(harness), str(TS_FEATURES), str(data)],
             capture_output=True, text=True,
@@ -76,32 +82,36 @@ def main() -> int:
     print(f"contract: {features.N_POINTS} points x {features.SEQ_LEN} frames "
           f"-> {features.FEATURE_SIZE} features\n")
 
-    for t in CASES:
-        # plausible unit-coordinate landmarks, with a real shoulder separation
-        seq = rng.uniform(0.1, 0.9, size=(t, features.N_POINTS, 3))
-        seq[:, features.L_SHOULDER, :2] = [0.40, 0.35]
-        seq[:, features.R_SHOULDER, :2] = [0.60, 0.35]
+    total = 0
+    for aspect in ASPECTS:
+        print(f"aspect {aspect:.4f}")
+        for t in CASES:
+            # plausible unit-coordinate landmarks, with a real shoulder separation
+            seq = rng.uniform(0.1, 0.9, size=(t, features.N_POINTS, 3))
+            seq[:, features.L_SHOULDER, :2] = [0.40, 0.35]
+            seq[:, features.R_SHOULDER, :2] = [0.60, 0.35]
 
-        py = features.extract(seq)
-        ts = run_ts(seq)
+            py = features.extract(seq, aspect)
+            ts = run_ts(seq, aspect)
+            total += 1
 
-        if py.shape != ts.shape:
-            print(f"FAIL  T={t:3d}  shape {py.shape} vs {ts.shape}")
-            failures += 1
-            continue
+            if py.shape != ts.shape:
+                print(f"  FAIL  T={t:3d}  shape {py.shape} vs {ts.shape}")
+                failures += 1
+                continue
 
-        delta = np.abs(py - ts).max()
-        ok = delta <= 1e-5
-        if not ok:
-            failures += 1
-        print(f"{'PASS' if ok else 'FAIL'}  T={t:3d}  max|py-ts| = {delta:.3e}")
+            delta = np.abs(py - ts).max()
+            ok = delta <= 1e-5
+            if not ok:
+                failures += 1
+            print(f"  {'PASS' if ok else 'FAIL'}  T={t:3d}  max|py-ts| = {delta:.3e}")
+        print()
 
-    print()
     if failures:
-        print(f"{failures}/{len(CASES)} FAILED — extractors have drifted. "
+        print(f"{failures}/{total} FAILED — extractors have drifted. "
               f"Do not train until this passes.")
         return 1
-    print(f"{len(CASES)}/{len(CASES)} passed — Python and TypeScript agree.")
+    print(f"{total}/{total} passed — Python and TypeScript agree.")
     return 0
 
 

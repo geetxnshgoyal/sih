@@ -34,11 +34,17 @@ export class GlossClassifier {
     });
   }
 
-  /** Top-k predictions, for the diagnostics panel. */
-  predictTop(frames: PointFrame[], k = 3): { gloss: string; conf: number }[] {
+  /**
+   * Top-k predictions, for the diagnostics panel.
+   *
+   * `aspect` is the source frame's width / height — see extractFeatures.
+   * Passing the wrong one does not throw; it silently classifies a
+   * differently-shaped body.
+   */
+  predictTop(frames: PointFrame[], aspect: number, k = 3): { gloss: string; conf: number }[] {
     if (!this.model || frames.length === 0) return [];
     const probs = tf.tidy(() => {
-      const feats = extractFeatures(frames);
+      const feats = extractFeatures(frames, aspect);
       const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
       return (this.model!.predict(input) as tf.Tensor).dataSync();
     });
@@ -48,12 +54,12 @@ export class GlossClassifier {
       .slice(0, k);
   }
 
-  /** Runs the model over a rolling buffer of frames. */
-  predict(frames: PointFrame[]): Prediction {
+  /** Runs the model over a rolling buffer of frames. `aspect` = width / height. */
+  predict(frames: PointFrame[], aspect: number): Prediction {
     if (!this.model || frames.length === 0) return { gloss: null, conf: 0 };
 
     const probs = tf.tidy(() => {
-      const feats = extractFeatures(frames);
+      const feats = extractFeatures(frames, aspect);
       const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
       return (this.model!.predict(input) as tf.Tensor).dataSync();
     });

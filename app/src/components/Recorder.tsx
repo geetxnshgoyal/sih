@@ -23,7 +23,7 @@ import { SEQ_LEN, type PointFrame } from "../lib/features";
 const COUNTDOWN = 3;
 const CAPTURE_MS = 2200;
 
-type Take = { gloss: string; frames: PointFrame[]; at: number };
+type Take = { gloss: string; frames: PointFrame[]; at: number; aspect: number };
 
 export default function Recorder() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -120,7 +120,12 @@ export default function Recorder() {
         const frames = bufRef.current.slice();
         setPhase("idle");
         if (frames.length >= SEQ_LEN) {
-          setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now() }]);
+          // Record the camera's aspect ratio with the take. MediaPipe's
+          // coordinates are aspect-dependent, so frames without it cannot be
+          // put into the model's coordinate space later — see features.ts.
+          const v = videoRef.current;
+          const aspect = v && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9;
+          setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now(), aspect }]);
         } else {
           setCamError(
             `Only ${frames.length} frames captured (need ${SEQ_LEN}). Keep both hands in frame for the whole take.`
@@ -134,12 +139,15 @@ export default function Recorder() {
     // Frames are already in the unit coordinate space that to_unit() produces,
     // so train/preprocess.py can read this directly.
     const payload = {
-      format: "setu-recordings-v1",
+      format: "setu-recordings-v2",
       points: 65,
-      note: "unit coordinates, pose 0-22 + left hand 23-43 + right hand 44-64",
+      note: "unit coordinates, pose 0-22 + left hand 23-43 + right hand 44-64; "
+        + "per-take `aspect` is the camera's width/height, required to map "
+        + "these into the model's isotropic space (v2 added this field)",
       takes: takes.map((t) => ({
         gloss: t.gloss,
         recorded_at: new Date(t.at).toISOString(),
+        aspect: t.aspect,
         frames: t.frames.map((f) => f.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)])),
       })),
     };

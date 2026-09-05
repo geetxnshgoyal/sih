@@ -7,7 +7,9 @@
  * Change one side, change the other, re-run the test. No exceptions.
  *
  * SHARED CONTRACT
- *   input : unit-coordinate sequence, (T, N_POINTS, 3)
+ *   input : unit-coordinate sequence, (T, N_POINTS, 3), plus the source
+ *           frame's aspect ratio (width / height)
+ *   isotropic: y /= aspect, undoing MediaPipe's aspect-dependent normalisation
  *   anchor: shoulder midpoint origin, shoulder-width scale
  *   resample: nearest-index stride to exactly SEQ_LEN frames
  *   standardise: zero mean, unit std over the whole flattened vector
@@ -54,25 +56,44 @@ export function assembleFrame(
   return out;
 }
 
-/** Shoulder-midpoint origin, shoulder-width scale. Mirrors anchor() in Python. */
-function anchor(seq: PointFrame[]): Float64Array {
+/**
+ * Shoulder-midpoint origin, shoulder-width scale, in ISOTROPIC coordinates.
+ * Mirrors isotropic() + anchor() in Python, fused into one pass.
+ *
+ * `aspect` is the source frame's width / height. MediaPipe divides x by the
+ * frame width and y by the frame height, so its "normalised" output is
+ * stretched by the aspect ratio — the same skeleton at 16:9 and at 1:1 is
+ * geometrically different. Dividing y by the aspect undoes that.
+ *
+ * This is not cosmetic. A model trained on 16:9 INCLUDE video scored 2.1% on
+ * square CISLR video against a 0.38% chance rate, purely because of this
+ * (ARCHITECTURE.md 5.1). The app is subject to the same failure whenever the
+ * webcam's shape differs from the training corpus — so the aspect must come
+ * from the live video element, never a constant.
+ *
+ * Division rather than multiplying by a reciprocal: Python does `y /= aspect`
+ * element-wise, and `y * (1/aspect)` rounds differently. test_parity.py asserts
+ * equality to 0.000e+00, so that difference would surface as a failure.
+ */
+function anchor(seq: PointFrame[], aspect: number): Float64Array {
   const per = N_POINTS * N_DIMS;
   const out = new Float64Array(seq.length * per);
 
   for (let t = 0; t < seq.length; t++) {
     const f = seq[t];
     const ls = f[L_SHOULDER], rs = f[R_SHOULDER];
-    const mx = (ls.x + rs.x) / 2, my = (ls.y + rs.y) / 2, mz = (ls.z + rs.z) / 2;
+    const lsy = ls.y / aspect, rsy = rs.y / aspect;
+    const mx = (ls.x + rs.x) / 2, my = (lsy + rsy) / 2, mz = (ls.z + rs.z) / 2;
 
     // shoulder width uses x,y only — matches np.linalg.norm(..., :2) in Python
-    const dx = ls.x - rs.x, dy = ls.y - rs.y;
+    const dx = ls.x - rs.x, dy = lsy - rsy;
     const span = Math.max(Math.hypot(dx, dy), 1e-6);
 
     const base = t * per;
     for (let i = 0; i < N_POINTS; i++) {
       const p = f[i];
       out[base + i * 3 + 0] = (p.x - mx) / span;
-      out[base + i * 3 + 1] = (p.y - my) / span;
+      out[base + i * 3 + 1] = (p.y / aspect - my) / span;
       out[base + i * 3 + 2] = (p.z - mz) / span;
     }
   }
@@ -117,12 +138,19 @@ function standardise(v: Float64Array): Float32Array {
   return out;
 }
 
-/** SHARED CONTRACT entry point. */
-export function extractFeatures(seq: PointFrame[]): Float32Array {
+/**
+ * SHARED CONTRACT entry point.
+ *
+ * `aspect` is the source frame's width / height — for live camera,
+ * `video.videoWidth / video.videoHeight`. It is required, not defaulted: a
+ * wrong aspect is silent. The model still returns a confident answer, it is
+ * just answering about a differently-shaped body.
+ */
+export function extractFeatures(seq: PointFrame[], aspect: number): Float32Array {
   const per = N_POINTS * N_DIMS;
   if (seq.length === 0) return new Float32Array(FEATURE_SIZE);
 
-  const anchored = anchor(seq);
+  const anchored = anchor(seq, aspect);
   const idx = resampleIndices(seq.length);
 
   const picked = new Float64Array(FEATURE_SIZE);

@@ -87,8 +87,14 @@ def main() -> int:
         if seq.ndim != 3 or seq.shape[1] != features.N_POINTS:
             print(f"  ! bad shape {seq.shape} for {t['gloss']}, skipped")
             continue
-        # identical path to the INCLUDE pipeline from this point on
-        arr = features.resample(features.anchor(seq))
+        # identical path to the INCLUDE pipeline from this point on.
+        # `aspect` is the recording camera's width/height, written by
+        # Recorder.tsx from v2 of the format. v1 files predate the field; they
+        # were captured at the 1280x720 the recorder requests, so 16/9 is what
+        # they were — but a v1 file recorded on a 4:3 camera is silently wrong
+        # and should be re-recorded rather than trusted.
+        aspect = float(t.get("aspect") or 16 / 9)
+        arr = features.resample(features.anchor(features.isotropic(seq, aspect)))
         if not np.all(np.isfinite(arr)):
             continue
         X[kept] = arr

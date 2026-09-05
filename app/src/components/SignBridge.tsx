@@ -191,6 +191,12 @@ export default function SignBridge({
     if (!runningRef.current) return;
     const video = videoRef.current;
     if (video && video.readyState >= 2) {
+      // MediaPipe's coordinates are normalised by frame width and height
+      // separately, so they carry the camera's aspect ratio. The model was
+      // trained in an isotropic space; feeding it raw MediaPipe output means
+      // classifying a body stretched by whatever shape this webcam happens to
+      // be. Read it live rather than assuming 16:9 — see lib/features.ts.
+      const aspect = video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
       const res = detect(video, performance.now());
       if (res) {
         draw(res.pose, res.left, res.right);
@@ -225,12 +231,12 @@ export default function SignBridge({
           setDiag({
             pose: !!res.pose, left: !!res.left, right: !!res.right,
             shoulder, verdict,
-            top: segment ? clfRef.current.predictTop(segment, 3) : [],
+            top: segment ? clfRef.current.predictTop(segment, aspect, 3) : [],
           });
         }
 
         if (segment) {
-          const pred = clfRef.current.predict(segment);
+          const pred = clfRef.current.predict(segment, aspect);
           const g = gateRef.current.once(pred);
           setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
 
@@ -240,7 +246,7 @@ export default function SignBridge({
           setCandidates(
             certainty(pred.conf) === "confident"
               ? []
-              : clfRef.current.predictTop(segment, 5)
+              : clfRef.current.predictTop(segment, aspect, 5)
           );
 
           if (g.fire) {
@@ -281,7 +287,7 @@ export default function SignBridge({
   async function replayDemo() {
     const clips: {
       true: string; pred: string; conf: number; correct: boolean;
-      frames: number[][][];
+      frames: number[][][]; aspect?: number;
     }[] = await (await fetch(asset("/model/_demo.json"))).json();
 
     const cv = canvasRef.current!;
@@ -290,6 +296,9 @@ export default function SignBridge({
     bufferRef.current = [];
 
     for (const clip of clips) {
+      // These are INCLUDE clips, uniformly 1920x1080. Clips written after the
+      // isotropic fix carry the field; older ones predate it and were 16:9.
+      const aspect = clip.aspect ?? 16 / 9;
       setReplaying(clip.true);
       bufferRef.current = [];
       gateRef.current.reset();
@@ -302,7 +311,7 @@ export default function SignBridge({
         drawFrame(frame);
 
         if (bufferRef.current.length >= SEQ_LEN) {
-          const pred = clfRef.current.predict(bufferRef.current);
+          const pred = clfRef.current.predict(bufferRef.current, aspect);
           const g = gateRef.current.push(pred);
           setLive({ gloss: pred.gloss, conf: pred.conf, progress: g.progress });
           if (g.fire) {
@@ -323,7 +332,7 @@ export default function SignBridge({
       // do the same so the stability window can fill. Same gate, same floor —
       // not lowering the bar, just giving it the frames it expects.
       for (let i = 0; i < NEEDED + 4 && bufferRef.current.length >= SEQ_LEN; i++) {
-        const pred = clfRef.current.predict(bufferRef.current);
+        const pred = clfRef.current.predict(bufferRef.current, aspect);
         const g = gateRef.current.push(pred);
         setLive({ gloss: pred.gloss, conf: pred.conf, progress: g.progress });
         if (g.fire) {
