@@ -1066,3 +1066,6 @@ code{
 }
 .install-steps{opacity:.95}
 .install-glyph{opacity:.7}
+
+.about-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.about-credit a:hover{opacity:1}

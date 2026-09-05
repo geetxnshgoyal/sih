@@ -82,6 +82,12 @@ export function HomeScreen() {
       </p>
       <p className="about-credit">
         Built by <strong>Team Awaaz</strong> for Smart India Hackathon 2026.
+        Free to use, and always will be.{" "}
+        <a href="https://github.com/geetxnshgoyal/sih/blob/main/PRIVACY.md"
+           target="_blank" rel="noopener noreferrer">Privacy</a>
+        {" · "}
+        <a href="https://github.com/geetxnshgoyal/sih" target="_blank"
+           rel="noopener noreferrer">Source</a>
       </p>
     </section>
   </div></main>;
