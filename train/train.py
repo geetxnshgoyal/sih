@@ -106,10 +106,29 @@ def score(model, X4, y):
     return top1, top5
 
 
+VAL_FRACTION = 0.15
+
+
 def run(name, Xtr, ytr, Xte, yte, n_classes, rng, verbose=0):
+    """Fit on Xtr, report on Xte. The test set is touched ONCE, at the end.
+
+    Validation is carved out of TRAIN, not taken from the test set.
+
+    This used to pass `validation_data=(Xte, yte)` alongside
+    `restore_best_weights=True`, which selects the stopping epoch on the very
+    set being reported — an optimistic bias of unmeasured size on every number
+    this script has ever printed, 52.0% and 40.4% among them. The clips are
+    split BEFORE augmentation so that augmented variants of a validation clip
+    cannot leak into training.
+    """
     Xte_raw = Xte
-    Xa, ya = aug.augment_batch(Xtr, ytr, rng, factor=4)
+    idx = rng.permutation(len(Xtr))
+    cut = max(int((1.0 - VAL_FRACTION) * len(idx)), 1)
+    tr_i, va_i = idx[:cut], idx[cut:]
+
+    Xa, ya = aug.augment_batch(Xtr[tr_i], ytr[tr_i], rng, factor=4)
     Xa = standardise(Xa)
+    Xva, yva = standardise(Xtr[va_i]), ytr[va_i]
     Xte = standardise(Xte)
     model = build_model(Xa.shape[1], Xa.shape[2], n_classes)
 
@@ -119,7 +138,7 @@ def run(name, Xtr, ytr, Xte, yte, n_classes, rng, verbose=0):
         keras.callbacks.ReduceLROnPlateau(monitor="val_accuracy", factor=0.5,
                                           patience=5, min_lr=1e-5),
     ]
-    hist = model.fit(Xa, ya, validation_data=(Xte, yte), epochs=EPOCHS,
+    hist = model.fit(Xa, ya, validation_data=(Xva, yva), epochs=EPOCHS,
                      batch_size=BATCH, callbacks=cbs, verbose=verbose)
 
     # Report both: the far-camera set the data was shot on, and the same clips
