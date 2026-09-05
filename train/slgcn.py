@@ -1,5 +1,5 @@
 """
-SL-GCN — a graph convolutional arm for the ablation.
+SL-GCN: a graph convolutional arm for the ablation.
 
 Why this exists
 ---------------
@@ -9,19 +9,19 @@ is a GRAPH. Nothing tells the model that wrist-elbow-shoulder are connected, so
 it has to rediscover human kinematics from 4,284 clips.
 
 SL-GCN (Jiang et al., SAM-SLR) instead convolves ALONG the skeleton. AI4Bharat
-benchmarked it at 93.5% on INCLUDE — the dataset we train on — against 91.2% for
+benchmarked it at 93.5% on INCLUDE, the dataset we train on, against 91.2% for
 ST-GCN and 90.4% for a transformer, so on our exact data it is the best-evidenced
 architecture available.
 
 Three ideas, in the order they matter here:
 
 1. DecoupleSCN. In an ordinary GCN every feature channel shares one adjacency
-   matrix, which caps expressiveness and overfits — and ordinary dropout works
+   matrix, which caps expressiveness and overfits, and ordinary dropout works
    poorly in GCNs. Decoupling gives each channel GROUP its own learnable
    adjacency, so one group can specialise in hand-internal structure while
    another tracks arm kinematics. (Cheng et al., ECCV 2020.)
 
-2. STC attention. Spatial, temporal and channel attention cascaded — which
+2. STC attention. Spatial, temporal and channel attention cascaded, which
    joints matter, which frames matter, which features matter.
 
 3. A smaller graph. SAM-SLR reduces to 27 keypoints and reports that this HELPS.
@@ -29,7 +29,7 @@ Three ideas, in the order they matter here:
    "fewer nodes, more structure" runs against the instinct to add capacity and
    is worth measuring rather than assuming.
 
-Everything here is einsum / matmul / conv2d — ops TF.js supports — so a winning
+Everything here is einsum / matmul / conv2d, ops TF.js supports, so a winning
 arm can actually ship to the browser rather than being a paper result.
 """
 from __future__ import annotations
@@ -54,7 +54,7 @@ _POSE_EDGES = [
     (11, 12),                            # shoulders
     # Anatomical bridges MediaPipe's own topology omits. Without these the face
     # (0-8), the mouth (9-10) and the torso (11+) are three disconnected
-    # components — verified: only 9 of 65 nodes were reachable. A GCN cannot
+    # components: verified: only 9 of 65 nodes were reachable. A GCN cannot
     # propagate across a disconnected graph, so head movement (which carries
     # negation in ISL) could never reach the hands that qualify it.
     (0, 11), (0, 12),                    # nose -> shoulders, joins head to body
@@ -75,7 +75,7 @@ _HAND_EDGES = [
 ]
 
 # The cross-links that make this ONE graph rather than three disconnected ones.
-# Pose wrist 15/16 is the same physical joint as hand root 0 — without these the
+# Pose wrist 15/16 is the same physical joint as hand root 0, without these the
 # model cannot relate handshape to where the hand is in body space, which is
 # most of what distinguishes one sign from another.
 _BRIDGE = [(15, LH + 0), (16, RH + 0)]
@@ -101,7 +101,7 @@ def build_adjacency(num_nodes: int = N_POINTS,
     different relationships rather than averaging all three together.
 
     Symmetric normalisation (D^-1/2 A D^-1/2) keeps activations from exploding
-    at high-degree nodes — the wrists here, which carry six edges each.
+    at high-degree nodes: the wrists here, which carry six edges each.
     """
     edges = list(_POSE_EDGES)
     for a, b in _HAND_EDGES:
@@ -113,7 +113,7 @@ def build_adjacency(num_nodes: int = N_POINTS,
         # CONTRACT, don't filter. Keeping only edges whose endpoints both survive
         # silently shatters the graph: CORE_27 keeps fingertips and knuckles but
         # drops the joints between them, so naive filtering left 17 of 27 nodes
-        # unreachable — fingertips floating free of the hand they belong to.
+        # unreachable: fingertips floating free of the hand they belong to.
         #
         # Instead, two kept nodes are joined when a path exists between them in
         # the full skeleton passing only through dropped nodes. That preserves
@@ -190,7 +190,7 @@ class DecoupleSCN(layers.Layer):
         self.A_fixed = self.add_weight(
             name="A_fixed", shape=(self.K, self.V, self.V),
             initializer=keras.initializers.Constant(self.A_init), trainable=False)
-        # One learnable adjacency residual PER GROUP — this is the decoupling.
+        # One learnable adjacency residual PER GROUP, this is the decoupling.
         self.A_res = self.add_weight(
             name="A_res", shape=(self.groups, self.K, self.V, self.V),
             initializer=keras.initializers.RandomNormal(stddev=1e-3), trainable=True)
@@ -227,7 +227,7 @@ class DecoupleSCN(layers.Layer):
 class STCAttention(layers.Layer):
     """Spatial, temporal and channel attention, cascaded.
 
-    Cheap (three small dense layers) and it makes the model's focus inspectable —
+    Cheap (three small dense layers) and it makes the model's focus inspectable , 
     the spatial weights say which joints a sign actually depends on, which is
     worth having when explaining a prediction to a clinician.
     """
@@ -289,7 +289,7 @@ def build_slgcn(seq_len: int, num_nodes: int, in_ch: int, n_classes: int,
     """SL-GCN over (T, V, C). Deliberately narrow, and that is the point.
 
     width=32 gives 461,830 parameters against the promoted Conv1D model's
-    512,994 — 0.90x. Matching capacity is not a detail: at the obvious width=64
+    512,994: 0.90x. Matching capacity is not a detail: at the obvious width=64
     this arm carries 2.39x the parameters, and a win there would be
     uninterpretable, because "graph structure helps" and "more capacity helps"
     would be perfectly confounded. Held slightly UNDER the baseline so any gain
@@ -310,7 +310,7 @@ def build_slgcn(seq_len: int, num_nodes: int, in_ch: int, n_classes: int,
     out = layers.Dense(n_classes, activation="softmax", name="head")(x)
 
     m = keras.Model(inp, out, name="sl_gcn")
-    # Same optimiser, loss and LR as train.build_model — another axis held fixed,
+    # Same optimiser, loss and LR as train.build_model, another axis held fixed,
     # so the arms differ only in architecture.
     m.compile(
         optimizer=keras.optimizers.Adam(1e-3),
@@ -323,8 +323,8 @@ def build_slgcn(seq_len: int, num_nodes: int, in_ch: int, n_classes: int,
 def standardise_graph(X4: np.ndarray) -> np.ndarray:
     """(N,T,V,C) -> (N,T,V,C), normalised EXACTLY as train.standardise does.
 
-    The statistics must match the flat path bit for bit — same whole-clip mean
-    and std over every value — or the two arms are not comparable and, worse,
+    The statistics must match the flat path bit for bit, same whole-clip mean
+    and std over every value: or the two arms are not comparable and, worse,
     the parity contract with features.ts silently no longer describes this model.
     Only the final reshape differs: the graph is preserved instead of flattened.
     """

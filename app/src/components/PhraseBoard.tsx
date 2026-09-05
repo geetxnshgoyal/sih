@@ -14,7 +14,7 @@ import type { DomainId } from "../lib/domains";
  * it has not seen; a tapped phrase is 100%, every time, offline. So this is the
  * primary surface and recognition is the shortcut, not the reverse.
  *
- * Layout follows a triage conversation rather than the alphabet — Emergency and
+ * Layout follows a triage conversation rather than the alphabet, Emergency and
  * About me first, because "I am Deaf" and "I cannot breathe" are the two things
  * that must never be more than one tap away. Search exists because 97 phrases
  * is more than anyone will scroll in pain.

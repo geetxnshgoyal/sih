@@ -1,10 +1,10 @@
 /**
- * Deployment domains — the same bridge, two settings.
+ * Deployment domains: the same bridge, two settings.
  *
  * Setu is going to SIH under two themes: MedTech and Travel & Tourism. That is
  * not two products. The recognition stack is identical and entirely
  * domain-neutral: one 264-sign classifier, one feature contract, one segmenter.
- * INCLUDE is a general lexicon — "Doctor" and "Train Station" are the same kind
+ * INCLUDE is a general lexicon, "Doctor" and "Train Station" are the same kind
  * of sign to the model, and nothing below the UI knows which setting it is in.
  *
  * What genuinely differs between a hospital reception and a tourist help desk is
@@ -38,7 +38,7 @@ export interface QuickPhrase {
 export interface Domain {
   id: DomainId;
   label: string;
-  /** Shown under the title — one line, plain. */
+  /** Shown under the title: one line, plain. */
   tagline: string;
   /** What the kiosk calls its location. */
   station: string;
@@ -52,12 +52,12 @@ export interface Domain {
  * Identity and courtesy, needed in every setting.
  *
  * "I Deaf" leads deliberately. It is the first thing a Deaf person usually has
- * to establish, in any setting, before anything else can happen — and it is the
+ * to establish, in any setting, before anything else can happen, and it is the
  * one phrase whose absence from a demo would be conspicuous.
  */
 const SHARED_QUICK: QuickPhrase[] = [
   { glosses: ["I", "Deaf"], caption: "I am Deaf" },
-  { glosses: ["I", "Deaf", "Sign"], caption: "I am Deaf — I sign" },
+  { glosses: ["I", "Deaf", "Sign"], caption: "I am Deaf: I sign" },
   { glosses: ["Hello"], caption: "Hello" },
   { glosses: ["Thank you"], caption: "Thank you" },
 ];
@@ -157,7 +157,7 @@ function read(): DomainId {
     const v = localStorage.getItem(STORAGE_KEY);
     if (v === "health" || v === "travel") return v;
   } catch {
-    // storage unavailable — fall through to the default
+    // storage unavailable: fall through to the default
   }
   return "health";
 }

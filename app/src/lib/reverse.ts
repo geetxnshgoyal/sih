@@ -1,5 +1,5 @@
 /**
- * Direction B — spoken language back into ISL.
+ * Direction B: spoken language back into ISL.
  *
  * The hearing person speaks; the deaf person needs to see it signed. We have
  * 96 signs available as pose sequences, played back as an animated skeleton.
@@ -16,8 +16,8 @@ export type SignLibrary = Record<string, SignFrame[]>;
 /**
  * Spoken words that should map onto a gloss we can actually play.
  *
- * This map is the setting-neutral core. Words specific to a deployment — "ward"
- * and "prescription", or "platform" and "fare" — live on the domain in
+ * This map is the setting-neutral core. Words specific to a deployment, "ward"
+ * and "prescription", or "platform" and "fare": live on the domain in
  * `domains.ts` and are layered on top at call time, so the same recogniser
  * serves a hospital desk and a station enquiry counter without either one
  * carrying the other's vocabulary.
@@ -49,7 +49,7 @@ const SYNONYMS: Record<string, string> = {
  * Turn a spoken sentence into a playable sign sequence.
  *
  * This is word matching, not translation. ISL has its own grammar and word
- * order, so a faithful system would reorder glosses before playback — that is
+ * order, so a faithful system would reorder glosses before playback, that is
  * the LLM step in the full design. Here we keep spoken order and are explicit
  * about it, rather than pretending a lookup is translation.
  */

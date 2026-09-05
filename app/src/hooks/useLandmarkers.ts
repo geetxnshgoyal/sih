@@ -21,13 +21,13 @@ export type DetectResult = {
 };
 
 /**
- * MediaPipe Holistic — one model for pose, both hands, and face.
+ * MediaPipe Holistic: one model for pose, both hands, and face.
  *
  * Why Holistic and not PoseLandmarker + HandLandmarker:
  * the INCLUDE pose release was extracted with Holistic, which produces pose and
  * hand landmarks in ONE consistent coordinate frame. Running two separate
- * landmarkers gives two different z conventions — hand z relative to the wrist,
- * pose z relative to the torso — and z carries roughly a third of the model's
+ * landmarkers gives two different z conventions, hand z relative to the wrist,
+ * pose z relative to the torso, and z carries roughly a third of the model's
  * input signal (pose z std 1.32 and hand z std 0.75, against x,y std of 1.24
  * and 2.32). Mixing conventions makes a third of the live input meaningless to
  * a model trained on Holistic. Same model in, same model out.

@@ -35,7 +35,7 @@ function ScreenRouter() {
     // landing page with a bare "Setu · Home" throws away every keyword the
     // static <title> was written to carry.
     document.title = activeView === "home"
-      ? "Setu — Indian Sign Language Bridge | Team Awaaz"
+      ? "Setu: Indian Sign Language Bridge | Team Awaaz"
       : `Setu · ${activeView === "bridge" ? "Consultation" : activeView.charAt(0).toUpperCase() + activeView.slice(1)}`;
   }, [activeView, selectedRole]);
 

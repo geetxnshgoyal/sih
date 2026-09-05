@@ -146,7 +146,7 @@ def main() -> int:
             word_id[f"asl:{i}"] = off + i
 
     if not rows:
-        print("nothing to write — let train/extract_islgov.py run further")
+        print("nothing to write: let train/extract_islgov.py run further")
         return 1
     X = np.stack(rows).astype(np.float32)
     word = np.asarray(row_word, dtype=np.int32)

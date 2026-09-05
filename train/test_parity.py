@@ -108,10 +108,10 @@ def main() -> int:
         print()
 
     if failures:
-        print(f"{failures}/{total} FAILED — extractors have drifted. "
+        print(f"{failures}/{total} FAILED: extractors have drifted. "
               f"Do not train until this passes.")
         return 1
-    print(f"{total}/{total} passed — Python and TypeScript agree.")
+    print(f"{total}/{total} passed: Python and TypeScript agree.")
     return 0
 
 

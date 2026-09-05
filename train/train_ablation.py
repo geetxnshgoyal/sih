@@ -16,12 +16,12 @@ Two independent questions, deliberately in one harness so they share the exact
 same clips, signers, classes, seed, augmentation draws and held-out-group
 protocol. Only one thing varies per comparison.
 
-Q1 — the face. `FACE_MODE = "FULL_FACE"` adds 48 eyebrow, eye-aperture and lip
+Q1: the face. `FACE_MODE = "FULL_FACE"` adds 48 eyebrow, eye-aperture and lip
 landmarks. ISL marks yes/no questions with raised brows, wh-questions with
 furrowed brows, and negation with a head shake, so there is a linguistic reason
 to expect a gain. That is an argument, not evidence, which is why it is measured.
 
-Q2 — the architecture. The baseline flattens each frame's landmarks into a
+Q2: the architecture. The baseline flattens each frame's landmarks into a
 195-vector, discarding the fact that they form a skeleton: nothing tells it that
 wrist-elbow-shoulder are connected. SL-GCN convolves ALONG the graph instead.
 AI4Bharat benchmarked SL-GCN at 93.5% on INCLUDE against 91.2% for ST-GCN and
@@ -29,14 +29,14 @@ AI4Bharat benchmarked SL-GCN at 93.5% on INCLUDE against 91.2% for ST-GCN and
 architecture available.
 
 Held at 0.90x the baseline's parameter count (461,830 vs 512,994) on purpose. At
-the natural width it carries 2.39x, and a win there would be uninterpretable —
+the natural width it carries 2.39x, and a win there would be uninterpretable , 
 "structure helps" and "capacity helps" would be perfectly confounded.
 
 Epoch budgets are per-architecture: see ARCH_EPOCHS below.
 
 Scope, stated plainly
 ---------------------
-This runs on whatever Zenodo parts have been extracted so far — the scope is
+This runs on whatever Zenodo parts have been extracted so far, the scope is
 read from disk at runtime and written into the output JSON, because a hardcoded
 scope string silently becomes a lie as more data lands. It is NOT the 4,284-clip
 / 264-class result and must never be quoted as one.
@@ -60,7 +60,7 @@ from slgcn import build_slgcn, standardise_graph  # noqa: E402
 
 # Epoch budget is PER ARCHITECTURE, not shared.
 #
-# EPOCHS=60 is tuned for the Conv1D baseline. SL-GCN converges far more slowly —
+# EPOCHS=60 is tuned for the Conv1D baseline. SL-GCN converges far more slowly , 
 # measured on a 20-class slice, it read 12.8% at 6 epochs and reached 100% train
 # / 33% val by 40. Running both arms at 60 would compare a converged model against
 # an undertrained one and conclude "graphs do not help", which would be a fact
@@ -85,7 +85,7 @@ def categories_present() -> set[str]:
     """Categories actually extracted, read from disk.
 
     The scope of this ablation changes every time another part lands, so it must
-    be observed rather than hardcoded — a stale scope string turns an honest
+    be observed rather than hardcoded, a stale scope string turns an honest
     result into a misleading one, and this file's whole job is honest reporting.
     """
     src = ROOT / "data" / "video_landmarks"
@@ -101,8 +101,8 @@ def parts_extracted() -> int:
 def run_arm(Xtr, ytr, Xte, yte, n_classes, rng, arch="cnn"):
     """One train+eval. Identical to train.run, minus the checkpoint bookkeeping.
 
-    `arch` selects the architecture. Everything else — augmentation draws, seed,
-    epochs, callbacks, held-out protocol — is held identical across arms, so the
+    `arch` selects the architecture. Everything else, augmentation draws, seed,
+    epochs, callbacks, held-out protocol, is held identical across arms, so the
     only thing that varies is the model. The two paths differ solely in whether
     the normalised clip keeps its (T,V,C) graph shape or is flattened to (T,195);
     the normalisation statistics are bit-identical either way.
@@ -140,7 +140,7 @@ def run_arm(Xtr, ytr, Xte, yte, n_classes, rng, arch="cnn"):
 
 
 def evaluate(X, y, signer, n_classes, arm_name, arch="cnn"):
-    """Held-out-group protocol, mean over groups — same as train.py."""
+    """Held-out-group protocol, mean over groups, same as train.py."""
     rows = []
     for g in sorted(set(signer.tolist())):
         # Reseed per arm+group so both arms see identical augmentation draws.
@@ -159,7 +159,7 @@ def evaluate(X, y, signer, n_classes, arm_name, arch="cnn"):
 
 def main() -> int:
     if not DATA.exists():
-        print(f"missing {DATA.relative_to(ROOT)} — run train/preprocess_face.py first")
+        print(f"missing {DATA.relative_to(ROOT)}, run train/preprocess_face.py first")
         return 1
 
     d = np.load(DATA, allow_pickle=True)
@@ -172,23 +172,23 @@ def main() -> int:
     print(f"chance {100/n_classes:.1f}%\n")
 
     print("=" * 62)
-    print("HEAD_ONLY — 65 points, no face mesh (baseline)")
+    print("HEAD_ONLY: 65 points, no face mesh (baseline)")
     print("=" * 62)
     head_rows, head_far, head_close = evaluate(X_head, y, signer, n_classes, "head")
 
     print()
     print("=" * 62)
-    print("FULL_FACE — 113 points, + eyebrows / eyes / lips")
+    print("FULL_FACE: 113 points, + eyebrows / eyes / lips")
     print("=" * 62)
     full_rows, full_far, full_close = evaluate(X_full, y, signer, n_classes, "full")
 
-    # Third arm: same 65 points as HEAD_ONLY, same everything — only the
+    # Third arm: same 65 points as HEAD_ONLY, same everything, only the
     # architecture differs. The flat model discards the fact that the landmarks
     # form a skeleton; SL-GCN convolves along it. Held at 0.90x the baseline's
     # parameters so a win cannot be explained by capacity.
     print()
     print("=" * 62)
-    print("SL-GCN — 65 points as a GRAPH, not a flat vector")
+    print("SL-GCN: 65 points as a GRAPH, not a flat vector")
     print("=" * 62)
     gcn_rows, gcn_far, gcn_close = evaluate(X_head, y, signer, n_classes, "gcn",
                                             arch="slgcn")
@@ -206,7 +206,7 @@ def main() -> int:
 
     print()
     print("=" * 62)
-    print("RESULT — held-out group mean")
+    print("RESULT: held-out group mean")
     print("=" * 62)
     print(f"  HEAD_ONLY   far {head_far*100:5.1f}%   close {head_close*100:5.1f}%   Conv1D, 65pt")
     print(f"  FULL_FACE   far {full_far*100:5.1f}%   close {full_close*100:5.1f}%   Conv1D, 113pt")
@@ -222,7 +222,7 @@ def main() -> int:
     print()
 
     # Verdict. Promotion follows train.py in caring about close range, but a mean
-    # smaller than the between-group spread is not a result — with three groups
+    # smaller than the between-group spread is not a result, with three groups
     # there is no power to call it, and saying otherwise would be exactly the
     # overclaiming this project refuses to do elsewhere.
     if abs(d_close) < spread:
@@ -230,7 +230,7 @@ def main() -> int:
         print("     between groups, so this subset cannot separate the two arms.")
         if d_close > 0 and d_far < 0:
             print("     Direction is worth noting though: close range gains while far")
-            print("     loses — the same shape as the perspective-augmentation result")
+            print("     loses: the same shape as the perspective-augmentation result")
             print("     in HANDOFF.md §6. Judging FULL_FACE on far-camera score alone")
             print("     would reject it for the wrong reason.")
         # Whether the decisive categories are present changes what "inconclusive"
@@ -242,7 +242,7 @@ def main() -> int:
                   f"({', '.join(sorted(NON_MANUAL_CATEGORIES))}) are extracted;")
             print("     the categories present here carry little non-manual grammar.")
         else:
-            print(f"     Note: {', '.join(have_nm)} IS included here — the categories")
+            print(f"     Note: {', '.join(have_nm)} IS included here, the categories")
             print("     where ISL marks questions and negation. So this is no longer")
             print("     a vocabulary gap. What remains is statistical power: three")
             print("     signer groups cannot resolve a difference this small. More")
@@ -278,7 +278,7 @@ def main() -> int:
             "categories": sorted(categories_present()),
             "parts_extracted": parts_extracted(),
             "note": (
-                f"{parts_extracted()} of 46 Zenodo parts — "
+                f"{parts_extracted()} of 46 Zenodo parts, "
                 f"{', '.join(sorted(categories_present()))}. "
                 "NOT the 264-class result."
             ),

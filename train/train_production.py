@@ -149,7 +149,7 @@ def fit_temperature(p: np.ndarray, y: np.ndarray) -> float:
 
 def main() -> int:
     if not DATA.exists():
-        print(f"missing {DATA.relative_to(ROOT)} — run train/preprocess_cislr.py")
+        print(f"missing {DATA.relative_to(ROOT)}, run train/preprocess_cislr.py")
         return 1
     d = np.load(DATA, allow_pickle=True)
     X, y, signer, corpus = d["X"], d["y"], d["signer"], d["corpus"]
@@ -160,7 +160,7 @@ def main() -> int:
 
     print(f"{len(X)} clips | {n_classes} classes | groups {np.bincount(signer).tolist()}")
     print(f"  INCLUDE {int((corpus == 0).sum())}  CISLR {int((corpus == 1).sum())}")
-    print(f"  encoder: {'MS-ASL + WLASL' if ENC.exists() else 'NONE — training from scratch'}\n")
+    print(f"  encoder: {'MS-ASL + WLASL' if ENC.exists() else 'NONE: training from scratch'}\n")
 
     # ---------- 1. estimate, and collect out-of-fold predictions ----------
     groups = sorted(set(signer.tolist()))
@@ -194,7 +194,7 @@ def main() -> int:
     cis1 = float(np.mean([r["close_top1"] for r in cis_g])) if cis_g else 0.0
     print(f"\n  INCLUDE groups mean  close top-1 {inc1*100:5.1f}%  top-5 {inc5*100:5.1f}%")
     print(f"  CISLR groups mean    close top-1 {cis1*100:5.1f}%"
-          f"   (small groups, few classes each — noisy)")
+          f"   (small groups, few classes each, noisy)")
 
     # ---------- 2. calibrate on the out-of-fold predictions ----------
     p, yy = oof_p[oof_seen], y[oof_seen]

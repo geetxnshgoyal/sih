@@ -1,5 +1,5 @@
 #!/bin/bash
-# CISLR — Corpus for Indian Sign Language Recognition (Joshi et al., EMNLP 2022).
+# CISLR: Corpus for Indian Sign Language Recognition (Joshi et al., EMNLP 2022).
 #
 # Why this dataset, specifically
 # -----------------------------
@@ -11,7 +11,7 @@
 #    settle it."
 #
 # INCLUDE is 7 signers from one school in Chennai, one room, one camera
-# distance — and the held-out-group spread on it is enormous (45% to 68%
+# distance: and the held-out-group spread on it is enormous (45% to 68%
 # depending on which group is held out). That spread IS the problem: it dwarfs
 # every architectural effect we measured, and it is why the honest number is
 # 56.8% rather than the 90.3% a random split reports.
@@ -23,7 +23,7 @@
 # Access
 # ------
 # Gated (gated: auto) under AFL-3.0. A human must accept the conditions once,
-# which includes agreeing to share contact information — that is the user's
+# which includes agreeing to share contact information, that is the user's
 # consent to give, so this script cannot and should not do it:
 #
 #   1. Sign in at https://huggingface.co/datasets/Exploration-Lab/CISLR
@@ -71,7 +71,7 @@ try:
     meta = json.load(urllib.request.urlopen(req))
 except urllib.error.HTTPError as e:
     if e.code in (401, 403):
-        sys.exit("token rejected or conditions not yet accepted — "
+        sys.exit("token rejected or conditions not yet accepted, "
                  "open the dataset page, accept, then retry")
     raise
 

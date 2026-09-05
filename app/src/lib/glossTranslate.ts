@@ -5,7 +5,7 @@
  * --------------------
  * `sentence.ts` deliberately refused to reorder glosses, on the grounds that
  * inventing plausible word order produces confident mistranslation. That
- * reasoning still holds — what changes here is that a real reordering now
+ * reasoning still holds: what changes here is that a real reordering now
  * exists for the sequences we precomputed, so we can be accurate where we have
  * an answer and honest where we do not.
  *
@@ -13,14 +13,14 @@
  * shows it. A precomputed sentence may be presented as a translation. A
  * gloss-order fallback may not.
  *
- * The table is generated offline by app/tools/buildGlossTable.ts — no API key
+ * The table is generated offline by app/tools/buildGlossTable.ts, no API key
  * and no network call ever reaches the browser. See that file for why.
  */
 import { phraseFor, type LangCode } from "./speech";
 import { asset } from "./assetUrl";
 
 export type TranslationSource =
-  /** Precomputed reordering. Real translation — safe to present as one. */
+  /** Precomputed reordering. Real translation, safe to present as one. */
   | "reordered"
   /** Single known sign from the bundled phrase table. */
   | "phrasebook"
@@ -53,13 +53,13 @@ let table: Table | null = null;
 let loadFailed = false;
 
 /**
- * Load the precomputed table. Safe to call repeatedly; safe to never call —
+ * Load the precomputed table. Safe to call repeatedly; safe to never call , 
  * every lookup degrades to the phrasebook path if the table is missing, which
  * is exactly the pre-existing behaviour.
  */
 // asset() is required here, not a plain absolute path. Under a subpath deploy
 // (GitHub Pages serves from /<repo>/) "/model/..." resolves to the domain root
-// and 404s — the table silently never loads and every phrase falls back to
+// and 404s: the table silently never loads and every phrase falls back to
 // gloss order, which looks like the generator failed rather than the path.
 export async function loadGlossTable(url = asset("/model/_utterances.json")): Promise<boolean> {
   if (table) return true;
@@ -147,6 +147,6 @@ export function sourceLabel(source: TranslationSource): string {
     case "phrasebook":
       return "phrase";
     case "gloss-order":
-      return "gloss order — not translated";
+      return "gloss order: not translated";
   }
 }

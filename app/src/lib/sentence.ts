@@ -4,8 +4,8 @@ import { translateGlosses, type Translation } from "./glossTranslate";
 /**
  * Assemble recognised signs into an utterance.
  *
- * ISL word order is not spoken word order — "STATION GO WHERE" rather than
- * "where do I go for the station" — so a faithful system reorders glosses
+ * ISL word order is not spoken word order, "STATION GO WHERE" rather than
+ * "where do I go for the station": so a faithful system reorders glosses
  * before speaking. That reordering is a language task, and the honest options
  * are an LLM call or a linguist-written grammar.
  *
@@ -15,7 +15,7 @@ import { translateGlosses, type Translation } from "./glossTranslate";
  * `glossTranslate.ts` for the lookup and the provenance contract.
  *
  * The original caution still governs everything outside that table. A sequence
- * with no precomputed entry is NOT reordered — it falls back to the phrasebook,
+ * with no precomputed entry is NOT reordered, it falls back to the phrasebook,
  * or to glosses in signed order, and reports which of the three happened so the
  * UI can label it. Inventing plausible word order at runtime would produce
  * confident mistranslation, which remains worse than none.
@@ -40,7 +40,7 @@ export type Utterance = {
 };
 
 /**
- * Sign pairs that read naturally when run together. Kept small and explicit —
+ * Sign pairs that read naturally when run together. Kept small and explicit , 
  * this is a phrasebook, not a grammar, and it should not pretend otherwise.
  */
 const PHRASE_PAIRS: Record<string, Record<LangCode, string>> = {
@@ -91,7 +91,7 @@ export function assembleWithSource(glosses: string[], lang: LangCode): Translati
     parts.push(phraseFor(glosses[i], lang));
   }
 
-  // 3. no pair matched either — this is signed order, and says so
+  // 3. no pair matched either, this is signed order, and says so
   return {
     text: parts.join(" "),
     source: usedPair ? "phrasebook" : "gloss-order",
@@ -119,7 +119,7 @@ export class UtteranceBuilder {
    * Returns a completed utterance if this sign started a new one.
    *
    * `conf` is required. It used to be dropped here, and the closing path then
-   * emitted a hardcoded 1 — so every finished utterance displayed 100% no
+   * emitted a hardcoded 1: so every finished utterance displayed 100% no
    * matter how uncertain its signs were, while the live readout showed the
    * honest number. That is the worst possible combination: the transient view
    * was truthful and the permanent record was not.

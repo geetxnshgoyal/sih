@@ -12,7 +12,7 @@ near 100%, and neither the face mesh nor SL-GCN moved it. More signers is the
 only lever the data supports.
 
 CISLR is a different corpus, different signers, different rooms and cameras.
-Its median gloss has ONE clip, so it cannot train its own 4,765-class model —
+Its median gloss has ONE clip, so it cannot train its own 4,765-class model , 
 but 612 of its clips carry 220 of our 264 labels. Those are worth having: they
 add unseen people to classes that already have enough examples to learn.
 
@@ -21,7 +21,7 @@ example does not become a supported word by appearing in labels.json; it
 becomes a word the model claims to know and cannot recognise, which is worse
 than an honest gap. See ARCHITECTURE.md §13.
 
-Output mirrors extract_video.py exactly — pose 33x4, face 468x3, lh/rh 21x3 —
+Output mirrors extract_video.py exactly, pose 33x4, face 468x3, lh/rh 21x3 , 
 so preprocess_face.py can read both corpora with no special case.
 """
 import argparse
@@ -84,7 +84,7 @@ def main() -> int:
     args = ap.parse_args()
 
     if not ZIP.exists():
-        print(f"missing {ZIP.relative_to(ROOT)} — run data/fetch_cislr.sh with FETCH_ALL=1")
+        print(f"missing {ZIP.relative_to(ROOT)}, run data/fetch_cislr.sh with FETCH_ALL=1")
         return 1
     todo = json.loads(TODO.read_text())
     if args.limit:

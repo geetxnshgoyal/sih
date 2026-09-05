@@ -50,7 +50,7 @@ def dedupe(text: str) -> str:
     NLLB does this reliably on very short inputs, which is exactly the shape of
     the most important phrases here: "Yes." came back as "हाँ, हाँ।" and "No."
     as "না, না, না।". Note the separator is sometimes a COMMA rather than a
-    sentence ender — splitting only on [.।?!] misses those, which is how the
+    sentence ender: splitting only on [.।?!] misses those, which is how the
     first pass let six through.
     """
     parts = [p.strip() for p in re.split(r"[.।?!,;]", text) if p.strip()]

@@ -1,12 +1,12 @@
 /**
- * The phrase board — the part that always works.
+ * The phrase board: the part that always works.
  *
  * Why this is not the gloss corpus
  * -------------------------------
  * Tap-to-say never runs the classifier. That frees it completely from the 264
  * INCLUDE labels, and the freedom matters more than it sounds: the eight things
- * a patient most needs to say — Water, Help, Yes, No, Pain, Name, Please,
- * Hotel — have no gloss in INCLUDE, so the recognition path can NEVER produce
+ * a patient most needs to say, Water, Help, Yes, No, Pain, Name, Please,
+ * Hotel: have no gloss in INCLUDE, so the recognition path can NEVER produce
  * them. Here they are just phrases, and they work.
  *
  * The design position
@@ -31,7 +31,7 @@
  *
  * The English here is a hearing engineer's guess at what a Deaf patient wants
  * to say. The translations are machine output from NLLB-200 and are NOT
- * verified — automated checks caught empties, untranslated passthrough, Latin
+ * verified: automated checks caught empties, untranslated passthrough, Latin
  * script leakage and self-duplication, but no automated check catches GRAMMAR.
  * One that slipped through: "I do not understand" rendered in Hindi as
  * "मैं समझ में नहीं आता", which is wrong (roughly "I am not understood").
@@ -67,7 +67,7 @@ export interface Phrase {
   urgent?: boolean;
   /**
    * The gloss sequence this corresponds to, WHERE ONE EXISTS.
-   * Optional on purpose — most useful phrases have no INCLUDE gloss, and
+   * Optional on purpose: most useful phrases have no INCLUDE gloss, and
    * requiring one would cut exactly the vocabulary a patient needs.
    */
   glosses?: string[];
@@ -94,7 +94,7 @@ export const HEALTH_PHRASES: Phrase[] = [
   // Identity leads. Until this is established nothing else in the conversation
   // can proceed, and it is the phrase most likely to be needed by every user.
   { id: "deaf", en: "I am Deaf.", short: "I am Deaf", category: "identity", urgent: true, glosses: ["I", "Deaf"] },
-  { id: "deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf — I sign ISL", category: "identity", glosses: ["I", "Deaf", "Sign"] },
+  { id: "deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf: I sign ISL", category: "identity", glosses: ["I", "Deaf", "Sign"] },
   { id: "need-interpreter", en: "I need a sign language interpreter.", short: "I need an interpreter", category: "identity", urgent: true },
   { id: "cannot-hear", en: "I cannot hear you. Please write it down.", short: "Please write it down", category: "identity" },
   { id: "face-me", en: "Please look at me when you speak so I can read your lips.", short: "Please face me", category: "identity" },
@@ -112,7 +112,7 @@ export const HEALTH_PHRASES: Phrase[] = [
   { id: "call-ambulance", en: "Please call an ambulance.", short: "Call an ambulance", category: "emergency", urgent: true },
   { id: "unconscious", en: "This person is unconscious.", short: "Someone is unconscious", category: "emergency", urgent: true },
 
-  // Pain — location, then character, then severity. This is the sequence a
+  // Pain: location, then character, then severity. This is the sequence a
   // clinician asks in, so the board should answer in that order.
   { id: "pain-have", en: "I am in pain.", short: "I am in pain", category: "pain", urgent: true },
   { id: "pain-here", en: "The pain is here.", short: "It hurts here", category: "pain" },
@@ -165,7 +165,7 @@ export const HEALTH_PHRASES: Phrase[] = [
   { id: "no-conditions", en: "I have no other medical conditions.", short: "No other conditions", category: "history" },
   { id: "have-report", en: "I have my medical reports with me.", short: "I have my reports", category: "history" },
 
-  // Needs — the everyday requests that make a hospital stay bearable.
+  // Needs: the everyday requests that make a hospital stay bearable.
   { id: "water", en: "I need water.", short: "Water", category: "needs" },
   { id: "toilet", en: "I need to use the toilet.", short: "Toilet", category: "needs" },
   { id: "food", en: "I need something to eat.", short: "Food", category: "needs" },
@@ -177,7 +177,7 @@ export const HEALTH_PHRASES: Phrase[] = [
   { id: "nurse", en: "Please call the nurse.", short: "Call the nurse", category: "needs" },
   { id: "phone", en: "I need to use a phone.", short: "Use a phone", category: "needs" },
 
-  // Understanding — the feedback channel. Without these the patient cannot say
+  // Understanding: the feedback channel. Without these the patient cannot say
   // the conversation has gone wrong, which is how consent quietly breaks down.
   { id: "yes", en: "Yes.", short: "Yes", category: "understanding" },
   { id: "no", en: "No.", short: "No", category: "understanding" },
@@ -214,7 +214,7 @@ export const HEALTH_PHRASES: Phrase[] = [
 
 export const TRAVEL_PHRASES: Phrase[] = [
   { id: "t-deaf", en: "I am Deaf.", short: "I am Deaf", category: "identity", urgent: true, glosses: ["I", "Deaf"] },
-  { id: "t-deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf — I sign ISL", category: "identity", glosses: ["I", "Deaf", "Sign"] },
+  { id: "t-deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf: I sign ISL", category: "identity", glosses: ["I", "Deaf", "Sign"] },
   { id: "t-write", en: "I cannot hear you. Please write it down.", short: "Please write it down", category: "identity" },
   { id: "t-point", en: "Please point or show me on the map.", short: "Please point / show me", category: "identity" },
   { id: "t-slower", en: "Please speak more slowly.", short: "Slower please", category: "identity" },
@@ -269,7 +269,7 @@ export const TRAVEL_PHRASES: Phrase[] = [
   { id: "t-sorry", en: "Sorry.", short: "Sorry", category: "courtesy" },
 ];
 
-/** Category order for the UI — triage order, not alphabetical. */
+/** Category order for the UI, triage order, not alphabetical. */
 export const HEALTH_ORDER: PhraseCategory[] = [
   "emergency", "identity", "pain", "symptoms", "needs",
   "history", "understanding", "logistics", "courtesy",

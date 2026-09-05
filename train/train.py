@@ -4,8 +4,8 @@ Train the gloss classifier.
     .venv-tf/bin/python train/train.py
 
 Trains twice on purpose:
-  1. RANDOM split      — clips shuffled, same person in train and test
-  2. HELD-OUT GROUP    — one body-type group never seen during training
+  1. RANDOM split: clips shuffled, same person in train and test
+  2. HELD-OUT GROUP: one body-type group never seen during training
 
 The gap between the two is the honest measure of how much a random split
 inflates the number. Report the held-out figure; show the random one only to
@@ -88,7 +88,7 @@ def close_range(X: np.ndarray, d_cam: float = 1.8) -> np.ndarray:
     scale leaves the score identical, because standardisation divides scale
     out); the projective distortion is the whole gap.
 
-    Without this as an eval, perspective augmentation looks like a regression —
+    Without this as an eval, perspective augmentation looks like a regression , 
     it costs a little far-camera accuracy and the far-camera test set cannot
     see what it buys. That mistake was made once already.
     """
@@ -116,7 +116,7 @@ def run(name, Xtr, ytr, Xte, yte, n_classes, rng, verbose=0):
 
     This used to pass `validation_data=(Xte, yte)` alongside
     `restore_best_weights=True`, which selects the stopping epoch on the very
-    set being reported — an optimistic bias of unmeasured size on every number
+    set being reported: an optimistic bias of unmeasured size on every number
     this script has ever printed, 52.0% and 40.4% among them. The clips are
     split BEFORE augmentation so that augmented variants of a validation clip
     cannot leak into training.
@@ -163,7 +163,7 @@ def main() -> int:
     cut = int(0.8 * len(X))
     tr, te = idx[:cut], idx[cut:]
     print("=" * 62)
-    print("RANDOM SPLIT — same signers in train and test (inflated)")
+    print("RANDOM SPLIT: same signers in train and test (inflated)")
     print("=" * 62)
     _, r_top1, r_top5, r_c1, r_c5, r_ep = run("random", X[tr], y[tr], X[te], y[te], n_classes, rng)
     print(f"  far   top-1 {r_top1*100:5.1f}%  top-5 {r_top5*100:5.1f}%   ({r_ep} epochs)")
@@ -178,7 +178,7 @@ def main() -> int:
         tr_m = ~te_m
         seen = len(set(y[tr_m].tolist()) & set(y[te_m].tolist()))
         print("=" * 62)
-        print(f"HELD-OUT GROUP {g} — {te_m.sum()} test clips, "
+        print(f"HELD-OUT GROUP {g}, {te_m.sum()} test clips, "
               f"{seen}/{n_classes} classes testable")
         print("=" * 62)
         m, top1, top5, c1, c5, ep = run(f"group{g}", X[tr_m], y[tr_m], X[te_m], y[te_m],
@@ -202,7 +202,7 @@ def main() -> int:
     print(f"  random split           far {r_top1*100:5.1f}%   close {r_c1*100:5.1f}%")
     print(f"  held-out group (mean)  far {mean1*100:5.1f}%   close {cmean1*100:5.1f}%")
     print(f"  inflation from random split: {(r_top1-mean1)*100:+.1f} points")
-    print(f"\n  CLOSE is the number that matters — it is the condition a laptop")
+    print(f"\n  CLOSE is the number that matters, it is the condition a laptop")
     print(f"  webcam actually produces. Promotion is decided on it.")
     print("\n  Report the held-out number. The random one is what you get")
     print("  when the same person appears in train and test.")
@@ -224,7 +224,7 @@ def main() -> int:
     prev = prev_doc.get("held_out_close_mean", {}).get("top1", -1.0)
     if cmean1 >= prev:
         best_model.save(OUT_DIR / "gloss_classifier.keras")
-        print(f"  new best close-range ({cmean1*100:.1f}% >= {prev*100:.1f}%) — promoted")
+        print(f"  new best close-range ({cmean1*100:.1f}% >= {prev*100:.1f}%): promoted")
     else:
         print(f"  NOT promoted: close {cmean1*100:.1f}% < current best {prev*100:.1f}%")
         print(f"  kept as {run_path.name}; gloss_classifier.keras unchanged")

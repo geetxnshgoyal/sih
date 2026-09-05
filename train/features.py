@@ -1,5 +1,5 @@
 """
-Feature extraction — Python side of the parity contract.
+Feature extraction: Python side of the parity contract.
 
 MUST stay byte-for-byte equivalent to app/src/lib/features.ts.
 Any change here requires the same change there, and `make parity` must pass.
@@ -15,7 +15,7 @@ import numpy as np
 from face import face_block_size
 
 SEQ_LEN = 32
-POSE_KEEP = 23          # pose landmarks 0..22 — includes the 11 head/face points
+POSE_KEEP = 23          # pose landmarks 0..22, includes the 11 head/face points
 FACE_MODE = "HEAD_ONLY" # INCLUDE poses carry no face mesh; see train/face.py
 N_FACE = face_block_size(FACE_MODE)
 N_POINTS = POSE_KEEP + 21 + 21 + N_FACE   # 65 head-only, 113 with full face
@@ -23,7 +23,7 @@ N_DIMS = 3
 FEATURE_SIZE = SEQ_LEN * N_POINTS * N_DIMS
 
 # Head motion survives normalisation because we anchor at the SHOULDER midpoint,
-# not the head — so nod/shake/tilt remain visible to the model.
+# not the head: so nod/shake/tilt remain visible to the model.
 
 # indices into the raw 75-point array
 POSE = slice(0, POSE_KEEP)
@@ -57,8 +57,8 @@ def isotropic(seq: np.ndarray, aspect: float) -> np.ndarray:
     trained on INCLUDE scores 2.1% on CISLR, barely above the 0.38% chance rate
     (ARCHITECTURE.md 5.1).
 
-    Dividing y by the aspect ratio puts every source — either corpus, and any
-    webcam the app runs on — into one isotropic space where a shoulder-width
+    Dividing y by the aspect ratio puts every source, either corpus, and any
+    webcam the app runs on: into one isotropic space where a shoulder-width
     means the same thing horizontally and vertically.
 
     z is left alone: MediaPipe already reports it on roughly the x scale.
@@ -115,7 +115,7 @@ def extract(seq: np.ndarray, aspect: float) -> np.ndarray:
     """SHARED CONTRACT. unit-coordinate (T,65,3) -> flat float32 features.
 
     `aspect` is the SOURCE FRAME's width / height. It is required, not
-    defaulted: a wrong aspect is silent — the model still returns a confident
+    defaulted: a wrong aspect is silent, the model still returns a confident
     answer, it is just answering about a differently-shaped body. Making every
     caller state it is the only way to keep that from happening again.
 
@@ -130,7 +130,7 @@ def extract(seq: np.ndarray, aspect: float) -> np.ndarray:
 def aspect_of(vid_shape) -> float:
     """Frame width / height for an INCLUDE pose-release clip.
 
-    `vid_shape` is stored (H, W) — (1080, 1920) for every clip in the release,
+    `vid_shape` is stored (H, W), (1080, 1920) for every clip in the release,
     i.e. LANDSCAPE 1920x1080. The docstring at the top of this file calls it
     (W,H); that is the upstream naming, and to_unit's divisor order matches the
     release's own pre-multiplication, so both are left as they are. Verified:

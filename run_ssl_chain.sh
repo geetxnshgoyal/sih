@@ -12,7 +12,7 @@ cd "$ROOT"
 LOCK="$ROOT/run/ssl_chain.pid"
 
 if [ -f "$LOCK" ] && kill -0 "$(cat "$LOCK")" 2>/dev/null; then
-  echo "already running as PID $(cat "$LOCK") — refusing to start a second"
+  echo "already running as PID $(cat "$LOCK"): refusing to start a second"
   exit 1
 fi
 mkdir -p run
@@ -33,7 +33,7 @@ log "extraction stopped with $n clips"
 if [ "$n" -lt 500 ]; then
   # Better to stop than to report a number from a corpus too small to mean
   # anything. 191 clips already produced a "working" run that proved nothing.
-  log "too few clips to draw any conclusion — stopping rather than reporting noise"
+  log "too few clips to draw any conclusion, stopping rather than reporting noise"
   exit 1
 fi
 
@@ -43,4 +43,4 @@ log "building the SSL corpus"
 log "self-supervised pretraining + fine-tune evaluation"
 PYTHONUNBUFFERED=1 .venv-tf/bin/python train/pretrain_ssl.py || { log "pretrain_ssl failed"; exit 1; }
 
-log "done — results in run/ssl_eval.json"
+log "done: results in run/ssl_eval.json"

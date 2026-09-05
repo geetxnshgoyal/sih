@@ -109,7 +109,7 @@ def cluster(X, meta) -> int:
 
     # A cluster that is a real person should cover most of the vocabulary.
     # A cluster covering few classes is a class artefact, not a signer.
-    print("\nvalidation — a real signer signed most of the vocabulary,")
+    print("\nvalidation: a real signer signed most of the vocabulary,")
     print("so every cluster should cover a large share of classes.")
     print("(These are body-type groups, not identified individuals. Holding one")
     print(" out is a conservative proxy for a signer-disjoint split.)")

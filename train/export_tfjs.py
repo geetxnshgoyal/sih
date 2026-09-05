@@ -46,7 +46,7 @@ def patch_keras3_topology(model_json: Path) -> None:
 
 def main() -> int:
     if not MODEL.exists():
-        print(f"missing {MODEL} — run train/train.py first")
+        print(f"missing {MODEL}: run train/train.py first")
         return 1
 
     OUT.mkdir(parents=True, exist_ok=True)

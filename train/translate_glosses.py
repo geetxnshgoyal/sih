@@ -20,7 +20,7 @@ Step 1 needs judgement about what a signer MEANS ("I Doctor" is a request, not
 a statement) and is short enough to review by eye. Step 2 is mechanical, and a
 purpose-built open translation model does it better than a general one.
 
-NLLB-200 distilled-600M is used because it is genuinely UNGATED — no Hugging
+NLLB-200 distilled-600M is used because it is genuinely UNGATED, no Hugging
 Face account, no token, no licence click. AI4Bharat's IndicTrans2 is the better
 model for Indic specifically, and is also free and open, but it is gated behind
 an account, so it is offered here as an opt-in rather than the default.
@@ -38,7 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ENGLISH_TS = ROOT / "app" / "tools" / "glossEnglish.ts"
 OUT = ROOT / "app" / "public" / "model" / "_utterances.json"
 
-# NLLB uses FLORES-200 codes, which carry the script as well as the language —
+# NLLB uses FLORES-200 codes, which carry the script as well as the language , 
 # Devanagari vs Bengali vs Telugu are different writing systems, and the model
 # needs to be told which one to produce.
 LANGS = {
@@ -70,7 +70,7 @@ def load_english() -> dict[str, str]:
 def load_meta() -> dict[str, dict]:
     """Per-sequence metadata the app needs alongside the translations.
 
-    `reordered` says whether spoken order actually differs from signed order —
+    `reordered` says whether spoken order actually differs from signed order , 
     the UI uses it to distinguish a real reordering from a passthrough, so it
     must be computed, not assumed. `register` drives nothing yet but is cheap to
     record and is the difference between "I need a doctor" and "Where is the
@@ -88,7 +88,7 @@ def load_meta() -> dict[str, dict]:
 def _dedupe(text: str) -> str:
     """Collapse "X. X." into "X."
 
-    NLLB repeats itself on very short inputs — a one-word source like "Hello."
+    NLLB repeats itself on very short inputs, a one-word source like "Hello."
     reliably produced "హలో. హలో." in Telugu. Caught by scanning all 365
     translations, where it was the only defect; cheap to fix, and it would look
     like a broken app rather than a quirk of the model.
@@ -123,7 +123,7 @@ def main() -> int:
     english = load_english()
     print(f"{len(english)} sequences to translate into {len(LANGS)} languages")
 
-    # The app expects {generated, model, entries:{...}} — NOT a flat map. It
+    # The app expects {generated, model, entries:{...}}, NOT a flat map. It
     # validates that shape on load and silently degrades to the phrasebook if it
     # is wrong, so a flat map would look like the generator never ran. Contract
     # is in app/src/lib/glossTranslate.ts (interface Table).
@@ -134,7 +134,7 @@ def main() -> int:
     meta = load_meta()
 
     # Show the download. Without this the script prints nothing for ~10 minutes
-    # while it pulls 2.4 GB, which is indistinguishable from being hung — and a
+    # while it pulls 2.4 GB, which is indistinguishable from being hung, and a
     # silent long-running job gets killed by whoever is watching it.
     print(f"loading {MODEL}")
     print("  first run downloads ~2.4 GB and caches it in ~/.cache/huggingface;")

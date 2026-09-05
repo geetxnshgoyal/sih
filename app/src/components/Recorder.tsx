@@ -8,7 +8,7 @@ import { SEQ_LEN, type PointFrame } from "../lib/features";
  *
  * Everything trained so far comes from 7 signers in one Chennai school at one
  * fixed distance. That model reaches ~52% on held-out INCLUDE signers and much
- * less on a laptop webcam, and no amount of augmentation closed the gap —
+ * less on a laptop webcam, and no amount of augmentation closed the gap , 
  * three attempts each made it measurably worse.
  *
  * Recording here removes the domain gap instead of modelling around it: same
@@ -16,7 +16,7 @@ import { SEQ_LEN, type PointFrame } from "../lib/features";
  * vocabulary recorded this way is a far easier problem than 264 classes of
  * someone else's footage.
  *
- * Output is a JSON file of raw unit-coordinate frames — the same thing
+ * Output is a JSON file of raw unit-coordinate frames, the same thing
  * features.to_unit() produces from the INCLUDE pickles, so train/preprocess.py
  * ingests it with no new code path.
  */
@@ -123,7 +123,7 @@ export default function Recorder() {
         if (frames.length >= SEQ_LEN) {
           // Record the camera's aspect ratio with the take. MediaPipe's
           // coordinates are aspect-dependent, so frames without it cannot be
-          // put into the model's coordinate space later — see features.ts.
+          // put into the model's coordinate space later: see features.ts.
           const v = videoRef.current;
           const aspect = v && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9;
           setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now(), aspect }]);

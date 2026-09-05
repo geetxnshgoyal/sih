@@ -6,7 +6,7 @@ Why this exists
 INCLUDE was recorded by deaf students at one school in Chennai, but the pose
 release carries no signer field, and the official train/test split (Google
 Drive) now 404s. Splitting clips randomly would put the same person in both
-train and test, inflating accuracy — the exact flaw that makes most published
+train and test, inflating accuracy, the exact flaw that makes most published
 sign-language numbers untrustworthy.
 
 Approach

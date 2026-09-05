@@ -22,7 +22,7 @@ type Entry = {
   text: string;
   conf: number;
   at: string;
-  /** Where the spoken text came from — shown so the UI never overstates it. */
+  /** Where the spoken text came from, shown so the UI never overstates it. */
   source: TranslationSource;
 };
 
@@ -87,7 +87,7 @@ export default function SignBridge({
    * Measured on a held-out signer group: top-1 is right 40.4% of the time, but
    * the correct answer is in the TOP FIVE 65.1% of the time (84% when
    * confidence >= 0.40). Refusing to show anything below a threshold throws
-   * that away — and with the calibrated bands it meant showing nothing for 65%
+   * that away: and with the calibrated bands it meant showing nothing for 65%
    * of signs, which reads as "the app cannot detect".
    *
    * So: never refuse. Offer the shortlist and let a person choose. That turns a
@@ -126,7 +126,7 @@ export default function SignBridge({
     fetch(asset("/model/_framing.json")).then((r) => r.json())
       .then((f) => { framingRef.current = f; })
       .catch(() => { /* diagnostics are optional */ });
-    // Precomputed gloss reorderings. A missing table is a supported state —
+    // Precomputed gloss reorderings. A missing table is a supported state , 
     // every utterance then falls back to the phrasebook, as it did before.
     void loadGlossTable();
     refreshVoices();
@@ -216,7 +216,7 @@ export default function SignBridge({
       // separately, so they carry the camera's aspect ratio. The model was
       // trained in an isotropic space; feeding it raw MediaPipe output means
       // classifying a body stretched by whatever shape this webcam happens to
-      // be. Read it live rather than assuming 16:9 — see lib/features.ts.
+      // be. Read it live rather than assuming 16:9, see lib/features.ts.
       const aspect = video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
       const res = detect(video, performance.now());
       if (res) {
@@ -231,7 +231,7 @@ export default function SignBridge({
         const segment = segRef.current.push(res.frame, hasHands);
         const seg = segRef.current;
 
-        // A window thrown out for having no hands is worth saying out loud —
+        // A window thrown out for having no hands is worth saying out loud , 
         // it is the difference between "the app is broken" and "you are framed
         // wrong", and the user cannot tell those apart from silence.
         if (segRef.current.lastReject === "no-hands") {
@@ -302,7 +302,7 @@ export default function SignBridge({
 
   /**
    * Replay real ISL clips from the held-out group through the exact same
-   * pipeline the camera uses — same buffer, same classifier, same gate, same
+   * pipeline the camera uses: same buffer, same classifier, same gate, same
    * speech. Only the frame source differs. Doubles as the stage fallback.
    */
   async function replayDemo() {
@@ -352,7 +352,7 @@ export default function SignBridge({
 
       // The clip has ended but the sign is complete in the buffer. Live, the
       // signer holds the final position and the gate keeps sampling; here we
-      // do the same so the stability window can fill. Same gate, same floor —
+      // do the same so the stability window can fill. Same gate, same floor , 
       // not lowering the bar, just giving it the frames it expects.
       for (let i = 0; i < NEEDED + 4 && bufferRef.current.length >= SEQ_LEN; i++) {
         const pred = clfRef.current.predict(bufferRef.current, aspect);
@@ -507,7 +507,7 @@ export default function SignBridge({
                   <div className="hud-k">Current sign</div>
                   {/* Three bands, not one floor. The classifier no longer drops
                       low-confidence reads silently, so an uncertain one is shown
-                      AND marked — the clinician can confirm it instead of the
+                      AND marked: the clinician can confirm it instead of the
                       app either announcing a guess or going mysteriously quiet.
                       Hiding it below a threshold meant showing nothing for 65%
                       of signs, which reads as a broken detector rather than an

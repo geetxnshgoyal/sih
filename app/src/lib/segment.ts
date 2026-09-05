@@ -6,7 +6,7 @@ import type { PointFrame } from "./features";
  * Why this is necessary
  * ---------------------
  * Every training clip is trimmed to exactly one sign. Feeding the model a
- * continuous rolling window instead — which is what the app did — mixes rest
+ * continuous rolling window instead, which is what the app did, mixes rest
  * position and transitions into the same 32 resampled frames, and accuracy
  * falls off a cliff:
  *
@@ -74,13 +74,13 @@ export class SignSegmenter {
   /**
    * Least fraction of a segment's frames that must actually contain a hand.
    *
-   * MediaPipe drops hands intermittently — a flicker is enough to start a
+   * MediaPipe drops hands intermittently, a flicker is enough to start a
    * segment, and `handsVisible` only describes the CURRENT frame, so a buffer
    * can accumulate that is mostly hand-less. Classifying that is not a
    * near-miss, it is meaningless: zero-filled hands anchor to a single fixed
    * point far outside the training manifold, the softmax saturates, and the
    * model returns an arbitrary class at ~100%. Measured directly against the
-   * trained model — an all-zero-hands input returns 'Temple' at 100.0%
+   * trained model: an all-zero-hands input returns 'Temple' at 100.0%
    * regardless of torso pose or scale.
    *
    * A sign is made with the hands. If most of the window has none, there is no
@@ -90,7 +90,7 @@ export class SignSegmenter {
   /**
    * Consecutive hand-less frames tolerated inside a sign before abandoning it.
    *
-   * MediaPipe loses the hands for a frame or two mid-sign routinely — on motion
+   * MediaPipe loses the hands for a frame or two mid-sign routinely, on motion
    * blur, on self-occlusion, when a hand crosses the face. Abandoning on the
    * first miss throws away good signs. Tolerating a short gap and letting
    * MIN_HAND_FRACTION judge the finished window is both more forgiving of real
@@ -100,7 +100,7 @@ export class SignSegmenter {
 
   get current(): SegState { return this.state; }
   get length(): number { return this.frames.length; }
-  /** 0..1, how much of a plausible sign has been captured — drives the UI ring */
+  /** 0..1, how much of a plausible sign has been captured, drives the UI ring */
   get progress(): number {
     if (this.state === "idle") return 0;
     return Math.min(1, this.frames.length / SignSegmenter.MIN_FRAMES);
@@ -135,7 +135,7 @@ export class SignSegmenter {
    *   left missing    22.8% top-1,  86/264 classes,           conf 0.77
    *   right missing   12.8% top-1,  57/264 classes,           conf 0.75
    *
-   * Accuracy collapses and predictions pile onto a few attractors — Car, Truck,
+   * Accuracy collapses and predictions pile onto a few attractors, Car, Truck,
    * Mouse, Today, Religion. Crucially the CONFIDENCE stays around 0.75-0.77,
    * i.e. above gate.FLOOR, so these get announced as if they were real reads.
    * That is the "it always says Truck" symptom: at close range one hand drifts
@@ -168,7 +168,7 @@ export class SignSegmenter {
    * Reject a window where only ONE hand is visible.
    *
    * Not an arbitrary strictness: ALL 4,284 INCLUDE training clips have both
-   * hands present for the majority of frames — measured, zero exceptions. The
+   * hands present for the majority of frames, measured, zero exceptions. The
    * model has therefore never seen a one-handed input, so feeding it one is
    * fully out of distribution. It does not fail loudly; it falls onto a few
    * attractor classes (Car, Truck, Mouse, Today) at ~0.76 confidence, which is
@@ -189,7 +189,7 @@ export class SignSegmenter {
     return bothCount / frames.length >= SignSegmenter.MIN_HAND_FRACTION;
   }
 
-  /** Why the last window was discarded — surfaced in the UI, not swallowed. */
+  /** Why the last window was discarded, surfaced in the UI, not swallowed. */
   private _lastReject: "no-hands" | "one-hand" | null = null;
   get lastReject() { return this._lastReject; }
 
@@ -210,7 +210,7 @@ export class SignSegmenter {
 
       if (this.gap <= SignSegmenter.HAND_GAP_TOLERANCE) return null;
 
-      // Gap too long — the hands are genuinely gone. Emit only if what we have
+      // Gap too long: the hands are genuinely gone. Emit only if what we have
       // is mostly real hand data; `handsVisible` describes one frame, so the
       // buffer behind it can be almost entirely empty.
       const inProgress = this.frames.slice(0, this.frames.length - this.gap);
@@ -249,7 +249,7 @@ export class SignSegmenter {
     const tooLong = this.frames.length >= SignSegmenter.MAX_FRAMES;
 
     if (ended || tooLong) {
-      // drop the trailing still frames — they are rest, not sign
+      // drop the trailing still frames, they are rest, not sign
       const trimmed = ended
         ? this.frames.slice(0, Math.max(1, this.frames.length - SignSegmenter.QUIET_FRAMES))
         : this.frames.slice();

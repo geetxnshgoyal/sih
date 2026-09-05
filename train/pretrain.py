@@ -12,18 +12,18 @@ ARCHITECTURE.md 5.1: a model trained on INCLUDE scores 2.1% on CISLR against
 0.38% chance. It learned one corpus, not the task. Two causes were found; this
 script tests the fix for the second.
 
-  1. GEOMETRY — MediaPipe normalises x by frame width and y by frame height, so
+  1. GEOMETRY: MediaPipe normalises x by frame width and y by frame height, so
      INCLUDE's 16:9 video came out stretched 1.78x vertically while every other
      corpus is square or near it. Fixed in features.isotropic, and the fix is
      already in the data this script loads.
 
-  2. VARIETY — INCLUDE is seven students, one room, one camera. No architecture
+  2. VARIETY: INCLUDE is seven students, one room, one camera. No architecture
      change can make that generalise, and 610 more CISLR clips bought only
      +1.4 points. What is missing is people and conditions, and ISL data of that
      kind does not exist for free.
 
 MS-ASL and WLASL are a different LANGUAGE, which is exactly why they are safe:
-their signs cannot leak answers. What transfers is the encoder — what a
+their signs cannot leak answers. What transfers is the encoder, what a
 handshape looks like on a webcam, how a trajectory unfolds, which joints move
 together. 38,758 clips from 130+ signers off YouTube carry far more variety than
 4,894 studio clips from seven students ever will. The head is discarded and
@@ -67,7 +67,7 @@ SEED = 0
 
 # Pretraining is an initialisation, not a deliverable: a cheaper budget than the
 # fine-tune is the right trade. factor=1 rather than 4 because 38,758 real clips
-# from 130+ signers already carry the variety augmentation is a substitute for —
+# from 130+ signers already carry the variety augmentation is a substitute for , 
 # and because the augmented array is held in memory whole (factor=2 on this set
 # is 1.9 GB before standardise copies it again).
 PRE_EPOCHS, PRE_FACTOR = 30, 1
@@ -106,7 +106,7 @@ def pretrain(rng) -> keras.Model:
     # Validation is the corpora's OWN signer-independent split, not a random
     # slice. Early stopping therefore selects the epoch that generalises to
     # unseen signers, which is the exact property the ISL model lacks. A random
-    # split would select for memorising signers — the failure being fixed here.
+    # split would select for memorising signers, the failure being fixed here.
     tr = np.flatnonzero(split == "train")
     va = np.flatnonzero(split != "train")
     print(f"pretrain corpus: {len(X)} clips, {n_classes} classes "
@@ -163,7 +163,7 @@ def arm(name, desc, src, X, y, tr_m, te_m, n_classes, rng):
     t1, t5 = score(X[te_m])
     c1, c5 = score(close_range(X[te_m]))
     print("=" * 66)
-    print(f"ARM {name} — {desc}")
+    print(f"ARM {name}, {desc}")
     print(f"  train {len(core)}  val {len(va)}  test {int(te_m.sum())}"
           f"   encoder layers transferred: {moved}")
     print(f"  far   top-1 {t1*100:5.1f}%  top-5 {t5*100:5.1f}%   "

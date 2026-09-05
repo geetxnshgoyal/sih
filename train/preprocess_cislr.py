@@ -27,7 +27,7 @@ while looking like it made them better:
 2. SIGNER IDs. CISLR groups are numbered AFTER INCLUDE's 0..2, never merged
    into them. Held-out-group evaluation is only honest if a group is one set of
    people; letting a CISLR clip land in INCLUDE group 0 would put the same
-   corpus on both sides of the split and inflate the result — the same class of
+   corpus on both sides of the split and inflate the result, the same class of
    mistake as the 99.8% calibration run (ARCHITECTURE.md §12).
 
 A `corpus` array rides along so evaluation can ask the question that actually
@@ -50,7 +50,7 @@ ASPECT = ROOT / "data" / "cislr" / "_aspect.json"
 OUT = ROOT / "data" / "dataset_merged.npz"
 
 POSE_KEEP = features.POSE_KEEP          # 23
-N_POINTS = POSE_KEEP + 21 + 21          # 65, head-only — matches dataset.npz
+N_POINTS = POSE_KEEP + 21 + 21          # 65, head-only, matches dataset.npz
 
 PAD = 3             # frames of lead-in kept either side of the active span
 MIN_ACTIVE = 8      # a clip with fewer visible-hand frames is not a usable sign
@@ -68,7 +68,7 @@ def active_span(npz) -> tuple[int, int] | None:
     """First and last frame with a hand detected, padded.
 
     Hand presence rather than motion energy, because the thing being cut here
-    is not stillness in general — it is the signer standing with their hands
+    is not stillness in general, it is the signer standing with their hands
     out of frame before and after the sign. Motion energy would also cut the
     hold at the end of a sign, which carries meaning.
     """
@@ -82,7 +82,7 @@ def active_span(npz) -> tuple[int, int] | None:
 
 def main() -> int:
     if not BASE.exists():
-        print(f"missing {BASE.relative_to(ROOT)} — run train/preprocess.py first")
+        print(f"missing {BASE.relative_to(ROOT)}, run train/preprocess.py first")
         return 1
     base = np.load(BASE, allow_pickle=True)
     labels = [str(s) for s in base["labels"]]
@@ -93,12 +93,12 @@ def main() -> int:
 
     files = sorted(SRC.rglob("*.npz"))
     if not files:
-        print(f"no clips under {SRC.relative_to(ROOT)} — run extract_cislr.py first")
+        print(f"no clips under {SRC.relative_to(ROOT)}, run extract_cislr.py first")
         return 1
     print(f"CISLR:   {len(files)} clips on disk")
 
     if not ASPECT.exists():
-        print(f"missing {ASPECT.relative_to(ROOT)} — frame shapes are not optional,"
+        print(f"missing {ASPECT.relative_to(ROOT)}, frame shapes are not optional,"
               f" see features.isotropic")
         return 1
     aspects = json.loads(ASPECT.read_text())
@@ -122,7 +122,7 @@ def main() -> int:
                     continue
                 pts = build_points(npz)[span[0]:span[1]]
             # Every CISLR clip measured is 300x300, so this is 1.0 and the step
-            # is a no-op today — which is exactly why it must be explicit. The
+            # is a no-op today: which is exactly why it must be explicit. The
             # square format is the geometrically correct one; INCLUDE is the
             # corpus that needs correcting. See features.isotropic.
             anchored = features.anchor(features.isotropic(pts, aspects[path.stem]))

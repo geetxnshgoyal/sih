@@ -1,5 +1,5 @@
 /**
- * Gloss classifier — the Phase 1 replacement for Phase 0's rule-based classify().
+ * Gloss classifier: the Phase 1 replacement for Phase 0's rule-based classify().
  *
  * Same contract as before: frames in, {gloss, conf} out. Everything around it
  * (gate, UI, speech) is unchanged, which is the whole reason Phase 0 was built
@@ -37,7 +37,7 @@ export class GlossClassifier {
   /**
    * Top-k predictions, for the diagnostics panel.
    *
-   * `aspect` is the source frame's width / height — see extractFeatures.
+   * `aspect` is the source frame's width / height: see extractFeatures.
    * Passing the wrong one does not throw; it silently classifies a
    * differently-shaped body.
    */

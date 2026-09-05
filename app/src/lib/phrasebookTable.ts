@@ -30,7 +30,7 @@ export async function loadPhrasebook(
     if (!res.ok) throw new Error(String(res.status));
     const body: unknown = await res.json();
     // A dev server with SPA fallback answers a missing file with index.html and
-    // HTTP 200, so check the shape rather than the status — otherwise a missing
+    // HTTP 200, so check the shape rather than the status, otherwise a missing
     // table becomes a parse error at the first tap instead of a clean degrade.
     if (
       typeof body !== "object" || body === null ||
@@ -51,7 +51,7 @@ export async function loadPhrasebook(
  *
  * Falls back to the English written in phrasebook.ts when the table is missing
  * or a language is absent. English spoken aloud is still useful in an Indian
- * hospital — silence is not — so the degrade is to a worse language, never to
+ * hospital: silence is not, so the degrade is to a worse language, never to
  * nothing.
  */
 export function phraseText(phrase: Phrase, lang: LangCode): string {

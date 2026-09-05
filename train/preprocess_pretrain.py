@@ -9,11 +9,11 @@ Writes data/pretrain.npz    X, y, labels, split, corpus
 Why a different sign language is the right pretraining data
 -----------------------------------------------------------
 ARCHITECTURE.md 5.1: a model trained on INCLUDE scored 2.1% on CISLR against
-0.38% chance. It had learned one corpus — seven students, one room, one camera —
+0.38% chance. It had learned one corpus, seven students, one room, one camera , 
 not the task. Two causes, and this script addresses the second:
 
-  1. GEOMETRY — fixed in features.isotropic; already applied to the data here.
-  2. VARIETY — INCLUDE cannot supply it and free ISL data of that kind does not
+  1. GEOMETRY: fixed in features.isotropic; already applied to the data here.
+  2. VARIETY: INCLUDE cannot supply it and free ISL data of that kind does not
      exist. So borrow it from a language whose signs cannot leak answers.
 
 What transfers is the encoder: what a handshape looks like on a webcam, how a
@@ -27,7 +27,7 @@ from MS-ASL alone.
     AUTSL     36,305       226      43   NO   licence-gated, see below
 
 MS-ASL and WLASL are both American Sign Language, so identical glosses are the
-same sign and are merged into one class rather than kept separate — more clips
+same sign and are merged into one class rather than kept separate, more clips
 per class, which is what the encoder wants.
 
 Both are already isotropic (nose-above-shoulders 0.559 and 0.572 in shoulder
@@ -90,7 +90,7 @@ def index_msasl() -> list[tuple]:
         p = n.split("/")
         if len(p) < 4:
             continue
-        # MS-ASL/PKL_POSES/<split>/<class>/<clip>.pkl — the archive's own split
+        # MS-ASL/PKL_POSES/<split>/<class>/<clip>.pkl: the archive's own split
         # is signer-independent, which is what we want validation to measure.
         out.append((z, n, norm_gloss(p[-2]), "train" if p[-3] == "train" else "val"))
     print(f"  MS-ASL  {len(out)} clips")
@@ -100,7 +100,7 @@ def index_msasl() -> list[tuple]:
 def index_wlasl() -> list[tuple]:
     """-> [(zip, member, gloss, split)]. Class comes from the public metadata."""
     if not (WLASL.exists() and WLASL_META.exists()):
-        print(f"  ! missing {WLASL.name} or {WLASL_META.name} — fetch the metadata:")
+        print(f"  ! missing {WLASL.name} or {WLASL_META.name}, fetch the metadata:")
         print("      curl -sL -o data/meta/WLASL_v0.3.json \\")
         print("        https://raw.githubusercontent.com/dxli94/WLASL/master/"
               "start_kit/WLASL_v0.3.json")
@@ -125,7 +125,7 @@ def main() -> int:
         print("no pretraining data found")
         return 1
     if AUTSL_LABELS.exists():
-        print(f"  note: {AUTSL_LABELS.name} found, but AUTSL is still unusable — "
+        print(f"  note: {AUTSL_LABELS.name} found, but AUTSL is still unusable, "
               f"its keypoints have no z. See the module docstring.")
 
     counts: dict[str, int] = {}

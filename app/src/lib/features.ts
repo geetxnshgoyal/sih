@@ -1,5 +1,5 @@
 /**
- * Feature extraction — THE PARITY-CRITICAL FILE.
+ * Feature extraction: THE PARITY-CRITICAL FILE.
  *
  * This is the exact mirror of train/features.py. If the two drift, the model
  * scores well offline and fails on camera, with almost no visible symptom.
@@ -16,16 +16,16 @@
  *   output: Float32Array(SEQ_LEN * N_POINTS * 3)
  *
  * Point layout (must match train/features.py select_points):
- *   [ 0..22]  pose 0-22   — head, shoulders, arms (legs dropped: extrapolated,
+ *   [ 0..22]  pose 0-22: head, shoulders, arms (legs dropped: extrapolated,
  *                           mean confidence 0.25 in the source data)
- *   [23..43]  left hand   — 21 MediaPipe hand landmarks
- *   [44..64]  right hand  — 21 MediaPipe hand landmarks
- *   [65..]    face subset — only when FACE_MODE is FULL_FACE (see train/face.py)
+ *   [23..43]  left hand: 21 MediaPipe hand landmarks
+ *   [44..64]  right hand: 21 MediaPipe hand landmarks
+ *   [65..]    face subset: only when FACE_MODE is FULL_FACE (see train/face.py)
  */
 
 export const SEQ_LEN = 32;
 export const POSE_KEEP = 23;
-export const N_FACE = 0;                 // HEAD_ONLY — mirrors FACE_MODE in features.py
+export const N_FACE = 0;                 // HEAD_ONLY, mirrors FACE_MODE in features.py
 export const N_POINTS = POSE_KEEP + 21 + 21 + N_FACE;   // 65
 export const N_DIMS = 3;
 export const FEATURE_SIZE = SEQ_LEN * N_POINTS * N_DIMS;
@@ -62,13 +62,13 @@ export function assembleFrame(
  *
  * `aspect` is the source frame's width / height. MediaPipe divides x by the
  * frame width and y by the frame height, so its "normalised" output is
- * stretched by the aspect ratio — the same skeleton at 16:9 and at 1:1 is
+ * stretched by the aspect ratio, the same skeleton at 16:9 and at 1:1 is
  * geometrically different. Dividing y by the aspect undoes that.
  *
  * This is not cosmetic. A model trained on 16:9 INCLUDE video scored 2.1% on
  * square CISLR video against a 0.38% chance rate, purely because of this
  * (ARCHITECTURE.md 5.1). The app is subject to the same failure whenever the
- * webcam's shape differs from the training corpus — so the aspect must come
+ * webcam's shape differs from the training corpus, so the aspect must come
  * from the live video element, never a constant.
  *
  * Division rather than multiplying by a reciprocal: Python does `y /= aspect`
@@ -85,7 +85,7 @@ function anchor(seq: PointFrame[], aspect: number): Float64Array {
     const lsy = ls.y / aspect, rsy = rs.y / aspect;
     const mx = (ls.x + rs.x) / 2, my = (lsy + rsy) / 2, mz = (ls.z + rs.z) / 2;
 
-    // shoulder width uses x,y only — matches np.linalg.norm(..., :2) in Python
+    // shoulder width uses x,y only, matches np.linalg.norm(..., :2) in Python
     const dx = ls.x - rs.x, dy = lsy - rsy;
     const span = Math.max(Math.hypot(dx, dy), 1e-6);
 
@@ -141,7 +141,7 @@ function standardise(v: Float64Array): Float32Array {
 /**
  * SHARED CONTRACT entry point.
  *
- * `aspect` is the source frame's width / height — for live camera,
+ * `aspect` is the source frame's width / height: for live camera,
  * `video.videoWidth / video.videoHeight`. It is required, not defaulted: a
  * wrong aspect is silent. The model still returns a confident answer, it is
  * just answering about a differently-shaped body.

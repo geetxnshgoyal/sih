@@ -48,7 +48,7 @@ export const RoleSelectionScreen: React.FC = () => {
           </p>
         </div>
 
-        {/* Role Cards Grid — Side-by-side on md+ */}
+        {/* Role Cards Grid: Side-by-side on md+ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-space-lg">
           {/* Doctor Card */}
           <div

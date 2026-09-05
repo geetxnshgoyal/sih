@@ -4,14 +4,14 @@ import type { Domain, QuickPhrase } from "../lib/domains";
 /**
  * Tap-to-say phrases for the current setting.
  *
- * This is the Deaf person's side of the bridge when signing is not practical —
+ * This is the Deaf person's side of the bridge when signing is not practical , 
  * hands full, injured, holding luggage, or simply faster to tap. It runs the
  * FORWARD direction: the phrase is spoken aloud to the hearing person, exactly
  * as a recognised sign would be.
  *
  * That means playability does not apply here. These glosses never need bundled
  * pose frames; they only need to be things the person wants to say. (The reverse
- * direction is where playability matters — see the library guard in reverse.ts.)
+ * direction is where playability matters, see the library guard in reverse.ts.)
  */
 export default function QuickPhrases({
   domain,

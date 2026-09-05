@@ -193,7 +193,7 @@ def run_fold(X, y, tr_m, te_m, n_classes, pretrained, rng, A):
 
 def main() -> int:
     if not DATA.exists():
-        print(f"missing {DATA.relative_to(ROOT)} — run train/preprocess_stgcn27.py")
+        print(f"missing {DATA.relative_to(ROOT)}, run train/preprocess_stgcn27.py")
         return 1
     d = np.load(DATA, allow_pickle=True)
     X, y, signer, corpus = d["X"], d["y"], d["signer"], d["corpus"]

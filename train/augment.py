@@ -11,7 +11,7 @@ Operates on the anchored (T, 65, 3) tensor, before standardisation.
 import numpy as np
 
 # MediaPipe pose landmarks come in left/right pairs. Mirroring the body means
-# swapping each pair, not just negating x — otherwise the left elbow ends up
+# swapping each pair, not just negating x, otherwise the left elbow ends up
 # labelled as the right one and the skeleton is inconsistent.
 POSE_PAIRS = [(1, 4), (2, 5), (3, 6), (7, 8), (9, 10),
               (11, 12), (13, 14), (15, 16), (17, 18), (19, 20), (21, 22)]
@@ -45,7 +45,7 @@ def perspective(seq: np.ndarray, rng, d_lo=1.6, d_hi=9.0) -> np.ndarray:
     This replaces an earlier scale_jitter that was a no-op: multiplying every
     coordinate by a constant is removed exactly by the unit-variance
     standardisation downstream (verified: max diff 4e-16). Distance is NOT a
-    scale change, it is a projective one — points nearer the lens spread
+    scale change, it is a projective one, points nearer the lens spread
     outward more than far ones, and that non-linearity does survive
     normalisation.
 
@@ -86,7 +86,7 @@ def z_noise(seq: np.ndarray, rng, scale=0.35) -> np.ndarray:
 
 
 def time_mask(seq: np.ndarray, rng, max_width=5) -> np.ndarray:
-    """Blank a few consecutive frames — occlusion, or a dropped detection."""
+    """Blank a few consecutive frames, occlusion, or a dropped detection."""
     out = seq.copy()
     w = int(rng.integers(2, max_width + 1))
     s = int(rng.integers(0, max(len(out) - w, 1)))

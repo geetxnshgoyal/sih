@@ -4,7 +4,7 @@ Run candidate models against your own recorded takes.
     .venv-tf/bin/python train/eval_on_takes.py setu-recordings-*.json
 
 The direct test. No geometry inference, no simulated camera, no assumption
-about why the domain differs — just: which checkpoint reads your signing?
+about why the domain differs, just: which checkpoint reads your signing?
 
 Every model in models/*.keras is scored, so the perspective-augmented one can
 be compared against the one trained without it on the same real frames.

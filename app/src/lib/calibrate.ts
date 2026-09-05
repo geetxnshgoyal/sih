@@ -1,18 +1,18 @@
 /**
- * Temperature scaling — make a stated confidence mean what it says.
+ * Temperature scaling: make a stated confidence mean what it says.
  *
  * The problem, measured
  * ---------------------
  * The exported model is a softmax classifier, and softmax confidence on a model
- * this size is not a probability — it is systematically inflated. Left alone it
+ * this size is not a probability, it is systematically inflated. Left alone it
  * says 0.90 while being right far less often, and the gate then speaks a
  * confident wrong reading aloud to a patient.
  *
  * The fix
  * -------
  * Divide the logits by a single scalar T before softmax. It cannot change which
- * class wins — dividing every logit by the same positive number preserves their
- * order — so accuracy is untouched. All it changes is how confident the model
+ * class wins: dividing every logit by the same positive number preserves their
+ * order: so accuracy is untouched. All it changes is how confident the model
  * claims to be:
  *
  *   ECE 23.5pp -> 6.5pp
@@ -29,7 +29,7 @@
  * condition the app runs in.
  *
  * REFIT AFTER ANY RETRAIN. T is a property of the trained weights, not of the
- * architecture — train_production.py prints the new value.
+ * architecture: train_production.py prints the new value.
  */
 
 /** Fitted out-of-fold over 7 signer groups, close range. See the header. */
@@ -40,7 +40,7 @@ export const TEMPERATURE = 2.34;
  *
  * The shipped graph model has softmax baked into its final layer, so the raw
  * logits are not available at runtime. log(p) recovers them up to a constant,
- * and softmax is invariant to that constant — so this is exactly equivalent to
+ * and softmax is invariant to that constant, so this is exactly equivalent to
  * scaling the true logits, without needing to re-export the model.
  */
 export function calibrate(probs: ArrayLike<number>, T = TEMPERATURE): Float32Array {

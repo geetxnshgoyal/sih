@@ -6,11 +6,11 @@ import { LANGUAGES, type LangCode } from "../lib/speech";
 import { asset } from "../lib/assetUrl";
 
 /**
- * Direction B — the hearing person's half of the conversation.
+ * Direction B: the hearing person's half of the conversation.
  *
  * They speak; it is transcribed, matched to signs we can play, and shown to
  * the deaf user as an animated skeleton plus large text. Text is not a
- * fallback here — many deaf users read the spoken language, and it carries the
+ * fallback here: many deaf users read the spoken language, and it carries the
  * words we have no sign for.
  */
 export default function HearingSide({
