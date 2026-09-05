@@ -4,36 +4,36 @@
  * The problem, measured
  * ---------------------
  * The exported model is a softmax classifier, and softmax confidence on a model
- * this size is not a probability — it is systematically inflated. Measured on
- * 1,566 clips from a signer group the model never trained on, at close range:
- *
- *   says 0.90  ->  right 48% of the time
- *   says 0.99  ->  right 70% of the time
- *   Expected Calibration Error: 34.1pp
- *
- * At the old gate (FLOOR 0.75) that meant 54% of segments were spoken aloud and
- * only 57.9% of those were correct — so 42% of everything the app said was
- * wrong, stated confidently, to a patient.
+ * this size is not a probability — it is systematically inflated. Left alone it
+ * says 0.90 while being right far less often, and the gate then speaks a
+ * confident wrong reading aloud to a patient.
  *
  * The fix
  * -------
- * Divide the logits by a single scalar T before softmax. T is fitted once,
- * offline, by minimising negative log-likelihood on held-out data. It cannot
- * change which class wins — dividing every logit by the same positive number
- * preserves their order — so accuracy is untouched at 40.4%. All it changes is
- * how confident the model claims to be:
+ * Divide the logits by a single scalar T before softmax. It cannot change which
+ * class wins — dividing every logit by the same positive number preserves their
+ * order — so accuracy is untouched. All it changes is how confident the model
+ * claims to be:
  *
- *   ECE 34.1pp -> 5.0pp        says 0.90 -> right 91%
+ *   ECE 23.5pp -> 6.5pp
  *
- * That is the whole point. The model is no better; it now admits it, and the
- * gate can be set from a number that means something.
+ * The model is no better; it now admits what it is, and the gate can be set
+ * from a number that means something.
  *
- * Fitted by the block in run/calib.log, held-out group 0. Refit after any
- * retrain: T is a property of the trained weights, not of the architecture.
+ * How T is fitted (train/train_production.py)
+ * -------------------------------------------
+ * On OUT-OF-FOLD predictions: leave-one-signer-group-out over all 7 groups, so
+ * every prediction used to fit T came from a model that had never seen that
+ * signer. Fitting on a group the model trained on would produce a T that
+ * flatters it. 4,894 predictions, scored at close range because that is the
+ * condition the app runs in.
+ *
+ * REFIT AFTER ANY RETRAIN. T is a property of the trained weights, not of the
+ * architecture — train_production.py prints the new value.
  */
 
-/** Fitted on held-out group 0, close range. See the header. */
-export const TEMPERATURE = 2.69;
+/** Fitted out-of-fold over 7 signer groups, close range. See the header. */
+export const TEMPERATURE = 2.34;
 
 /**
  * Re-apply softmax at temperature T to already-softmaxed probabilities.
@@ -69,10 +69,11 @@ export type Certainty = "confident" | "uncertain" | "unusable";
  * Measured trade-off on held-out data, after calibration:
  *
  *   floor   speaks    and is right
- *    0.30     49%        60.2%
- *    0.50     23%        75.8%
- *    0.70     10%        84.3%
- *    0.90      2%        97.4%
+ *    0.30    72.8%       69.9%
+ *    0.40    61.0%       74.9%
+ *    0.50    49.4%       80.6%
+ *    0.70    30.6%       87.8%
+ *    0.90    11.9%       93.4%
  *
  * A single hard floor forces a bad choice: high enough to be trustworthy and
  * the app is silent nine times in ten; low enough to be responsive and it is
