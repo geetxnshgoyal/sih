@@ -177,6 +177,9 @@ def main() -> int:
     print(f"\nkept {len(X)}  (dropped {bad})")
     print(f"  INCLUDE {int((corpus == 0).sum())}  CISLR {int((corpus == 1).sum())}")
     print(f"  groups {np.bincount(signer).tolist()}")
+    # No features.check_isotropy here: that reads the 65-point (T, N, 3) layout
+    # and this array is (C, T, V) over 27 joints in 2D. The inputs to it are
+    # already checked where they are built, and the geometry is inherited.
     print(f"X {X.shape}  (C, T, V) = (2, {NUM_FRAMES}, {len(KEEP_27)})")
 
     np.savez_compressed(OUT, X=X, y=y, signer=signer, corpus=corpus,

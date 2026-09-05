@@ -177,6 +177,8 @@ def main() -> int:
         labels = [labels[i] for i in np.flatnonzero(present)]
         print(f"dropped {int((~present).sum())} class(es) with no surviving clips")
 
+    features.check_isotropy(X[:400], "MS-ASL + WLASL")
+
     c = np.bincount(y, minlength=len(labels))
     print(f"{len(labels)} classes | per class: min {c.min()} "
           f"median {int(np.median(c))} max {c.max()}")

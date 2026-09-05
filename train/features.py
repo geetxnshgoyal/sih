@@ -68,6 +68,45 @@ def isotropic(seq: np.ndarray, aspect: float) -> np.ndarray:
     return seq
 
 
+# Nose above the shoulder line, in shoulder widths, for a correctly-scaled
+# human. Measured across four independently-produced corpora that are already
+# isotropic: CISLR 0.552, MS-ASL 0.559, WLASL 0.572, AUTSL 0.583.
+ANATOMY_RATIO = 0.578
+ANATOMY_BAND = (0.42, 0.80)
+
+
+def check_isotropy(anchored: np.ndarray, name: str = "corpus") -> float:
+    """Warn if an anchored batch is not in plausible human proportions.
+
+    Accepts (T, N, 3) or (B, T, N, 3) already through anchor().
+
+    This exists because the same bug has now happened twice. MediaPipe's
+    coordinates carry the source video's aspect ratio, so a corpus whose aspect
+    is guessed wrong comes out stretched, and NOTHING downstream complains: the
+    model trains happily and simply fails on anything shaped differently. It
+    cost 2.1% cross-corpus accuracy on INCLUDE, and was about to be repeated on
+    the ISL dictionary, which was assumed square and is in fact 16:9.
+
+    A ratio near 1.0 means the y axis is still stretched by roughly the frame's
+    aspect. Returns the measured ratio so callers can log it.
+    """
+    a = np.asarray(anchored, dtype=np.float64)
+    if a.ndim == 4:
+        a = a.reshape(-1, a.shape[-2], a.shape[-1])
+    span = np.abs(a[:, L_SHOULDER, 0] - a[:, R_SHOULDER, 0])
+    nose = np.abs(a[:, 0, 1] - (a[:, L_SHOULDER, 1] + a[:, R_SHOULDER, 1]) / 2.0)
+    ok = span > 1e-6
+    if not ok.any():
+        return float("nan")
+    ratio = float(np.median(nose[ok] / span[ok]))
+    lo, hi = ANATOMY_BAND
+    if not (lo <= ratio <= hi):
+        print(f"  !! {name}: nose/shoulder = {ratio:.3f}, outside {lo}-{hi}. "
+              f"The aspect ratio is probably wrong "
+              f"(implied {ratio / ANATOMY_RATIO:.2f}x). See features.isotropic.")
+    return ratio
+
+
 def anchor(seq: np.ndarray) -> np.ndarray:
     """Body-anchored and scale-invariant. Input already in unit coordinates."""
     seq = seq.astype(np.float64).copy()

@@ -90,6 +90,8 @@ def main() -> int:
         for f in failed[:3]:
             print(f"  ! {f}")
 
+    features.check_isotropy(X[:400], "INCLUDE")
+
     counts = np.bincount(y, minlength=len(labels))
     print(f"\nsamples per class: min {counts.min()}  median {int(np.median(counts))}  max {counts.max()}")
     print("group sizes:", np.bincount(signer).tolist())

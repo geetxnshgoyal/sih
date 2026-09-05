@@ -161,6 +161,9 @@ def main() -> int:
     corpus = np.concatenate([np.zeros(len(base["X"]), np.int32),
                              np.ones(len(Xc), np.int32)])
 
+    features.check_isotropy(Xc[:400], "CISLR")
+    features.check_isotropy(base["X"][:400], "INCLUDE")
+
     counts = np.bincount(y, minlength=len(labels))
     gained = np.bincount(yc, minlength=len(labels))
     print(f"\nmerged {len(X)} clips, {len(labels)} classes")

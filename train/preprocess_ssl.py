@@ -66,7 +66,12 @@ STRIDE = 16                             # 50% overlap
 MAX_WINDOWS = 6                         # per clip; see the docstring
 MIN_ACTIVE = 16
 PAD = 3
-ASPECT = 1.0        # dictionary video is square-ish; corrected below if not
+# MEASURED, not assumed. 24 clips sampled straight from the repository: every
+# one is 16:9 (1920x1080 and 1280x720 both appear, the aspect does not vary).
+# This was 1.0 until the landmarks showed a nose/shoulder ratio of 0.938 against
+# an anatomical 0.578 -- i.e. the whole SSL corpus would have been built with
+# exactly the vertical stretch that cost 2.1% cross-corpus on INCLUDE.
+ASPECT = 16 / 9
 
 
 def active_span(npz) -> tuple[int, int] | None:
@@ -131,6 +136,10 @@ def main() -> int:
             bad += 1
 
     print(f"  {len(rows)} windows  (dropped {short} too short, {bad} unusable)")
+    if rows:
+        r = features.check_isotropy(np.stack(rows[:400]), "ISL dictionary")
+        print(f"  isotropy check: nose/shoulder {r:.3f} "
+              f"(anatomical {features.ANATOMY_RATIO})")
 
     if args.include_asl and ASL.exists():
         d = np.load(ASL, allow_pickle=True)
