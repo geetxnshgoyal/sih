@@ -4,7 +4,14 @@ Build unlabelled windows for self-supervised pretraining.
     .venv/bin/python train/preprocess_ssl.py [--include-asl]
 
 Reads  data/islgov_landmarks/**/*.npz  (+ data/pretrain.npz with --include-asl)
-Writes data/ssl.npz    X (N, 32, 65, 3)   -- no labels, by design
+Writes data/ssl.npz    X (N, 32, 65, 3), word (N,), words (W,)
+
+The `word` array is NOT a training label. It exists so pretrain_ssl.py can form
+contrastive positives: two clips of the SAME dictionary entry, signed by
+different people, should land in the same place. That is signer invariance
+taught directly, and it is the property the model most lacks. No classifier is
+ever built over these 12,103 words -- with a median of one clip each, one could
+not be.
 
 Why self-supervision, and why this corpus
 -----------------------------------------
@@ -97,6 +104,8 @@ def main() -> int:
     args = ap.parse_args()
 
     rows: list[np.ndarray] = []
+    row_word: list[int] = []
+    word_id: dict[str, int] = {}
     files = sorted(SRC.rglob("*.npz"))
     print(f"ISL dictionary: {len(files)} clips extracted so far")
     short = bad = 0
@@ -113,23 +122,40 @@ def main() -> int:
                 pts = np.concatenate([d["pose"][lo:hi, :POSE_KEEP, :3],
                                       d["lh"][lo:hi], d["rh"][lo:hi]],
                                      axis=1).astype(np.float64)
-            rows.extend(windows_of(features.isotropic(pts, ASPECT)))
+            w = windows_of(features.isotropic(pts, ASPECT))
+            # the dictionary entry this clip demonstrates, from its directory
+            wid = word_id.setdefault(path.parent.name.lower(), len(word_id))
+            rows.extend(w)
+            row_word.extend([wid] * len(w))
         except Exception:  # noqa: BLE001
             bad += 1
 
     print(f"  {len(rows)} windows  (dropped {short} too short, {bad} unusable)")
 
     if args.include_asl and ASL.exists():
-        a = np.load(ASL, allow_pickle=True)["X"]
+        d = np.load(ASL, allow_pickle=True)
+        a, ay = d["X"], d["y"]
         print(f"MS-ASL + WLASL: {len(a)} windows")
+        # Namespace ASL glosses away from ISL ones. "book" in ASL and "book" in
+        # ISL are different signs, so treating them as one contrastive positive
+        # would pull two unrelated movements together.
+        off = len(word_id)
         rows.extend(a)
+        row_word.extend((ay + off).tolist())
+        for i in range(int(ay.max()) + 1):
+            word_id[f"asl:{i}"] = off + i
 
     if not rows:
         print("nothing to write — let train/extract_islgov.py run further")
         return 1
     X = np.stack(rows).astype(np.float32)
+    word = np.asarray(row_word, dtype=np.int32)
+    words = np.array([w for w, _ in sorted(word_id.items(), key=lambda kv: kv[1])])
+    multi = int((np.bincount(word, minlength=len(words)) >= 2).sum())
     print(f"\nX {X.shape}")
-    np.savez_compressed(OUT, X=X)
+    print(f"{len(words)} distinct entries, {multi} with 2+ windows "
+          f"(those supply cross-clip contrastive positives)")
+    np.savez_compressed(OUT, X=X, word=word, words=words)
     print(f"wrote {OUT.relative_to(ROOT)} ({OUT.stat().st_size / 1e6:.1f} MB)")
     return 0
 
