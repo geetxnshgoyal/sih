@@ -410,8 +410,11 @@ select{
 
 .stage{
   position:relative;
-  aspect-ratio:16/9;
-  min-height:280px;
+  /* The REAL camera aspect, set by SignBridge from video.videoWidth/videoHeight.
+     Hardcoding it was wrong in both directions: a 4:3 webcam in a 16/9 box, or
+     the Stitch design's 4/3 box holding a 16:9 stream. 16/9 is only the
+     fallback for before the stream reports its size. */
+  aspect-ratio:var(--stage-aspect, 16/9);
   overflow:hidden;
   background:#07110F;
 }
@@ -420,7 +423,12 @@ select{
   inset:0;
   width:100%;
   height:100%;
-  object-fit:cover;
+  /* contain, NOT cover. The signer frames themselves against this preview, so
+     it has to show exactly what MediaPipe sees. `cover` crops to fill the box,
+     which means hands can be inside the model's view but off the edge of the
+     picture -- the person then moves them to "fix" a problem that does not
+     exist, and creates one. Letterboxing is the honest failure. */
+  object-fit:contain;
   transform:scaleX(-1);
 }
 .idle{
@@ -803,7 +811,7 @@ code{
   .lang-control{width:100%}
   .lang-control select{min-width:0}
   .bridge.compact .side{grid-template-columns:1fr}
-  .stage{min-height:220px}
+  .stage{min-height:160px}
   .hearing-stage{grid-template-columns:1fr;min-height:0}
   .signplayer{max-height:none}
   .input-row,.row{align-items:stretch}
@@ -900,7 +908,7 @@ code{
 @layer components {
   :root { --bg: #f8f9ff; --ink: #0b1c30; --muted: #545f73; --line: #dfe7ec; --line-2: #bfc8cd; --sign: #004357; --sign-strong: #0d5c75; --sign-dim: #e5eeff; --surface-2: #eff4ff; --shadow: 0 4px 16px #00435708; }
   .bridge.compact .card { border-radius: 12px; box-shadow: none; }
-  .bridge.compact .stage { width: 100%; max-width: 100%; min-height: 180px; }
+  .bridge.compact .stage { width: 100%; max-width: 100%; }
   .bridge.compact .bridge-content { min-width: 0; }
   .bridge.compact .card-h { flex-wrap: wrap; letter-spacing: 0; }
   @media (max-width: 380px) {

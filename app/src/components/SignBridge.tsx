@@ -51,6 +51,18 @@ export default function SignBridge({
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+
+  /** Size the preview box to the stream's real shape.
+   *
+   * Cameras hand back whatever they like -- 1280x720 is requested, 640x480 is
+   * common -- and the same number feeds the model as `aspect`, so the picture
+   * and the classifier stay in agreement about what is being looked at. */
+  const setStageAspect = useCallback((w: number, h: number) => {
+    if (stageRef.current && w > 0 && h > 0) {
+      stageRef.current.style.setProperty("--stage-aspect", `${w} / ${h}`);
+    }
+  }, []);
   const bufferRef = useRef<PointFrame[]>([]);
   const gateRef = useRef(new StabilityGate());
   const clfRef = useRef(new GlossClassifier());
@@ -301,6 +313,7 @@ export default function SignBridge({
 
     const cv = canvasRef.current!;
     cv.width = 960; cv.height = 540;
+    setStageAspect(960, 540);       // demo clips are INCLUDE's 16:9
     gateRef.current.reset();
     bufferRef.current = [];
 
@@ -415,6 +428,7 @@ export default function SignBridge({
       await video.play();
       if (!canvasRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
       const cv = canvasRef.current;
+      setStageAspect(video.videoWidth, video.videoHeight);
       cv.width = video.videoWidth || 1280;
       cv.height = video.videoHeight || 720;
       runningRef.current = true;
@@ -476,7 +490,7 @@ export default function SignBridge({
             <span>Signs to speech</span>
             {showDetails && <span className="mono">{fps ? `${fps} fps` : "-"}</span>}
           </div>
-          <div className="stage">
+          <div className="stage" ref={stageRef}>
             <video ref={videoRef} playsInline muted />
             <canvas ref={canvasRef} />
             {!running && !replaying && (
