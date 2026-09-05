@@ -1,6 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+// Imported for its side effect and BEFORE anything renders: beforeinstallprompt
+// fires very early, and a listener added later simply misses it.
+import './lib/install'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

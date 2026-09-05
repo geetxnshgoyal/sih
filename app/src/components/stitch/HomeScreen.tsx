@@ -1,3 +1,4 @@
+import { InstallButton } from '../InstallPrompt';
 import { ArrowRight, Video, Languages, MessageSquare, FileText, ClipboardCheck, Settings2 } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 const modules = [
@@ -76,6 +77,9 @@ export function HomeScreen() {
           </p>
         </div>
       </div>
+      <p className="about-install">
+        <InstallButton />
+      </p>
       <p className="about-credit">
         Built by <strong>Team Awaaz</strong> for Smart India Hackathon 2026.
       </p>

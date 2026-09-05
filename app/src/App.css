@@ -1056,3 +1056,13 @@ code{
   .install-title{font-size:13.5px}
   .install-text{font-size:12px}
 }
+
+/* Always-available install control, for when the browser never offers one. */
+.about-install{margin:0}
+.install-inline{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.install-inline .install-yes{background:#2563EB}
+.install-hint,.install-steps{
+  font-size:12.5px;line-height:1.5;opacity:.72;max-width:42ch;
+}
+.install-steps{opacity:.95}
+.install-glyph{opacity:.7}
