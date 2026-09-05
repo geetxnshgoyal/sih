@@ -54,6 +54,7 @@ LIST = ROOT / "data" / "meta" / "_islgov_files.json"
 OUT = ROOT / "data" / "islgov_landmarks"
 REPO = "silentone0725/Indian_Sign_Language_Data.gov_Rencoded"
 N_POSE, N_HAND = 33, 21
+CHUNK = 25          # clips per task; small enough that workers get recycled
 
 
 def word_of(path: str) -> str:
@@ -74,7 +75,7 @@ def to_array(landmarks, n: int, dims: int) -> np.ndarray:
 
 
 def worker(args) -> tuple[int, int, int]:
-    shard, complexity = args
+    shard, complexity, target_fps = args
     import cv2
     import mediapipe as mp
 
@@ -98,11 +99,25 @@ def worker(args) -> tuple[int, int, int]:
                 os.close(fd)
                 urllib.request.urlretrieve(url, tmp_vid)
                 cap = cv2.VideoCapture(tmp_vid)
+                # Sample at a fixed rate rather than taking every frame. Two
+                # reasons, and the second matters more than the speed:
+                #   - these entries average ~900 frames and are resampled to 32
+                #     later anyway, so most of the decode is thrown away
+                #   - source clips are 25 AND 30 fps, so a fixed frame stride
+                #     would give different real-time windows for different
+                #     entries. Deriving the stride from each clip's own fps
+                #     makes a 32-frame window mean the same duration everywhere.
+                src_fps = cap.get(cv2.CAP_PROP_FPS) or target_fps
+                stride = max(1, int(round(src_fps / target_fps)))
                 pose, lh, rh = [], [], []
+                fi = -1
                 while True:
                     ok, frame = cap.read()
                     if not ok:
                         break
+                    fi += 1
+                    if fi % stride:
+                        continue
                     res = holistic.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                     pose.append(to_array(res.pose_landmarks, N_POSE, 4))
                     lh.append(to_array(res.left_hand_landmarks, N_HAND, 3))
@@ -135,6 +150,8 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--complexity", type=int, default=1, choices=[0, 1, 2])
+    ap.add_argument("--target-fps", type=float, default=15.0,
+                    help="resample each clip to this rate before inference")
     ap.add_argument("--limit", type=int, default=0)
     args = ap.parse_args()
 
@@ -149,9 +166,21 @@ def main() -> int:
     if not todo:
         return 0
 
-    shards = [todo[i::args.workers] for i in range(args.workers)]
-    with mp_proc.Pool(args.workers) as pool:
-        results = pool.map(worker, [(s, args.complexity) for s in shards])
+    # Chunk the work rather than handing each worker one giant shard, so the
+    # pool can RECYCLE workers. A MediaPipe process grows steadily -- measured
+    # here, throughput fell 12 -> 5 clips/min over a few hours as the workers
+    # bloated into swap on a 16 GB machine, and recovered the moment they were
+    # restarted. maxtasksperchild caps that: a worker is retired after a few
+    # chunks and its memory returns to the system.
+    chunks = [todo[i:i + CHUNK] for i in range(0, len(todo), CHUNK)]
+    with mp_proc.Pool(args.workers, maxtasksperchild=2) as pool:
+        results = []
+        for k, r in enumerate(pool.imap_unordered(
+                worker, [(c, args.complexity, args.target_fps) for c in chunks]), 1):
+            results.append(r)
+            if k % 10 == 0:
+                have = sum(x[0] + x[1] for x in results)
+                print(f"  {have}/{len(todo)}", flush=True)
 
     done = sum(r[0] for r in results)
     skipped = sum(r[1] for r in results)
