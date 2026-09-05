@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, Info, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { GlossClassifier } from "../lib/classifier";
 import { StabilityGate, FLOOR, NEEDED } from "../lib/gate";
@@ -34,11 +35,18 @@ export default function SignBridge({
   lang: langProp,
   onLang,
   compact = false,
+  showDetails = false,
+  onRecognized,
 }: {
   lang?: LangCode;
   onLang?: (l: LangCode) => void;
   compact?: boolean;
+  showDetails?: boolean;
+  onRecognized?: (text: string) => void;
 } = {}) {
+  const recognizedRef = useRef(onRecognized);
+  useEffect(() => { recognizedRef.current = onRecognized; }, [onRecognized]);
+  const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bufferRef = useRef<PointFrame[]>([]);
@@ -164,6 +172,7 @@ export default function SignBridge({
       if (!glosses.length) return;
       const { text, source } = assembleWithSource(glosses, l);
       speak(text, l);
+      recognizedRef.current?.(text);
       setLog((prev) => [
         { gloss: glosses.join(" · "), text, conf, at, source },
         ...prev,
@@ -288,6 +297,7 @@ export default function SignBridge({
             const l = langRef.current;
             const text = phraseFor(g.fire, l);
             speak(text, l);
+      recognizedRef.current?.(text);
             setLog((prev) => [{
               gloss: g.fire!, text, conf: g.conf,
               at: new Date().toLocaleTimeString(), source: "phrasebook" as const,
@@ -309,6 +319,7 @@ export default function SignBridge({
           const l = langRef.current;
           const text = phraseFor(g.fire, l);
           speak(text, l);
+      recognizedRef.current?.(text);
           setLog((prev) => [{
             gloss: g.fire!, text, conf: g.conf,
             at: new Date().toLocaleTimeString(), source: "phrasebook" as const,
@@ -367,10 +378,13 @@ export default function SignBridge({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: false,
       });
-      const video = videoRef.current!;
+      if (!videoRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
+      const video = videoRef.current;
       video.srcObject = stream;
       await video.play();
-      const cv = canvasRef.current!;
+      if (!canvasRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      const cv = canvasRef.current;
       cv.width = video.videoWidth || 1280;
       cv.height = video.videoHeight || 720;
       runningRef.current = true;
@@ -400,13 +414,13 @@ export default function SignBridge({
     setFps(0);
   }
 
-  useEffect(() => () => { runningRef.current = false; cancelAnimationFrame(rafRef.current); }, []);
+  useEffect(() => () => { runningRef.current = false; cancelAnimationFrame(rafRef.current); streamRef.current?.getTracks().forEach(t => t.stop()); }, []);
 
   const ready = lmState === "ready" && modelState === "ready";
   const status =
     lmState === "error" ? `Landmarker failed: ${lmError}` :
     modelState === "error" ? `Model failed: ${modelError}` :
-    !ready ? "Loading models…" :
+    !ready ? "Preparing camera tools..." :
     running ? "Listening for signs" : "Ready";
 
   const voice = voiceFor(lang);
@@ -417,8 +431,8 @@ export default function SignBridge({
         <div className="brand">
           <div className="mark">से</div>
           <div>
-            <h1>Setu — ISL to Regional Speech</h1>
-            <p>Phase 1 · {clfRef.current.vocabulary.length || "…"} signs · trained model</p>
+            <h1>Setu</h1>
+            <p>{clfRef.current.vocabulary.length || "..."} signs available</p>
           </div>
         </div>
         <span className={`status ${lmState === "error" || modelState === "error" ? "err" : ready ? "ok" : "busy"}`}>
@@ -426,21 +440,25 @@ export default function SignBridge({
         </span>
       </header>
 
-      <main>
+      <div className="bridge-content">
         <section className="card stage-card">
-          <div className="card-h"><span>Live camera</span><span className="mono">{fps ? `${fps} fps` : "—"}</span></div>
+          <div className="card-h">
+            <span>Signs to speech</span>
+            {showDetails && <span className="mono">{fps ? `${fps} fps` : "-"}</span>}
+          </div>
           <div className="stage">
             <video ref={videoRef} playsInline muted />
             <canvas ref={canvasRef} />
             {!running && !replaying && (
               <div className="idle">
-                Camera is off.<br />Press <b>Start camera</b> and sign into the lens.
+                <b>{ready ? "Ready to start" : status}</b>
+                <span>Start when the signer is framed from face to hands.</span>
               </div>
             )}
             {(running || replaying) && (
               <div className="hud">
                 <div>
-                  <div className="hud-k">Detecting</div>
+                  <div className="hud-k">Current sign</div>
                   <div className={`gloss ${live.gloss ? "" : "none"}`}>
                     {live.gloss ?? (diag && !diag.left && !diag.right ? "hands not visible" : "no sign")}
                   </div>
@@ -458,19 +476,27 @@ export default function SignBridge({
                   </div>
                 )}
                 <div className="ring" style={{ ["--p" as string]: live.progress }}>
-                  <span>{live.progress >= 1 ? "✓" : "HOLD"}</span>
+                  <span>{live.progress >= 1 ? "OK" : "HOLD"}</span>
                 </div>
               </div>
             )}
           </div>
           <div className="card-b">
             <div className="row">
-              <button className="go" onClick={start} disabled={!ready || running}>Start camera</button>
-              <button onClick={stop} disabled={!running}>Stop</button>
-              <button onClick={replayDemo} disabled={!ready || running || !!replaying}>
-                {replaying ? `Replaying: ${replaying}` : "Replay held-out clips"}
+              <button className="go" onClick={start} disabled={!ready || running}>
+                <Camera size={17} /> Start camera
               </button>
-              <button onClick={() => setLog([])}>Clear</button>
+              <button onClick={stop} disabled={!running}>
+                <Square size={16} /> Stop
+              </button>
+              {showDetails && (
+                <button onClick={replayDemo} disabled={!ready || running || !!replaying}>
+                  <Play size={16} /> {replaying ? replaying : "Play sample"}
+                </button>
+              )}
+              <button onClick={() => setLog([])} disabled={!log.length}>
+                <RotateCcw size={16} /> Clear
+              </button>
             </div>
             {camError && <div className="err-box">{camError}</div>}
           </div>
@@ -478,82 +504,96 @@ export default function SignBridge({
 
         <div className="side">
           <section className="card">
-            <div className="card-h">Output</div>
+            <div className="card-h">
+              <span>Spoken output</span>
+              <Volume2 size={15} />
+            </div>
             <div className="card-b">
               <label className="field">
-                <span>Speak to the hearing person in</span>
+                <span>Language</span>
                 <select value={lang} onChange={(e) => setLang(e.target.value as LangCode)}>
                   {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
                 </select>
               </label>
-              <p className="note">
-                {voice
-                  ? <>Voice: <code>{voice.name}</code></>
-                  : <>No <code>{lang}</code> voice installed — the browser will use its default.</>}
-              </p>
-            </div>
-          </section>
-
-          <section className="card">
-            <div className="card-h">Diagnostics</div>
-            <div className="card-b">
-              {!diag && <p className="note">Start the camera to see what the model sees.</p>}
-              {diag && (
-                <div className="diag">
-                  <div className="drow">
-                    <span className={diag.pose ? "on" : "off"}>pose</span>
-                    <span className={diag.left ? "on" : "off"}>left hand</span>
-                    <span className={diag.right ? "on" : "off"}>right hand</span>
-                  </div>
-                  <div className="dline">
-                    <span>shoulder span</span>
-                    <b>{diag.shoulder.toFixed(3)}</b>
-                    <em>trained on 0.12–0.15</em>
-                  </div>
-                  {diag.verdict && (
-                    <p className={`verdict ${diag.verdict.includes("matches") ? "good" : "bad"}`}>
-                      {diag.verdict}
-                    </p>
-                  )}
-                  <div className="dtop">
-                    {diag.top.map((t) => (
-                      <div key={t.gloss}>
-                        <span>{t.gloss}</span>
-                        <i style={{ width: `${Math.round(t.conf * 100)}%` }} />
-                        <b>{Math.round(t.conf * 100)}%</b>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {showDetails && (
+                <p className="note">
+                  {voice
+                    ? <>Voice: <code>{voice.name}</code></>
+                    : <>No <code>{lang}</code> voice installed. The browser will use its default.</>}
+                </p>
               )}
             </div>
           </section>
+
+          {showDetails && (
+            <section className="card details-card">
+              <div className="card-h">
+                <span>Demo details</span>
+                <Info size={15} />
+              </div>
+              <div className="card-b">
+                {!diag && <p className="note">Start the camera to see recognition diagnostics.</p>}
+                {diag && (
+                  <div className="diag">
+                    <div className="drow">
+                      <span className={diag.pose ? "on" : "off"}>pose</span>
+                      <span className={diag.left ? "on" : "off"}>left hand</span>
+                      <span className={diag.right ? "on" : "off"}>right hand</span>
+                    </div>
+                    <div className="dline">
+                      <span>shoulder span</span>
+                      <b>{diag.shoulder.toFixed(3)}</b>
+                      <em>training range 0.12-0.15</em>
+                    </div>
+                    {diag.verdict && (
+                      <p className={`verdict ${diag.verdict.includes("matches") ? "good" : "bad"}`}>
+                        {diag.verdict}
+                      </p>
+                    )}
+                    <div className="dtop">
+                      {diag.top.map((t) => (
+                        <div key={t.gloss}>
+                          <span>{t.gloss}</span>
+                          <i style={{ width: `${Math.round(t.conf * 100)}%` }} />
+                          <b>{Math.round(t.conf * 100)}%</b>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           <section className="card">
             <div className="card-h">Transcript</div>
             <div className="card-b">
               <div className="log">
-                {log.length === 0 && <p className="empty">Recognised signs appear here.</p>}
+                {log.length === 0 && <p className="empty">Spoken translations appear here.</p>}
                 {log.map((e, i) => (
                   <div className="msg" key={`${e.at}-${i}`}>
-                    <div className="k">{e.gloss}</div>
                     <div className="t">{e.text}</div>
+                    <div className="k">{e.gloss}</div>
                     <div className="m">
                       <span>{Math.round(e.conf * 100)}%</span>
-                      <span
-                        className={e.source === "gloss-order" ? "prov warn" : "prov"}
-                        title={
-                          e.source === "reordered"
-                            ? "Reordered into natural spoken word order"
-                            : e.source === "phrasebook"
-                              ? "From the hand-verified phrase table"
-                              : "Signs read in the order they were made — not reordered"
-                        }
-                      >
-                        {sourceLabel(e.source)}
-                      </span>
+                      {showDetails && (
+                        <span
+                          className={e.source === "gloss-order" ? "prov warn" : "prov"}
+                          title={
+                            e.source === "reordered"
+                              ? "Reordered into natural spoken word order"
+                              : e.source === "phrasebook"
+                                ? "From the hand-verified phrase table"
+                                : "Signs read in the order they were made - not reordered"
+                          }
+                        >
+                          {sourceLabel(e.source)}
+                        </span>
+                      )}
                       <span>{e.at}</span>
-                      <button className="replay" onClick={() => speak(e.text, lang)}>replay</button>
+                      <button className="replay" onClick={() => speak(e.text, lang)}>
+                        <Volume2 size={13} /> Replay
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -561,7 +601,7 @@ export default function SignBridge({
             </div>
           </section>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
