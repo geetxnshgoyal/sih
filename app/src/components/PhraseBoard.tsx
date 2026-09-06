@@ -10,7 +10,7 @@ import type { DomainId } from "../lib/domains";
 /**
  * The phrase board.
  *
- * This is the path that always works. Recognition is 40.4% correct on a signer
+ * This is the path that always works. Recognition is 74% correct on a signer
  * it has not seen; a tapped phrase is 100%, every time, offline. So this is the
  * primary surface and recognition is the shortcut, not the reverse.
  *

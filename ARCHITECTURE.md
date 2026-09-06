@@ -283,34 +283,67 @@ version overwrote a single file and destroyed the best model across three runs.
 
 ## 5. Results: and which number to report
 
-| split | far camera | close (laptop) |
+Two models ship. The app picks by setting: health loads the clinical one, travel
+keeps the general one.
+
+| model | classes | clips | held-out signer, close range |
+|---|---|---|---|
+| **clinical** (health) | **38** | 740 | **73.9% top-1 / 96.3% top-5** |
+| general (travel) | 264 | 4,894 | 64.8% top-1 / 86.6% top-5 |
+
+Chance is 2.6% and 0.38% respectively. Per-group top-1 for the clinical model:
+**72.9 / 80.5 / 68.2**.
+
+> **Report the held-out-signer number, never a random split.** A random split
+> puts the same person on both sides and inflates by roughly 38 points. Being
+> able to explain that gap is the most credible thing this project can say;
+> most competing work quotes the inflated figure.
+
+**Quote 73.9% for the clinical model, and say what it cannot do in the same
+breath.** It has no sign for *pain*, *water*, *help*, *yes* or *no*: those are
+absent from every ISL corpus available to us, and they live on the phrase board
+instead. A headline accuracy without that sentence is misleading.
+
+### 5.0 How these numbers were earned, and what did not work
+
+Cutting the vocabulary did nearly all of it. Holding data, recipe and protocol
+fixed and varying only the class count, on held-out INCLUDE group 0:
+
+| classes | top-1 | top-5 |
 |---|---|---|
-| random (same signers both sides) | 90.3% top-1 / 97.4% top-5 | 88.4% |
-| **held-out group (mean)** | **52.0% top-1 / 75.7% top-5** | **51.6% / 76.2%** |
+| 20 | 76.1% | 94.8% |
+| 80 | 66.0% | 92.8% |
+| 264 | 56.1% | 81.4% |
 
-Per-group held-out top-1: **42.7% / 67.4% / 45.8%**, the spread across body-type
-groups is itself a finding worth showing.
+Each extra class is another way to be wrong across ~19 clips from about ten
+signers, and most of the 264 are words a consultation never needs.
 
-264 classes, chance **0.4%**.
+Everything tried on the modelling side, measured against a control:
 
-> **Report the held-out number, not the random split.** The random split inflates
-> by ~38 points because the same person appears on both sides. Explaining that gap
-> is the most credible thing the team can say, most competing projects quote the
-> inflated figure.
+| change | effect |
+|---|---|
+| **38-class clinical vocabulary** | **+8.4** |
+| **stacked encoder** (SSL then supervised ASL) | **+3.1** on identical arms |
+| supervised ASL pretraining (38,758 clips) | +18.4 over no pretraining |
+| self-supervised on 13,662 ISL clips, alone | +1.3 |
+| hand-dropout augmentation | -0.8 |
+| test-time augmentation | -8.1 |
+| face mesh (FULL_FACE), SL-GCN | ~0, see §9 |
 
-**Which held-out number, though, they are not interchangeable.** Three figures
-appear in this document and they measure different things:
+Five consecutive negative results are what prompted the vocabulary experiment.
+When five methods do nothing, the method is not the constraint.
 
-| figure | scope | what it is |
-|---|---|---|
-| **52.0%** | 264 classes, 4,284 clips, mean of 3 groups | the headline model, §5 |
-| **56.8%** | 188 classes, 3,003 clips, mean of 3 groups | the ablation baseline, §9 |
-| **40.4%** | 264 classes, **group 0 only** | the calibration model, §14 |
+The stacked encoder is the only use in which the ISL dictionary paid for
+itself. Trained on alone it was worth +1.3; used as the INITIALISER for the ASL
+stage it is worth +3.1 on top of ASL, because the two signals compound instead
+of one overwriting the other.
 
-Higher class count is harder, and group 0 is the hardest of the three groups
-for every arm ever run. So 40.4% is not a contradiction of 52.0%, it is the
-worst group at the full class count. Quote **52%** as the headline and say
-which protocol produced it.
+### 5.0.1 Superseded figures
+
+Earlier revisions of this document led with **52.0%** and **40.4%**. Both came
+from a protocol that selected the stopping epoch on the test set, so both were
+optimistic by an unmeasured amount. They are recorded here only so an old slide
+or README can be matched to what replaced it, and neither should be quoted.
 
 ### 5.1 Cross-corpus: the number that reframes the other numbers (5 Sept)
 
@@ -366,8 +399,9 @@ unmeasured amount: 52.0%, 56.8% and 40.4% included.
 
 `eval_cislr.py` carves validation out of TRAIN instead and touches the test set
 once, at the end. That, plus training on group 2 alone (group 1 is held for
-validation), is why arm A reads 28.2% where §5 reads 40.4% for a similar split.
-**Arm A is the honest re-measurement; compare B against A, never against 40.4%.**
+validation), is why arm A reads 28.2% where the superseded figure for a similar
+split was 40.4% (§5.0.1). **Arm A is the honest re-measurement; compare B
+against A, never against the old number.**
 
 #### What to say publicly
 

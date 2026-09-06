@@ -69,11 +69,16 @@ export function HomeScreen() {
         <div>
           <h3>What it cannot do yet</h3>
           <p>
-            Recognition understands 264 signs and is correct about 14% of the time
-            for a signer it has never seen, so the camera is offered as a
-            shortcut, not a substitute for an interpreter. The phrase board is
-            the path that always works. Translations are machine generated and
-            await review by Deaf signers.
+            In a clinical setting Setu recognises 38 signs and gets the right
+            one first about 74% of the time for a signer it has never seen, with
+            the right answer among its top five 96% of the time. It cannot sign
+            <em> pain</em>, <em>water</em>, <em>help</em>, <em>yes</em> or
+            <em>no</em> at all: those are not in any Indian Sign Language dataset
+            we can use, so they live on the phrase board instead, where they are
+            exact every time. Accuracy also drops sharply for signers recorded in
+            very different conditions. The camera is a shortcut, not a substitute
+            for an interpreter. Translations are machine generated and await
+            review by Deaf signers.
           </p>
         </div>
       </div>

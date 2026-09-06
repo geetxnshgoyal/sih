@@ -87,11 +87,11 @@ export default function SignBridge({
   /**
    * Candidates for the sign just segmented, when the top one is not certain.
    *
-   * Measured on a held-out signer group: top-1 is right 40.4% of the time, but
-   * the correct answer is in the TOP FIVE 65.1% of the time (84% when
-   * confidence >= 0.40). Refusing to show anything below a threshold throws
-   * that away: and with the calibrated bands it meant showing nothing for 65%
-   * of signs, which reads as "the app cannot detect".
+   * Measured on a held-out signer group with the clinical model: top-1 is right
+   * 73.9% of the time, but the correct answer is in the TOP FIVE 96.3% of the
+   * time. That gap IS the product. Refusing to show anything below a threshold
+   * throws away the 22 points between them, and reads as "the app cannot
+   * detect" when in fact it knows and is merely unsure which.
    *
    * So: never refuse. Offer the shortlist and let a person choose. That turns a
    * 40%-accurate model into a 65%-useful one without ever claiming certainty.
