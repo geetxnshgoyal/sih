@@ -15,7 +15,7 @@
 // release cached the 264-class model cache-first and never bumped, so every
 // returning visitor kept being served a superseded model while the site
 // advertised a better one.
-const VERSION = "setu-v2";
+const VERSION = "setu-v3";
 const SHELL = `${VERSION}-shell`;
 const MODEL = `${VERSION}-model`;
 
@@ -32,6 +32,7 @@ const PRECACHE = [
   `${BASE}model/model.json`,
   `${BASE}model/labels.json`,
   `${BASE}model/_phrasebook.json`,
+  `${BASE}model/_bank.json`,
 ];
 
 self.addEventListener("install", (e) => {

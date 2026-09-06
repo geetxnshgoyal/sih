@@ -81,6 +81,17 @@ def main() -> int:
     # Keras config at all, so none of that can go wrong. Inference is identical;
     # the app loads it with tf.loadGraphModel instead of tf.loadLayersModel.
     model = keras.models.load_model(MODEL)
+
+    # Two outputs from one graph: the 83-way softmax, and the 256-d embedding
+    # feeding it. The embedding is an intermediate tensor that already exists,
+    # so exposing it adds no weights and no download, but it is what lets the
+    # app look a sign up in a reference bank instead of being limited to the 83
+    # answers the softmax can give. See train/build_bank.py.
+    emb = model.layers[-2].output
+    model = keras.Model(model.input, [model.output, emb], name="gloss")
+    print(f"exporting 2 outputs: softmax {model.output_shape[0]} "
+          f"and embedding {model.output_shape[1]}")
+
     sm = ROOT / "models" / "saved_model"
     if sm.exists():
         shutil.rmtree(sm)

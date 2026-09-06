@@ -22,7 +22,10 @@ export async function checkModelParity() {
     const rows: number[][] = ref.input;
     const flat = rows.flat();
     const input = tf.tensor(flat, [1, rows.length, rows[0].length]);
-    const probs = Array.from((model.predict(input) as tf.Tensor).dataSync());
+    // the graph has two outputs now (softmax + embedding), so name the one
+    // this check is about rather than relying on predict()'s array order
+    const probs = Array.from(
+      (model.execute(input, ["Identity"]) as tf.Tensor).dataSync());
     input.dispose();
 
     let maxDiff = 0;
@@ -65,7 +68,8 @@ export async function checkClipParity() {
       // predate the field, and 16/9 is what they were.
       const feats = extractFeatures(frames, c.aspect ?? 16 / 9);
       const t = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
-      const probs = Array.from((model.predict(t) as tf.Tensor).dataSync());
+      const probs = Array.from(
+        (model.execute(t, ["Identity"]) as tf.Tensor).dataSync());
       t.dispose();
       let bi = 0;
       for (let i = 1; i < probs.length; i++) if (probs[i] > probs[bi]) bi = i;

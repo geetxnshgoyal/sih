@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Info, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { GlossClassifier } from "../lib/classifier";
+import { SignBank, type BankMatch } from "../lib/bank";
 import { StabilityGate, FLOOR, NEEDED } from "../lib/gate";
 import { SEQ_LEN, type PointFrame } from "../lib/features";
 import { SignSegmenter } from "../lib/segment";
@@ -66,6 +67,7 @@ export default function SignBridge({
   const bufferRef = useRef<PointFrame[]>([]);
   const gateRef = useRef(new StabilityGate());
   const clfRef = useRef(new GlossClassifier());
+  const bankRef = useRef(new SignBank());
   const rafRef = useRef<number>(0);
   const tickRef = useRef(0);
   const runningRef = useRef(false);
@@ -102,6 +104,8 @@ export default function SignBridge({
    * 40%-accurate model into a 65%-useful one without ever claiming certainty.
    */
   const [candidates, setCandidates] = useState<{ gloss: string; conf: number }[]>([]);
+  const [dict, setDict] = useState<BankMatch[]>([]);
+  const [bankSize, setBankSize] = useState(0);
   const [live, setLive] = useState<{ gloss: string | null; conf: number; progress: number }>(
     { gloss: null, conf: 0, progress: 0 }
   );
@@ -127,9 +131,15 @@ export default function SignBridge({
   // label sets and two caches to invalidate, and the first release pinned
   // returning users to a stale one through exactly that complexity.
   //
-  // It cannot say pain, water, help, yes or no. Those are absent from every
-  // ISL corpus available, so they live on the phrase board, which is exact and
-  // needs no model at all.
+  // The 83 classes still cannot say pain, water or help: those words have one
+  // clip each in every source that has them, and one example cannot both teach
+  // and examine a class. They are reached a different way. lib/bank.ts holds
+  // one reference vector per word and matches the same embedding by cosine
+  // distance, which needs one clip instead of fifteen. It is offered as a
+  // dictionary shortlist, never as a confident answer, because measured from a
+  // corpus its references do not include it is 46% top-1 and 72% top-5.
+  //
+  // The phrase board remains the exact path and needs no model at all.
   useEffect(() => {
     let cancelled = false;
     clfRef.current
@@ -147,6 +157,10 @@ export default function SignBridge({
         setModelError(e instanceof Error ? e.message : String(e));
         setModelState("error");
       });
+    bankRef.current
+      .load(asset("/model/_bank.json"))
+      .then(() => { if (!cancelled) setBankSize(bankRef.current.size); })
+      .catch(() => { /* the classifier still works without the dictionary */ });
     fetch(asset("/model/_framing.json")).then((r) => r.json())
       .then((f) => { framingRef.current = f; })
       .catch(() => { /* diagnostics are optional */ });
@@ -318,11 +332,18 @@ export default function SignBridge({
           // Below the confident band, show what else it considered rather than
           // discarding the sign. The right answer is in this list far more often
           // than it is the top entry.
-          setCandidates(
-            certainty(pred.conf) === "confident" && !confirmOnly
-              ? []
-              : clfRef.current.predictTop(segment, aspect, 5)
-          );
+          const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
+          setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5) : []);
+
+          // When the classifier is unsure, the sign may simply not be one of
+          // its 83. Only then is the dictionary worth searching, and only then
+          // is its own weaker accuracy an improvement on having no answer.
+          if (unsure && bankRef.current.ready) {
+            const e = clfRef.current.embed(segment, aspect);
+            setDict(e ? bankRef.current.lookup(e, 4) : []);
+          } else {
+            setDict([]);
+          }
 
           if (g.fire) {
             const l = langRef.current;
@@ -632,6 +653,32 @@ export default function SignBridge({
                           <span className="cand-c">{Math.round(c.conf * 100)}%</span>
                         </button>
                       ))}
+                    </div>
+                  )}
+                  {dict.length > 0 && (
+                    <div className="dict">
+                      <div className="dict-head">
+                        not one of the {vocabSize}? closest of {bankSize} dictionary signs
+                      </div>
+                      <div className="cands">
+                        {dict.map((d) => (
+                          <button
+                            key={d.word}
+                            className="cand dict-cand"
+                            onClick={() => {
+                              const l = langRef.current;
+                              const finished = uttRef.current.add(d.word, Date.now(), 1);
+                              if (finished) emit(finished.glosses, finished.at, l, 1);
+                              setPending(uttRef.current.pending);
+                              setCandidates([]);
+                              setDict([]);
+                            }}
+                          >
+                            {d.word}
+                            <span className="cand-c">{Math.round(d.score * 100)}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {notice && <div className="hud-notice">{notice}</div>}

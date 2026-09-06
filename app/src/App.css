@@ -1096,3 +1096,15 @@ code{
   border:1px solid var(--line-2,rgba(128,128,128,.28));
   background:rgba(128,128,128,.07);white-space:nowrap;
 }
+
+/* Dictionary shortlist: words reached by nearest-neighbour lookup rather than
+   by the classifier. Visually separated from .cand on purpose. These are a
+   weaker signal (46% top-1 from an unseen corpus against the classifier's
+   68.3%), so they must not read as the model's answer. */
+.dict{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line-2);
+      pointer-events:auto}
+.dict-head{font-size:10.5px;letter-spacing:.02em;color:var(--faint);
+           font-family:"IBM Plex Mono",monospace}
+.dict .cands{margin-top:6px}
+.cand.dict-cand{border-style:dashed;opacity:.92}
+.cand.dict-cand:hover{border-style:solid;border-color:var(--sign);opacity:1}
