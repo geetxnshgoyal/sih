@@ -64,3 +64,9 @@ stitch_setu_healthcare_communication_bridge.zip
 
 # TFLite exports: derived from models/, rebuilt by train/export_tflite.py
 models/tflite/
+
+# Sentence corpus: landmarks derived from ISH News, rebuilt by
+# train/build_isl_sentences.py. Not ours to redistribute.
+data/isl_sentences/
+data/translate.npz
+models/translate/
