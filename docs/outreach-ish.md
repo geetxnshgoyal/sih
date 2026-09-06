@@ -48,8 +48,8 @@ Contact: the ISH News YouTube channel's About tab, or Instagram
 >
 > Thank you for the work you publish. It is the reason any of this was possible.
 >
-> [names], Team Awaaz
-> [repo link] · [live link]
+> [your names], Team Awaaz
+> github.com/geetxnshgoyal/sih · geetxnshgoyal.github.io/sih
 
 ---
 

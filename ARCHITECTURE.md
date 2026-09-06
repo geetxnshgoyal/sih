@@ -909,56 +909,149 @@ the trained weights, not of the architecture.
 
 ---
 
+## 12.5 Sentence translation: a corpus that works, a model that does not
+
+Everything above recognises ISOLATED SIGNS: one clip, one of 83 labels. It
+cannot read a sentence, and no amount of retraining lets it, because a softmax
+over a fixed vocabulary has no mechanism to emit text. Sentences need an
+encoder-decoder, and far more importantly they need paired data.
+
+### The data, which turned out to exist
+
+Every continuous ISL corpus we chased was licence-gated, missing, or 404.
+ISLTranslate and iSign return nothing on Hugging Face. Meanwhile ISH News, a
+Deaf-run channel, has been publishing daily ISL bulletins with MANUALLY WRITTEN
+English subtitles and accurate timestamps the whole time. Each subtitle cue is a
+(signing segment, English sentence) pair, which is exactly the supervision
+gloss-free translation needs.
+
+    channel      7,935 videos, 7,615 under 15 min, 576 hours
+    extracted    171 bulletins -> 7,231 pairs, 5,051-word vocabulary
+    stopped by   YouTube anti-bot throttling, 217 failures, not a code fault
+
+    PHOENIX14T (German)    8,257 pairs    the benchmark this field uses
+    CSL-Daily (Chinese)   20,654
+    ISH News (ISL)      ~300,000 available, 7,231 extracted
+
+`build_isl_sentences.py` fetches subtitles BEFORE the video, so a bulletin
+without them costs no download. Aspect is measured per video and stored beside
+the landmarks. The split holds out whole BULLETINS, never individual cues: two
+cues from one video share a signer, a room and a camera, and a random split
+would leak all three.
+
+### The model, and three negative results
+
+`train_translate.py` is a Conv1D downsample into a transformer encoder-decoder,
+3.9M parameters, greedy decoding, corpus BLEU.
+
+    pairs   encoder             BLEU-4   best val acc
+      753   scratch               0.00      0.192
+    7,231   scratch               0.00      0.215
+    7,231   pretrained, frozen    0.02      0.219
+
+Ten times the data moved validation accuracy 0.19 to 0.215. Giving it the
+83-sign model's encoder, frozen, moved it 0.215 to 0.219. Both obvious levers,
+both measured, neither works. BLEU-4 of 0.02 over 1,140 validation sentences is
+one lucky 4-gram.
+
+The pretrained encoder did change the output qualitatively, which is worth
+recording:
+
+    scratch     "on 24 august 2026 ,"  ->  "the video was also also <unk> ."
+    pretrained  "on 24 august 2026 ,"  ->  "the protest was on july 2026 ."
+
+Frequency-ranked filler became grammatical English containing a date. It began
+producing sentences rather than word rankings. It still is not reading the
+signing.
+
+### Why this is a shortage and not a bug
+
+Trained deliberately on 40 pairs with train and validation identical, the model
+reaches loss 0.018, token accuracy 1.000 and BLEU 100 across all four n-grams,
+reproducing sentences word for word. Encoder, decoder, causal mask, teacher
+forcing, greedy decode and BLEU are therefore all correct.
+
+So the constraint is real. GFSLT-VLP reaches BLEU-4 around 21 on a corpus this
+size using CLIP-style visual-language pretraining and four GPUs. The method and
+the compute are doing that work, and neither is available here.
+
+**Do not repeat these three runs.** If someone returns to this, the next thing
+to try is visual-language pretraining on a GPU, not more scraping.
+
+### What the deliverable actually is
+
+The CORPUS, not the model. 7,231 pairs of Indian Sign Language with
+human-written English, comparable in size to the German benchmark the field is
+built on, assembled from a source nobody appears to have used this way. It is
+gitignored because it derives from ISH News's work; see `docs/outreach-ish.md`.
+
 ## 13. Remaining work
 
-Reordered 5 Sept. §5.1 changed the priorities: the bottleneck is not the model,
-and it is not the face mesh. It is that the model has learned one corpus.
+Reordered 7 Sept. Most of what this section used to list has since been done or
+ruled out by measurement. What survives is short, and only the first item is
+still a modelling problem.
 
 ### Do now: highest value per hour
 
-1. **Record your own signs, in the room the app will run in.** This is now
-   unambiguously first. Arm C says a model trained elsewhere scores 2.1% here;
-   the only data guaranteed to match deployment conditions is data recorded in
-   them. Everything downstream already works (`ingest_recordings.py` ->
-   `eval_on_takes.py`). Prioritise the eight `UNREACHABLE` glosses, they are
-   what a patient actually needs, and CISLR has clips of all eight to check
-   against.
-2. **Label recognition as experimental in the UI.** At 2.1% cross-corpus, a
-   confident-looking transcript is a liability in a hospital. The phrase board
-   is already primary; the recognition panel should say what it is.
-3. **Fix the evaluation protocol before running any more experiments.** Move
-   `train.py`'s validation off the test set (§5.1). Until that is done, no
-   ablation this repo runs can be trusted to the precision it reports.
+1. **Record `pain`, `yes`, `no` and `please`.** These four exist in NO public
+   source. Checked: INCLUDE, CISLR, the Government of India dictionary, MS-ASL,
+   WLASL, AUTSL, ISH News and ISH Shiksha. They are the words a patient needs
+   most, and recording is the only route. The path is now proven end to end,
+   not merely wired: a simulated export of 36 takes reached
+   `dataset_merged.npz` as its own signer group, so leave-one-group-out reports
+   accuracy on the person who recorded rather than the corpus average.
+   `ingest_recordings.py` wrote `own.npz` for days while nothing read it; that
+   is fixed and tested.
+2. **Send `docs/outreach-ish.md`.** A Deaf-run organisation backing this is
+   worth more than any number in this document, it settles the standing of the
+   corpus before anyone asks, and it is the natural place to ask for those four
+   signs. Names and links need filling in, and it should go from a person.
+3. **Get the phrasebook reviewed by a Deaf ISL user.** 145 phrases of unreviewed
+   machine translation with at least one known Hindi grammatical error, on the
+   surface the product tells clinicians to rely on. This has been outstanding
+   longest and is not a technical task.
+
+### Settled by measurement, do not repeat
+
+| tried | result |
+|---|---|
+| Cutting the vocabulary, 264 to 83 | **the only large win: +8.4** |
+| Borrowed ASL pretraining | **+18.4 over no pretraining** |
+| Stacking SSL then ASL encoders | +3.1 |
+| CISLR, 610 new clips | +3.4 |
+| Self-supervision on 13,662 ISL clips, alone | +1.3 |
+| Hand-dropout augmentation | -0.8 |
+| Test-time augmentation | -8.1 |
+| FULL_FACE face mesh | ~0, see §9 |
+| SL-GCN | ~0, see §9 |
+| Sentence translation, three runs | BLEU-4 ~0, see §12.5 |
+
+Five consecutive negatives are what prompted the vocabulary experiment. When
+five methods land at zero, the method is not the constraint.
 
 ### The real fix, and its size
 
-Arm B: 610 new clips, +36% training data, **+1.4 points**. Extrapolating, closing
-the gap to a deployable score needs thousands of clips from many signers in many
-rooms: not a weekend of recording. Options, cheapest first:
+Still data, still signer diversity, and now precisely quantified: the shipped
+model trains on 1,668 clips from about ten people. Every free source has been
+exhausted. Options, cheapest first:
 
-- **More corpora.** ISLTranslate/iSign are continuous ISL; segmenting them into
-  isolated signs is work but they are free and already identified (§2.4).
-- **Domain-adversarial or corpus-balanced training.** Arm D shows the gap is at
-  least partly learnable. A model penalised for predicting *which corpus* a clip
-  came from is the standard remedy and costs no new data.
-- **Self-recorded data at scale.** Highest quality per clip, lowest throughput.
-
-### Deprioritised by §5.1
-
-- **FULL_FACE retrain.** Face-mesh extraction stalled at 8/46 Zenodo parts, and
-  §9 already measured FULL_FACE as a 2.4-point regression on the honest split.
-  The signal is real (eyebrow height varies 0.077 within a clip) but it is not
-  what is limiting the model. Do not spend the compute until cross-corpus
-  accuracy is off the floor.
-- **SL-GCN.** Same reasoning. §9 settled that capacity is not the constraint.
+- **Self-recorded data at scale.** ~30 clips each of the 83 signs across a few
+  signers is roughly 2,500 recordings: a weekend with volunteers, not a research
+  programme. Highest quality per clip because it matches deployment conditions
+  exactly.
+- **Partnership with ISH or ISLRTC.** They have signers, we have the pipeline.
+- **A GPU, for the sentence work.** §12.5 established the corpus is adequate and
+  the method is not. That is the one item here that money rather than effort
+  solves.
 
 ### Admin
 
 - Confirm with the SPOC: the 2026 per-college nomination quota, **whether one team
   may submit more than one idea** (this gates reusing the idea for Travel & Tourism),
   and the real deadline: the portal says 20 Sept, secondary sources say 30 Sept.
-
----
+- Verify the "63 million Deaf Indians" and "~300 certified interpreters" figures
+  used in the deck and the app's About section. Both are widely cited and
+  neither has been checked against a source worth defending to a judge.
 
 ## 14. Invariants: breaking these silently destroys accuracy
 
