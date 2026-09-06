@@ -41,6 +41,7 @@ import argparse
 import json
 import multiprocessing as mp_proc
 import os
+import shutil
 import signal
 import sys
 import tempfile
@@ -98,7 +99,13 @@ def worker(args) -> tuple[int, int, int]:
             try:
                 fd, tmp_vid = tempfile.mkstemp(suffix=".mp4")
                 os.close(fd)
-                urllib.request.urlretrieve(url, tmp_vid)
+                # A timeout is not optional here. urlretrieve blocks
+                # FOREVER on a stalled connection, and one hung worker
+                # deadlocks the whole pool: this run stopped dead at
+                # 13,660 of 13,665 with every process at 0% CPU.
+                with urllib.request.urlopen(url, timeout=60) as r, \
+                        open(tmp_vid, "wb") as fh:
+                    shutil.copyfileobj(r, fh)
                 cap = cv2.VideoCapture(tmp_vid)
                 # Sample at a fixed rate rather than taking every frame. Two
                 # reasons, and the second matters more than the speed:
