@@ -162,7 +162,24 @@ export default function SignBridge({
     };
   }, [domain]);
 
-  const draw = useCallback((pose: unknown, left: unknown, right: unknown) => {
+  /**
+   * Draw what MediaPipe is actually tracking.
+   *
+   * The face mesh is drawn even though the MODEL does not consume it. Two
+   * different questions get confused otherwise: "is the tracker seeing me"
+   * and "is the tracker using my face". Holistic returns 468 face points every
+   * frame and always has; they were simply never rendered, so the tracking
+   * looked dead when it was working perfectly.
+   *
+   * What the model consumes is 65 points: pose 0-22, which INCLUDES the nose,
+   * eyes, ears and mouth corners, plus both hands. So head position and
+   * orientation do reach it. The 468-point mesh does not: FACE_MODE is
+   * HEAD_ONLY because the FULL_FACE ablation measured no gain from it
+   * (ARCHITECTURE.md 9), and INCLUDE's pose release carries no mesh to train
+   * on in the first place.
+   */
+  const draw = useCallback((pose: unknown, left: unknown, right: unknown,
+                            face: unknown) => {
     const cv = canvasRef.current;
     const ctx = cv?.getContext("2d");
     if (!cv || !ctx) return;
@@ -195,6 +212,21 @@ export default function SignBridge({
       for (const p of hand) {
         ctx.beginPath();
         ctx.arc(p.x * w, p.y * h, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Face mesh, drawn faintly: it is confirmation that tracking is alive, not
+    // a claim that the model reads expression. Every 4th point keeps 468 dots
+    // from becoming a solid mask over the signer's face.
+    const mesh = face as { x: number; y: number }[] | null;
+    if (mesh && mesh.length) {
+      ctx.fillStyle = "rgba(72,207,171,.34)";
+      for (let i = 0; i < mesh.length; i += 4) {
+        const p = mesh[i];
+        if (!p) continue;
+        ctx.beginPath();
+        ctx.arc(p.x * w, p.y * h, 1.1, 0, Math.PI * 2);
         ctx.fill();
       }
     }
@@ -245,7 +277,7 @@ export default function SignBridge({
       const aspect = video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
       const res = detect(video, performance.now());
       if (res) {
-        draw(res.pose, res.left, res.right);
+        draw(res.pose, res.left, res.right, res.face);
         tickRef.current++;
         const hasHands = !!res.left || !!res.right;
 
