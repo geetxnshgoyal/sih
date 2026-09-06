@@ -37,6 +37,7 @@ the only way to know whether more data is helping.
 Validation holds out whole BULLETINS, never individual cues: two cues from one
 bulletin share a signer, a room and a camera.
 """
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -49,6 +50,7 @@ from tensorflow.keras import layers
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "translate.npz"
 OUT_DIR = ROOT / "models" / "translate"
+ENC = ROOT / "models" / "encoder_stacked.weights.h5"
 RUN = ROOT / "run" / "translate_eval.json"
 
 PAD, BOS, EOS, UNK = 0, 1, 2, 3
@@ -66,18 +68,34 @@ def positional(length: int, depth: int) -> np.ndarray:
     return pe
 
 
-def build(src_len: int, tgt_len: int, n_vocab: int) -> keras.Model:
+def build(src_len: int, tgt_len: int, n_vocab: int, pretrained: bool) -> keras.Model:
     src = keras.Input(shape=(src_len, 195), name="src")
     tgt = keras.Input(shape=(tgt_len,), dtype="int32", name="tgt")
 
-    # Downsample before attention: 160 frames -> 40, so self-attention runs on a
-    # quarter of the length and a sixteenth of the cost.
-    x = layers.Conv1D(D_MODEL, 5, strides=2, padding="same", use_bias=False)(src)
-    x = layers.BatchNormalization()(x)
+    # Visual front end, deliberately IDENTICAL in shape to build_model's conv
+    # stack so the 83-sign encoder's weights can be loaded straight into it.
+    #
+    # Training this from scratch on 6,091 sentences was the previous failure:
+    # ten times the data moved BLEU-4 not at all, because the model was being
+    # asked to learn what a hand looks like AND how English works from the same
+    # thin signal. The 83-sign encoder already knows the first half, having been
+    # trained on 60,713 self-supervised ISL windows and 38,758 supervised ASL
+    # clips, so hand it over instead of asking a translator to rediscover it.
+    x = layers.Conv1D(128, 5, padding="same", use_bias=False, name="enc1")(src)
+    x = layers.BatchNormalization(name="enc1_bn")(x)
     x = layers.Activation("relu")(x)
-    x = layers.Conv1D(D_MODEL, 5, strides=2, padding="same", use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
+    x = layers.Conv1D(256, 5, padding="same", use_bias=False, name="enc2")(x)
+    x = layers.BatchNormalization(name="enc2_bn")(x)
     x = layers.Activation("relu")(x)
+    x = layers.MaxPooling1D(2)(x)
+    x = layers.Dropout(0.2)(x)
+    x = layers.Conv1D(256, 3, padding="same", use_bias=False, name="enc3")(x)
+    x = layers.BatchNormalization(name="enc3_bn")(x)
+    x = layers.Activation("relu")(x)
+
+    # Down to a length attention can afford: 160 frames -> 80 above -> 40 here.
+    x = layers.MaxPooling1D(2)(x)
+    x = layers.Dense(D_MODEL)(x)
     enc_len = src_len // 4
     x = x + positional(enc_len, D_MODEL)[None]
 
@@ -93,8 +111,8 @@ def build(src_len: int, tgt_len: int, n_vocab: int) -> keras.Model:
     y = y + positional(tgt_len, D_MODEL)[None]
     for _ in range(LAYERS):
         # Causal self-attention: a decoder must not read the word it is about to
-        # predict. use_causal_mask does that; forgetting it produces a model
-        # that scores brilliantly in training and emits nothing at inference.
+        # predict. Forgetting use_causal_mask gives a model that scores
+        # brilliantly in training and emits nothing at inference.
         s = layers.MultiHeadAttention(HEADS, D_MODEL // HEADS, dropout=DROPOUT)(
             y, y, use_causal_mask=True)
         y = layers.LayerNormalization()(y + s)
@@ -106,12 +124,31 @@ def build(src_len: int, tgt_len: int, n_vocab: int) -> keras.Model:
 
     out = layers.Dense(n_vocab, name="logits")(y)
     m = keras.Model([src, tgt], out)
-    m.compile(
-        optimizer=keras.optimizers.Adam(LR),
-        # Padding contributes no loss; without masking, a model that predicts
-        # <pad> everywhere would look excellent.
-        loss=masked_loss, metrics=[masked_acc],
-    )
+
+    if pretrained and ENC.exists():
+        from train import build_model
+        src_m = build_model(32, 195, 2186)
+        src_m.load_weights(ENC)
+        # copy by position among the weighted conv/BN layers only
+        donors = [l for l in src_m.layers if l.get_weights()]
+        takers = [m.get_layer(n) for n in
+                  ("enc1", "enc1_bn", "enc2", "enc2_bn", "enc3", "enc3_bn")]
+        moved = 0
+        for a, b in zip(donors, takers):
+            wa, wb = a.get_weights(), b.get_weights()
+            if len(wa) == len(wb) and all(x.shape == z.shape for x, z in zip(wa, wb)):
+                b.set_weights(wa)
+                # Frozen. With 6,091 pairs the translation objective is not
+                # enough signal to improve a visual encoder, only to damage one.
+                b.trainable = False
+                moved += 1
+        keras.backend.clear_session() if False else None
+        print(f"  visual encoder: {moved}/6 layers loaded from {ENC.name}, frozen")
+    elif pretrained:
+        print(f"  ! {ENC.name} missing, training the encoder from scratch")
+
+    m.compile(optimizer=keras.optimizers.Adam(LR),
+              loss=masked_loss, metrics=[masked_acc])
     return m
 
 
@@ -161,6 +198,10 @@ def bleu(refs: list[list[str]], hyps: list[list[str]], n_max: int = 4) -> list[f
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--scratch", action="store_true",
+                    help="train the visual encoder from scratch (the control arm)")
+    args = ap.parse_args()
     if not DATA.exists():
         print(f"missing {DATA.relative_to(ROOT)} — run train/preprocess_sentences.py")
         return 1
@@ -179,7 +220,7 @@ def main() -> int:
     # position shorter than the stored sequence. Building it at the full length
     # is a shape error at the first batch, which is the good kind of mistake.
     dec_len = tgt.shape[1] - 1
-    model = build(src.shape[1], dec_len, len(vocab))
+    model = build(src.shape[1], dec_len, len(vocab), not args.scratch)
     print(f"parameters: {model.count_params():,}\n")
 
     # teacher forcing: the decoder reads tgt[:-1] and predicts tgt[1:]
@@ -218,7 +259,7 @@ def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     model.save(OUT_DIR / "translate.keras")
     (OUT_DIR / "vocab.json").write_text(json.dumps(vocab))
-    doc = {"pairs": int(len(src)), "train": int(tr.sum()), "val": int(va.sum()),
+    doc = {"pretrained_encoder": not args.scratch, "pairs": int(len(src)), "train": int(tr.sum()), "val": int(va.sum()),
            "vocab": len(vocab), "params": int(model.count_params()),
            "bleu": {f"bleu{i}": s for i, s in enumerate(b, 1)},
            "epochs": len(hist.history["loss"]),
