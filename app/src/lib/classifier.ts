@@ -13,9 +13,9 @@ import { calibrate, TEMPERATURE } from "./calibrate";
 export class GlossClassifier {
   private model: tf.GraphModel | null = null;
   private labels: string[] = [];
-  // Temperature belongs to the WEIGHTS, not the architecture, so it has to
-  // travel with whichever model was loaded. Two ship, and using one model's
-  // temperature on the other silently misreports every confidence.
+  // One model ships, so one temperature. It still lives here rather than being
+  // imported at each call site: if a second model ever returns, the compiler
+  // points at load() instead of letting a stale constant misreport confidence.
   private temperature = TEMPERATURE;
 
   get ready() { return this.model !== null; }

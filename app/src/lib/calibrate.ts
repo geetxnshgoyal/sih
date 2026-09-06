@@ -32,19 +32,19 @@
  * architecture: train_production.py prints the new value.
  */
 
-/** Fitted out-of-fold over 7 signer groups, close range. See the header. */
-export const TEMPERATURE = 2.34;
-
 /**
- * The 38-class clinical model, fitted the same way (train/train_clinical.py).
+ * Fitted out-of-fold over 7 signer groups at close range, for the 83-sign model
+ * that ships (train/train_clinical.py --vocab universal).
  *
- * Much closer to 1.0 than the general model's 2.34, and that is the point: a
- * temperature near 1 means the raw softmax was already close to honest. The
- * 264-class model needed heavy correction because it was badly overconfident
- * across a vocabulary it could not separate. Measured ECE before scaling was
- * 9.7pp here against 23.5pp there.
+ * 1.69 rather than the 2.34 the old 264-class model needed. A temperature
+ * closer to 1.0 means the raw softmax was already nearer honest, which is what
+ * a vocabulary the model can actually separate buys you. Measured ECE before
+ * scaling: 13.9pp, against 23.5pp for 264 classes.
+ *
+ * REFIT AFTER ANY RETRAIN. T belongs to the weights, not the architecture, and
+ * train_clinical.py prints the new value.
  */
-export const CLINICAL_TEMPERATURE = 1.35;
+export const TEMPERATURE = 1.69;
 
 /**
  * Re-apply softmax at temperature T to already-softmaxed probabilities.

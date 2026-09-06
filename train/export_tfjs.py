@@ -16,22 +16,23 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-import argparse
-
-_ap = argparse.ArgumentParser()
-_ap.add_argument("--clinical", action="store_true",
-                 help="export models/clinical/ to app/public/model/clinical/")
-_args, _ = _ap.parse_known_args()
-
-# Two models ship. The 264-class one is the general vocabulary; the 38-class
-# clinical one trades words a clinic never needs for accuracy on the ones it
-# does, and is measurably better where it counts: 73.9% vs 64.8% top-1 and
-# 96.3% vs 86.6% top-5 on a held-out signer.
-_SRC = ROOT / ("models/clinical" if _args.clinical else "models")
+# One model ships. The universal 83-sign vocabulary covers both settings a
+# hospital and a railway counter need, which is what the project is submitted
+# under. Measured on a held-out signer, same protocol for all three:
+#
+#     clinical    38 classes   73.9% top-1   96.3% top-5
+#     universal   83 classes   68.3% top-1   89.7% top-5   <- ships
+#     general    264 classes   64.8% top-1   86.6% top-5
+#
+# The clinical model is more accurate and cannot say Train, Ticket, Money or
+# Police. Carrying two models meant two temperatures, two label sets and two
+# caches to invalidate, and the first release already shipped a stale one that
+# way. One model, one number to quote, one thing to keep honest.
+_SRC = ROOT / "models" / "universal"
 MODEL = _SRC / "gloss_classifier.keras"
 LABELS = _SRC / "labels.json"
 METRICS = _SRC / "metrics.json"
-OUT = ROOT / "app" / "public" / "model" / ("clinical" if _args.clinical else "")
+OUT = ROOT / "app" / "public" / "model"
 
 
 def patch_keras3_topology(model_json: Path) -> None:

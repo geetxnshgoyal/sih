@@ -10,7 +10,7 @@ import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glos
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
 import { asset } from "../lib/assetUrl";
 import { getDomain, getServerDomain, subscribeDomain } from "../lib/domains";
-import { certainty, CLINICAL_TEMPERATURE, TEMPERATURE, UNCERTAIN } from "../lib/calibrate";
+import { certainty, UNCERTAIN } from "../lib/calibrate";
 
 /** Replay still fills a buffer; the live path is driven by the segmenter. */
 const BUFFER = SEQ_LEN * 2;
@@ -87,9 +87,9 @@ export default function SignBridge({
   /**
    * Candidates for the sign just segmented, when the top one is not certain.
    *
-   * Measured on a held-out signer group with the clinical model: top-1 is right
-   * 73.9% of the time, but the correct answer is in the TOP FIVE 96.3% of the
-   * time. That gap IS the product. Refusing to show anything below a threshold
+   * Measured on a held-out signer group: top-1 is right 68.3% of the time, but
+   * the correct answer is in the TOP FIVE 89.7% of the time. That gap IS the
+   * product. Refusing to show anything below a threshold
    * throws away the 22 points between them, and reads as "the app cannot
    * detect" when in fact it knows and is merely unsure which.
    *
@@ -115,28 +115,20 @@ export default function SignBridge({
   const langRef = useRef(lang);
   useEffect(() => { langRef.current = lang; }, [lang]);
 
-  // Load the classifier that suits the setting.
+  // Load the classifier.
   //
-  // Two models ship. The clinical one knows 38 signs instead of 264, having
-  // dropped the words a consultation never needs -- Yellow, Grey, Thursday --
-  // and it is markedly better on the ones it kept: 73.9% top-1 and 96.3% top-5
-  // on a held-out signer, against 64.8% and 86.6%. Fewer classes means fewer
-  // ways to be wrong on ~19 clips per sign from about ten signers.
+  // One model, 83 signs, covering both the clinical and the travel setting.
+  // Two models shipped briefly and it was a mistake: two temperatures, two
+  // label sets and two caches to invalidate, and the first release pinned
+  // returning users to a stale one through exactly that complexity.
   //
-  // It cannot say pain, water, help, yes or no. Those are not in INCLUDE at any
-  // count, so they stay on the phrase board, which is exact and needs no model.
-  //
-  // Reloading on a domain change is deliberate: the temperature differs between
-  // the two (1.35 against 2.34) and using the wrong one silently misreports
-  // every confidence the gate reads.
+  // It cannot say pain, water, help, yes or no. Those are absent from every
+  // ISL corpus available, so they live on the phrase board, which is exact and
+  // needs no model at all.
   useEffect(() => {
     let cancelled = false;
-    const clinical = domain === "health";
-    const dir = clinical ? "/model/clinical" : "/model";
-    setModelState("loading");
     clfRef.current
-      .load(asset(`${dir}/model.json`), asset(`${dir}/labels.json`),
-            clinical ? CLINICAL_TEMPERATURE : TEMPERATURE)
+      .load(asset("/model/model.json"), asset("/model/labels.json"))
       .then(() => {
         if (!cancelled) {
           setVocabSize(clfRef.current.vocabulary.length);
@@ -160,7 +152,7 @@ export default function SignBridge({
       cancelled = true;
       window.speechSynthesis?.removeEventListener("voiceschanged", refreshVoices);
     };
-  }, [domain]);
+  }, []);
 
   /**
    * Draw what MediaPipe is actually tracking.

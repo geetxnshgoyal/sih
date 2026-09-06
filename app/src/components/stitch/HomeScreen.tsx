@@ -69,9 +69,10 @@ export function HomeScreen() {
         <div>
           <h3>What it cannot do yet</h3>
           <p>
-            In a clinical setting Setu recognises 38 signs and gets the right
-            one first about 74% of the time for a signer it has never seen, with
-            the right answer among its top five 96% of the time. It cannot sign
+            Setu recognises 83 signs, covering a consultation and a journey
+            alike, and gets the right one first about 68% of the time for a
+            signer it has never seen, with the right answer among its top five
+            90% of the time. It cannot sign
             <em> pain</em>, <em>water</em>, <em>help</em>, <em>yes</em> or
             <em>no</em> at all: those are not in any Indian Sign Language dataset
             we can use, so they live on the phrase board instead, where they are
