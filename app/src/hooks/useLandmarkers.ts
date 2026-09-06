@@ -6,9 +6,15 @@ import {
 } from "@mediapipe/tasks-vision";
 import { assembleFrame, type Landmark, type PointFrame } from "../lib/features";
 
-// Keep this in sync with app/package-lock.json. The JS wrapper and Wasm files
-// are version-coupled; loading 0.10.x Wasm with the installed 1.x wrapper can
-// leave the detector stuck in "Preparing..." on real browsers.
+// Keep this in sync with the version in app/package.json, which is pinned
+// EXACTLY (no caret) for this reason. The JS wrapper and the Wasm are
+// version-coupled: loading mismatched pairs can leave the detector stuck in
+// "Preparing..." on real browsers, with no error to explain it.
+//
+// A caret range here was a live trap. package.json said "^1.0.1" while this URL
+// says 1.0.1, so any fresh npm install that resolved 1.1+ would have shipped a
+// mismatched pair. The lockfile happened to hold 1.0.1, so nothing broke, but
+// nothing was preventing it either.
 const CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
 const HOLISTIC_MODEL =
   "https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task";

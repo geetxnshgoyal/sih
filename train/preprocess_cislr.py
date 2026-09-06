@@ -3,8 +3,10 @@ Turn CISLR landmarks into model-ready arrays and merge them with INCLUDE.
 
     .venv/bin/python train/preprocess_cislr.py
 
-Reads  data/cislr_landmarks/<gloss>/<uid>.npz  +  data/dataset.npz
+Reads  data/cislr_landmarks/<gloss>/<uid>.npz, data/dataset.npz, data/own.npz
 Writes data/dataset_merged.npz    X, y, signer, labels, corpus
+
+corpus: 0 = INCLUDE, 1 = CISLR, 2 = your own recordings.
 
 Why this exists
 ---------------
@@ -47,6 +49,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "data" / "cislr_landmarks"
 BASE = ROOT / "data" / "dataset.npz"
 ASPECT = ROOT / "data" / "cislr" / "_aspect.json"
+OWN = ROOT / "data" / "own.npz"
 OUT = ROOT / "data" / "dataset_merged.npz"
 
 POSE_KEEP = features.POSE_KEEP          # 23
@@ -160,6 +163,36 @@ def main() -> int:
     signer = np.concatenate([base["signer"], sc])
     corpus = np.concatenate([np.zeros(len(base["X"]), np.int32),
                              np.ones(len(Xc), np.int32)])
+
+    # Your own recordings, if you have made any.
+    #
+    # ingest_recordings.py wrote data/own.npz and NOTHING read it: not train.py,
+    # which loads dataset.npz, and not train_production.py or train_clinical.py,
+    # which load this file. Every take anyone recorded was silently discarded,
+    # while "record your own signs" was the standing top recommendation. Folding
+    # them in here is the fix, because this is the file the shipping models
+    # actually train on.
+    #
+    # They get their OWN signer group, one past the CISLR groups. That is not
+    # bookkeeping: leave-one-group-out then measures how the model does on you
+    # specifically, which is the number a demo actually depends on.
+    if OWN.exists():
+        own = np.load(OWN, allow_pickle=True)
+        own_labels = [str(s) for s in own["labels"]]
+        # own.npz indexes its own label list, so remap onto this one
+        remap = np.array([label_id.get(n, -1) for n in own_labels], np.int64)
+        oy = remap[own["y"]]
+        keep_mask = oy >= 0
+        if keep_mask.sum():
+            og = int(signer.max()) + 1
+            X = np.concatenate([X, own["X"][keep_mask]])
+            y = np.concatenate([y, oy[keep_mask].astype(y.dtype)])
+            signer = np.concatenate([signer, np.full(int(keep_mask.sum()), og, np.int32)])
+            corpus = np.concatenate([corpus, np.full(int(keep_mask.sum()), 2, np.int32)])
+            print(f"  own recordings: {int(keep_mask.sum())} takes as signer group {og}"
+                  f"  ({int((~keep_mask).sum())} off-vocabulary, dropped)")
+    else:
+        print(f"  own recordings: none ({OWN.relative_to(ROOT)} not present)")
 
     features.check_isotropy(Xc[:400], "CISLR")
     features.check_isotropy(base["X"][:400], "INCLUDE")
