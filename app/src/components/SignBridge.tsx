@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Info, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { GlossClassifier } from "../lib/classifier";
@@ -9,7 +9,6 @@ import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
 import { asset } from "../lib/assetUrl";
-import { getDomain, getServerDomain, subscribeDomain } from "../lib/domains";
 import { certainty, UNCERTAIN } from "../lib/calibrate";
 
 /** Replay still fills a buffer; the live path is driven by the segmenter. */
@@ -53,7 +52,6 @@ export default function SignBridge({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const domain = useSyncExternalStore(subscribeDomain, getDomain, getServerDomain);
 
   /** Size the preview box to the stream's real shape.
    *
