@@ -16,10 +16,22 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MODEL = ROOT / "models" / "gloss_classifier.keras"
-LABELS = ROOT / "models" / "labels.json"
-METRICS = ROOT / "models" / "metrics.json"
-OUT = ROOT / "app" / "public" / "model"
+import argparse
+
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--clinical", action="store_true",
+                 help="export models/clinical/ to app/public/model/clinical/")
+_args, _ = _ap.parse_known_args()
+
+# Two models ship. The 264-class one is the general vocabulary; the 38-class
+# clinical one trades words a clinic never needs for accuracy on the ones it
+# does, and is measurably better where it counts: 73.9% vs 64.8% top-1 and
+# 96.3% vs 86.6% top-5 on a held-out signer.
+_SRC = ROOT / ("models/clinical" if _args.clinical else "models")
+MODEL = _SRC / "gloss_classifier.keras"
+LABELS = _SRC / "labels.json"
+METRICS = _SRC / "metrics.json"
+OUT = ROOT / "app" / "public" / "model" / ("clinical" if _args.clinical else "")
 
 
 def patch_keras3_topology(model_json: Path) -> None:

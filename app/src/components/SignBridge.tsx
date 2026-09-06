@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Camera, Info, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { GlossClassifier } from "../lib/classifier";
@@ -9,7 +9,8 @@ import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
 import { asset } from "../lib/assetUrl";
-import { certainty, UNCERTAIN } from "../lib/calibrate";
+import { getDomain, getServerDomain, subscribeDomain } from "../lib/domains";
+import { certainty, CLINICAL_TEMPERATURE, TEMPERATURE, UNCERTAIN } from "../lib/calibrate";
 
 /** Replay still fills a buffer; the live path is driven by the segmenter. */
 const BUFFER = SEQ_LEN * 2;
@@ -52,6 +53,7 @@ export default function SignBridge({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const domain = useSyncExternalStore(subscribeDomain, getDomain, getServerDomain);
 
   /** Size the preview box to the stream's real shape.
    *
@@ -113,11 +115,28 @@ export default function SignBridge({
   const langRef = useRef(lang);
   useEffect(() => { langRef.current = lang; }, [lang]);
 
-  // load the trained classifier
+  // Load the classifier that suits the setting.
+  //
+  // Two models ship. The clinical one knows 38 signs instead of 264, having
+  // dropped the words a consultation never needs -- Yellow, Grey, Thursday --
+  // and it is markedly better on the ones it kept: 73.9% top-1 and 96.3% top-5
+  // on a held-out signer, against 64.8% and 86.6%. Fewer classes means fewer
+  // ways to be wrong on ~19 clips per sign from about ten signers.
+  //
+  // It cannot say pain, water, help, yes or no. Those are not in INCLUDE at any
+  // count, so they stay on the phrase board, which is exact and needs no model.
+  //
+  // Reloading on a domain change is deliberate: the temperature differs between
+  // the two (1.35 against 2.34) and using the wrong one silently misreports
+  // every confidence the gate reads.
   useEffect(() => {
     let cancelled = false;
+    const clinical = domain === "health";
+    const dir = clinical ? "/model/clinical" : "/model";
+    setModelState("loading");
     clfRef.current
-      .load(asset("/model/model.json"), asset("/model/labels.json"))
+      .load(asset(`${dir}/model.json`), asset(`${dir}/labels.json`),
+            clinical ? CLINICAL_TEMPERATURE : TEMPERATURE)
       .then(() => {
         if (!cancelled) {
           setVocabSize(clfRef.current.vocabulary.length);
@@ -141,7 +160,7 @@ export default function SignBridge({
       cancelled = true;
       window.speechSynthesis?.removeEventListener("voiceschanged", refreshVoices);
     };
-  }, []);
+  }, [domain]);
 
   const draw = useCallback((pose: unknown, left: unknown, right: unknown) => {
     const cv = canvasRef.current;

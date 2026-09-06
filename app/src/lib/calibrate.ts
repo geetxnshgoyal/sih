@@ -36,6 +36,17 @@
 export const TEMPERATURE = 2.34;
 
 /**
+ * The 38-class clinical model, fitted the same way (train/train_clinical.py).
+ *
+ * Much closer to 1.0 than the general model's 2.34, and that is the point: a
+ * temperature near 1 means the raw softmax was already close to honest. The
+ * 264-class model needed heavy correction because it was badly overconfident
+ * across a vocabulary it could not separate. Measured ECE before scaling was
+ * 9.7pp here against 23.5pp there.
+ */
+export const CLINICAL_TEMPERATURE = 1.35;
+
+/**
  * Re-apply softmax at temperature T to already-softmaxed probabilities.
  *
  * The shipped graph model has softmax baked into its final layer, so the raw

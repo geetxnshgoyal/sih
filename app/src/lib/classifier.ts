@@ -8,16 +8,21 @@
 import * as tf from "@tensorflow/tfjs";
 import { extractFeatures, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame } from "./features";
 import type { Prediction } from "./gate";
-import { calibrate } from "./calibrate";
+import { calibrate, TEMPERATURE } from "./calibrate";
 
 export class GlossClassifier {
   private model: tf.GraphModel | null = null;
   private labels: string[] = [];
+  // Temperature belongs to the WEIGHTS, not the architecture, so it has to
+  // travel with whichever model was loaded. Two ship, and using one model's
+  // temperature on the other silently misreports every confidence.
+  private temperature = TEMPERATURE;
 
   get ready() { return this.model !== null; }
   get vocabulary() { return [...this.labels]; }
 
-  async load(modelUrl: string, labelsUrl: string) {
+  async load(modelUrl: string, labelsUrl: string, temperature = TEMPERATURE) {
+    this.temperature = temperature;
     const [model, labels] = await Promise.all([
       tf.loadGraphModel(modelUrl),
       fetch(labelsUrl).then(r => r.json() as Promise<string[]>),
@@ -48,7 +53,7 @@ export class GlossClassifier {
       const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
       return (this.model!.predict(input) as tf.Tensor).dataSync();
     });
-    return Array.from(calibrate(probs))
+    return Array.from(calibrate(probs, this.temperature))
       .map((conf, i) => ({ gloss: this.labels[i], conf }))
       .sort((a, b) => b.conf - a.conf)
       .slice(0, k);
@@ -68,7 +73,7 @@ export class GlossClassifier {
     // probability: measured on a held-out signer group it said 0.90 while being
     // right 48% of the time (ECE 34.1pp). Temperature scaling brings that to
     // 5.0pp without touching which class wins. See lib/calibrate.ts.
-    const cal = calibrate(probs);
+    const cal = calibrate(probs, this.temperature);
 
     let bestIdx = 0;
     for (let i = 1; i < cal.length; i++) if (cal[i] > cal[bestIdx]) bestIdx = i;
