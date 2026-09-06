@@ -1,7 +1,8 @@
 """
-Train the clinical vocabulary: fewer signs, each one worth saying.
+Train a curated vocabulary: fewer signs, each one worth saying.
 
-    .venv-tf/bin/python train/train_clinical.py
+    .venv-tf/bin/python train/train_clinical.py                 # 38-sign clinical
+    .venv-tf/bin/python train/train_clinical.py --vocab universal   # 83-sign, both settings
 
 Reads  data/dataset_merged.npz  +  models/encoder_pretrain.weights.h5
 Writes models/clinical/  (gloss_classifier.keras, labels.json, metrics.json)
@@ -34,6 +35,7 @@ is the honest division of labour: the board carries what must never be wrong,
 and recognition carries what is convenient. Anyone reading a headline accuracy
 number for this model should read that list first.
 """
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -62,10 +64,41 @@ DATA = ROOT / "data" / "dataset_merged.npz"
 # +1.3, as an initialiser it is worth +3.1 on top of ASL.
 ENCODER = ROOT / "models" / "encoder_stacked.weights.h5"
 ENCODER_FALLBACK = ROOT / "models" / "encoder_pretrain.weights.h5"
-OUT_DIR = ROOT / "models" / "clinical"
-RUN = ROOT / "run" / "clinical_eval.json"
+OUT_BASE = ROOT / "models"
+RUN_BASE = ROOT / "run"
 SEED = 0
 FACTOR = 4
+
+# The universal vocabulary: one model for every setting rather than one per
+# setting. A hospital and a railway counter need the same greetings, the same
+# pronouns and the same words for time; only the nouns differ, and carrying both
+# sets costs far less than carrying all 264.
+#
+# 83 classes rather than 38 is a deliberate trade. The vocabulary curve
+# (run/vocab_eval.json) says accuracy falls as classes rise, so this buys
+# coverage with a few points of top-1. Whether that trade is worth taking is
+# measured, not assumed: compare against models/clinical/metrics.json.
+UNIVERSAL = [
+    # people, and who is being spoken about
+    "I", "you", "he", "she", "we", "they", "Man", "Woman", "Child", "Family", "Friend",
+    # opening and closing any conversation, anywhere
+    "Hello", "Thank you", "How are you", "Alright", "Pleased", "good", "bad",
+    "Good Morning", "Good afternoon", "Good evening", "Good night",
+    # health
+    "sick", "healthy", "weak", "strong", "alive", "Death", "Doctor", "Hospital",
+    "Medicine", "Patient", "Deaf", "Blind", "hot", "cold", "warm", "cool",
+    # getting around, and the transactions that go with it
+    "Train", "Bus", "Car", "Plane", "Boat", "Bicycle", "Train Station",
+    "train ticket", "Restaurant", "Market", "Store or Shop", "Street or Road",
+    "City", "Bank", "Money", "Police", "Park", "Bill", "Key", "Door",
+    "Transportation", "Location",
+    # when: onset, duration and appointments are most of any exchange
+    "Today", "Tomorrow", "Yesterday", "Time", "Morning", "Evening", "Night",
+    "Afternoon", "Hour", "Minute", "Week", "Month", "Year",
+    # where
+    "Bathroom", "Bedroom", "House", "School", "Office", "Library", "Temple",
+    "University", "Kitchen", "Ground",
+]
 
 # Chosen for what a consultation needs, then filtered to what the data actually
 # supports. Grouped so the gaps are visible rather than buried.
@@ -117,6 +150,14 @@ def warm_start(model, n_classes) -> int:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--vocab", choices=["clinical", "universal"], default="clinical")
+    args = ap.parse_args()
+    vocab = CLINICAL if args.vocab == "clinical" else UNIVERSAL
+    out_dir = OUT_BASE / args.vocab
+    run_path = RUN_BASE / f"{args.vocab}_eval.json"
+    print(f"vocabulary: {args.vocab} ({len(vocab)} requested)")
+
     d = np.load(DATA, allow_pickle=True)
     X, y, signer, corpus = d["X"], d["y"], d["signer"], d["corpus"]
     labels = [str(s) for s in d["labels"]]
@@ -127,7 +168,7 @@ def main() -> int:
     print(f"encoder: {which.name}")
 
     keep, missing = [], []
-    for w in CLINICAL:
+    for w in vocab:
         (keep if w in index else missing).append(w)
     if missing:
         print(f"not in the corpus, dropped: {', '.join(missing)}")
@@ -219,19 +260,19 @@ def main() -> int:
                                                     patience=5, min_lr=1e-5),
               ], verbose=0)
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    final.save(OUT_DIR / "gloss_classifier.keras")
-    (OUT_DIR / "labels.json").write_text(json.dumps(keep))
+    out_dir.mkdir(parents=True, exist_ok=True)
+    final.save(out_dir / "gloss_classifier.keras")
+    (out_dir / "labels.json").write_text(json.dumps(keep))
     doc = {"classes": len(keep), "labels": keep, "clips": int(len(Xs)),
            "encoder": which.name,
            "held_out_group": per, "held_out_mean": {"top1": m1, "top5": m5},
            "temperature": T, "ece_before": before, "ece_after": after,
            "bands": bands, "cannot_say": ["pain", "water", "help", "yes", "no",
                                           "please", "fever", "breathe"]}
-    (OUT_DIR / "metrics.json").write_text(json.dumps(doc, indent=2))
-    RUN.parent.mkdir(parents=True, exist_ok=True)
-    RUN.write_text(json.dumps(doc, indent=2))
-    print(f"\nsaved models/clinical/  (temperature {T:.2f})")
+    (out_dir / "metrics.json").write_text(json.dumps(doc, indent=2))
+    run_path.parent.mkdir(parents=True, exist_ok=True)
+    run_path.write_text(json.dumps(doc, indent=2))
+    print(f"\nsaved {out_dir.relative_to(ROOT)}/  (temperature {T:.2f})")
     return 0
 
 

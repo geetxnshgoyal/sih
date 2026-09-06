@@ -61,3 +61,6 @@ AGENTS.md
 # Stitch design export: the unpacked directory is kept as reference, the zip
 # was an exact duplicate of it.
 stitch_setu_healthcare_communication_bridge.zip
+
+# TFLite exports: derived from models/, rebuilt by train/export_tflite.py
+models/tflite/
