@@ -23,6 +23,7 @@ import features
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "own.npz"
+FORMATS = {"setu-recordings-v1", "setu-recordings-v2"}
 
 
 def main() -> int:
@@ -50,11 +51,13 @@ def main() -> int:
             print(f"missing: {path}")
             continue
         doc = json.loads(path.read_text())
-        if doc.get("format") != "setu-recordings-v1":
+        fmt = doc.get("format")
+        if fmt not in FORMATS:
             print(f"skipping {path.name}: unexpected format {doc.get('format')!r}")
             continue
-        takes.extend(doc["takes"])
-        print(f"{path.name}: {len(doc['takes'])} takes")
+        batch = doc.get("takes", [])
+        takes.extend(batch)
+        print(f"{path.name}: {len(batch)} takes ({fmt})")
 
     if not takes:
         print("nothing to ingest")
@@ -62,7 +65,10 @@ def main() -> int:
 
     counts: dict[str, int] = {}
     for t in takes:
-        counts[t["gloss"]] = counts.get(t["gloss"], 0) + 1
+        gloss = str(t.get("gloss", "")).strip()
+        if not gloss:
+            continue
+        counts[gloss] = counts.get(gloss, 0) + 1
 
     thin = {g: n for g, n in counts.items() if n < args.min_takes}
     if thin:
@@ -81,11 +87,12 @@ def main() -> int:
 
     kept = 0
     for t in takes:
-        if t["gloss"] not in label_id:
+        gloss = str(t.get("gloss", "")).strip()
+        if gloss not in label_id:
             continue
-        seq = np.asarray(t["frames"], dtype=np.float64)   # (T, 65, 3) unit coords
+        seq = np.asarray(t.get("frames", []), dtype=np.float64)   # (T, 65, 3) unit coords
         if seq.ndim != 3 or seq.shape[1] != features.N_POINTS:
-            print(f"  ! bad shape {seq.shape} for {t['gloss']}, skipped")
+            print(f"  ! bad shape {seq.shape} for {gloss}, skipped")
             continue
         # identical path to the INCLUDE pipeline from this point on.
         # `aspect` is the recording camera's width/height, written by
@@ -98,7 +105,7 @@ def main() -> int:
         if not np.all(np.isfinite(arr)):
             continue
         X[kept] = arr
-        y[kept] = label_id[t["gloss"]]
+        y[kept] = label_id[gloss]
         kept += 1
 
     X, y = X[:kept], y[:kept]

@@ -109,6 +109,23 @@ def score(model, X4, y):
 VAL_FRACTION = 0.15
 
 
+def train_val_split(n: int, rng, val_fraction: float = VAL_FRACTION) -> tuple[np.ndarray, np.ndarray]:
+    """Return train/validation indices with a non-empty validation side.
+
+    Tiny captured datasets hit this edge first: max(..., 1) keeps training
+    non-empty but can still leave validation empty, which makes Keras callbacks
+    monitor a metric that is never produced.
+    """
+    if n <= 0:
+        raise ValueError("cannot split an empty training set")
+    idx = rng.permutation(n)
+    if n == 1:
+        return idx, idx
+    cut = int((1.0 - val_fraction) * n)
+    cut = min(max(cut, 1), n - 1)
+    return idx[:cut], idx[cut:]
+
+
 def run(name, Xtr, ytr, Xte, yte, n_classes, rng, verbose=0):
     """Fit on Xtr, report on Xte. The test set is touched ONCE, at the end.
 
@@ -122,9 +139,7 @@ def run(name, Xtr, ytr, Xte, yte, n_classes, rng, verbose=0):
     cannot leak into training.
     """
     Xte_raw = Xte
-    idx = rng.permutation(len(Xtr))
-    cut = max(int((1.0 - VAL_FRACTION) * len(idx)), 1)
-    tr_i, va_i = idx[:cut], idx[cut:]
+    tr_i, va_i = train_val_split(len(Xtr), rng)
 
     Xa, ya = aug.augment_batch(Xtr[tr_i], ytr[tr_i], rng, factor=4)
     Xa = standardise(Xa)

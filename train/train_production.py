@@ -41,7 +41,7 @@ from tensorflow import keras
 
 sys.path.insert(0, str(Path(__file__).parent))
 import augment as aug
-from train import BATCH, EPOCHS, build_model, close_range, standardise
+from train import BATCH, EPOCHS, build_model, close_range, standardise, train_val_split
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data" / "dataset_merged.npz"
@@ -82,9 +82,7 @@ def warm_start(model: keras.Model, n_classes: int) -> int:
 
 
 def fit(Xtr, ytr, n_classes, rng, verbose=0):
-    idx = rng.permutation(len(Xtr))
-    cut = max(int((1.0 - VAL_FRACTION) * len(idx)), 1)
-    tr, va = idx[:cut], idx[cut:]
+    tr, va = train_val_split(len(Xtr), rng, VAL_FRACTION)
     Xa, ya = aug.augment_batch(Xtr[tr], ytr[tr], rng, factor=FACTOR)
     model = build_model(Xa.shape[1], Xa.shape[2] * Xa.shape[3], n_classes)
     moved = warm_start(model, n_classes)

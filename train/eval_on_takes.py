@@ -40,24 +40,35 @@ def main() -> int:
         return 1
 
     labels = json.loads((MODELS / "labels.json").read_text())
-    label_id = {g: i for i, g in enumerate(labels)}
+    label_id = {g.casefold(): i for i, g in enumerate(labels)}
 
     X, y, names = [], [], []
     unknown = set()
+    bad = 0
     for t in takes:
-        g = t["gloss"]
-        seq = np.asarray(t["frames"], dtype=np.float64)
-        X.append(features.resample(features.anchor(seq)))
+        g = str(t.get("gloss", "")).strip()
+        seq = np.asarray(t.get("frames", []), dtype=np.float64)
+        if not g or seq.ndim != 3 or seq.shape[1] != features.N_POINTS:
+            bad += 1
+            continue
+        aspect = float(t.get("aspect") or 16 / 9)
+        X.append(features.resample(features.anchor(features.isotropic(seq, aspect))))
         names.append(g)
-        if g in label_id:
-            y.append(label_id[g])
+        key = g.casefold()
+        if key in label_id:
+            y.append(label_id[key])
         else:
             y.append(-1)
             unknown.add(g)
+    if not X:
+        print("no valid takes found")
+        return 1
     X = np.stack(X).astype(np.float32)
     y = np.asarray(y)
 
     print(f"{len(X)} takes, {len(set(names))} distinct labels")
+    if bad:
+        print(f"skipped {bad} malformed take(s)")
     if unknown:
         print(f"not in the 264-class vocabulary (scored as top-3 only): {sorted(unknown)}")
     scored = y >= 0

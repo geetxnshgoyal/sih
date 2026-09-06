@@ -29,7 +29,10 @@ type Take = { gloss: string; frames: PointFrame[]; at: number; aspect: number };
 export default function Recorder() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef(0);
+  const countdownRef = useRef<number | null>(null);
+  const captureTimerRef = useRef<number | null>(null);
   const runningRef = useRef(false);
   const bufRef = useRef<PointFrame[]>([]);
   const capturingRef = useRef(false);
@@ -43,7 +46,7 @@ export default function Recorder() {
   const [hands, setHands] = useState(false);
   const [camError, setCamError] = useState<string | null>(null);
 
-  const loop = useCallback(() => {
+  const loop = useCallback(function loop() {
     if (!runningRef.current) return;
     const video = videoRef.current;
     if (video && video.readyState >= 2) {
@@ -73,15 +76,29 @@ export default function Recorder() {
 
   async function start() {
     setCamError(null);
+    if (state !== "ready") {
+      setCamError(error ? `Landmarker: ${error}` : "Camera tools are still preparing.");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamError("Camera access is unavailable in this browser or page context.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: false,
       });
-      const v = videoRef.current!;
+      const v = videoRef.current;
+      const cv = canvasRef.current;
+      if (!v || !cv) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = stream;
       v.srcObject = stream;
       await v.play();
-      const cv = canvasRef.current!;
       cv.width = v.videoWidth || 1280;
       cv.height = v.videoHeight || 720;
       runningRef.current = true;
@@ -92,31 +109,56 @@ export default function Recorder() {
     }
   }
 
-  function stop() {
-    runningRef.current = false;
-    cancelAnimationFrame(rafRef.current);
-    (videoRef.current?.srcObject as MediaStream | null)?.getTracks().forEach((t) => t.stop());
-    if (videoRef.current) videoRef.current.srcObject = null;
-    setLive(false);
+  function clearTimers() {
+    if (countdownRef.current !== null) window.clearInterval(countdownRef.current);
+    if (captureTimerRef.current !== null) window.clearTimeout(captureTimerRef.current);
+    countdownRef.current = null;
+    captureTimerRef.current = null;
   }
 
-  useEffect(() => () => { runningRef.current = false; cancelAnimationFrame(rafRef.current); }, []);
+  function stop() {
+    runningRef.current = false;
+    capturingRef.current = false;
+    clearTimers();
+    cancelAnimationFrame(rafRef.current);
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    bufRef.current = [];
+    setLive(false);
+    setHands(false);
+    setPhase("idle");
+    setCount(0);
+  }
+
+  useEffect(() => () => { stop(); }, []);
 
   /** Countdown, then capture a fixed window so every take is comparable. */
   function record() {
-    if (!gloss.trim() || !live) return;
+    if (!gloss.trim()) {
+      setCamError("Enter a sign label before recording.");
+      return;
+    }
+    if (!live || !runningRef.current) {
+      setCamError("Start the camera before recording.");
+      return;
+    }
+    if (phase !== "idle") return;
+    setCamError(null);
     setPhase("counting");
     setCount(COUNTDOWN);
     let n = COUNTDOWN;
-    const tick = window.setInterval(() => {
+    countdownRef.current = window.setInterval(() => {
       n -= 1;
       setCount(n);
       if (n > 0) return;
-      window.clearInterval(tick);
+      if (countdownRef.current !== null) window.clearInterval(countdownRef.current);
+      countdownRef.current = null;
       bufRef.current = [];
       capturingRef.current = true;
       setPhase("capturing");
-      window.setTimeout(() => {
+      captureTimerRef.current = window.setTimeout(() => {
+        captureTimerRef.current = null;
         capturingRef.current = false;
         const frames = bufRef.current.slice();
         setPhase("idle");
@@ -127,6 +169,7 @@ export default function Recorder() {
           const v = videoRef.current;
           const aspect = v && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9;
           setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now(), aspect }]);
+          setCamError(null);
         } else {
           setCamError(
             `Only ${frames.length} frames captured (need ${SEQ_LEN}). Keep both hands in frame for the whole take.`

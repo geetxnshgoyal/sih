@@ -13,6 +13,7 @@ import { DiagnosticsScreen } from "./components/stitch/DiagnosticsScreen";
 import { loadGlossTable } from "./lib/glossTranslate";
 import { DeviceReadinessScreen } from "./components/stitch/DeviceReadinessScreen";
 import InstallPrompt from "./components/InstallPrompt";
+import Recorder from "./components/Recorder";
 import "./App.css";
 import { ScreenErrorBoundary } from "./components/ScreenErrorBoundary";
 
@@ -45,6 +46,8 @@ function ScreenRouter() {
         return <HomeScreen />;
       case "bridge":
         return selectedRole === "doctor" ? <DoctorViewScreen /> : <PatientViewScreen />;
+      case "capture":
+        return <Recorder />;
       case "language":
         return <SpokenLanguageScreen />;
       case "transcript":

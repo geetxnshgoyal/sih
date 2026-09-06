@@ -165,7 +165,7 @@ export class SignSegmenter {
   }
 
   /**
-   * Reject a window where only ONE hand is visible.
+   * Detect a window where only ONE hand is visible.
    *
    * Not an arbitrary strictness: ALL 4,284 INCLUDE training clips have both
    * hands present for the majority of frames, measured, zero exceptions. The
@@ -174,10 +174,9 @@ export class SignSegmenter {
    * attractor classes (Car, Truck, Mouse, Today) at ~0.76 confidence, which is
    * above gate.FLOOR and so gets spoken aloud as if it were a real reading.
    *
-   * This does mean genuinely one-handed signing is refused rather than guessed
-   * at. That is the correct trade for a medical kiosk: "move your other hand
-   * into frame" is recoverable, "you have a fever" when the patient signed
-   * something else is not. When one-handed training data exists, relax this.
+   * One-handed windows are usable only with human confirmation. The segmenter
+   * marks them via lastReject and still returns the segment; SignBridge then
+   * shows candidates but blocks automatic speech.
    */
   private static hasBothHands(frames: PointFrame[]): boolean {
     if (frames.length === 0) return false;
@@ -222,7 +221,7 @@ export class SignSegmenter {
       }
       if (!SignSegmenter.hasBothHands(inProgress)) {
         this._lastReject = "one-hand";
-        return null;
+        return inProgress;
       }
       return inProgress;
     }
@@ -265,7 +264,7 @@ export class SignSegmenter {
       }
       if (!SignSegmenter.hasBothHands(trimmed)) {
         this._lastReject = "one-hand";
-        return null;
+        return trimmed;
       }
       return trimmed;
     }

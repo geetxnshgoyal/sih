@@ -56,7 +56,7 @@ from tensorflow import keras
 
 sys.path.insert(0, str(Path(__file__).parent))
 import augment as aug
-from train import BATCH, build_model, close_range, standardise
+from train import BATCH, build_model, close_range, standardise, train_val_split
 
 ROOT = Path(__file__).resolve().parent.parent
 PRE = ROOT / "data" / "pretrain.npz"
@@ -76,9 +76,7 @@ VAL_FRACTION = 0.15
 
 
 def split_train_val(n, rng):
-    idx = rng.permutation(n)
-    cut = max(int((1.0 - VAL_FRACTION) * n), 1)
-    return idx[:cut], idx[cut:]
+    return train_val_split(n, rng, VAL_FRACTION)
 
 
 def transfer_encoder(src: keras.Model, dst: keras.Model) -> int:

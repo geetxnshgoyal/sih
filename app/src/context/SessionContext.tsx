@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { LANGUAGES, type LangCode } from "../lib/speech";
 
 export type ScreenId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-export type ActiveView = "home" | "bridge" | "language" | "transcript" | "phrases" | "summary" | "diagnostics" | "devices";
+export type ActiveView = "home" | "bridge" | "capture" | "language" | "transcript" | "phrases" | "summary" | "diagnostics" | "devices";
 
 export interface TranscriptItem {
   id: string;
@@ -58,7 +58,7 @@ interface SessionContextType {
 
 function readView(): ActiveView {
   const view = window.location.hash.slice(1);
-  return ["home", "bridge", "language", "transcript", "phrases", "summary", "diagnostics", "devices"].includes(view) ? view as ActiveView : "home";
+  return ["home", "bridge", "capture", "language", "transcript", "phrases", "summary", "diagnostics", "devices"].includes(view) ? view as ActiveView : "home";
 }
 
 const SESSION_KEY = "setu-session-v1";
@@ -91,6 +91,7 @@ const STEP_TO_VIEW: Record<ScreenId, ActiveView> = {
 const VIEW_TO_STEP: Record<ActiveView, ScreenId> = {
   home: 1,
   bridge: 4,
+  capture: 5,
   language: 2,
   transcript: 6,
   phrases: 7,

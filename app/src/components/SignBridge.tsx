@@ -77,6 +77,7 @@ export default function SignBridge({
   const { state: lmState, error: lmError, detect } = useLandmarkers();
   const [modelState, setModelState] = useState<"loading" | "ready" | "error">("loading");
   const [modelError, setModelError] = useState<string | null>(null);
+  const [vocabSize, setVocabSize] = useState(0);
   const [running, setRunning] = useState(false);
   const [ownLang, setOwnLang] = useState<LangCode>("hi-IN");
   const lang = langProp ?? ownLang;
@@ -116,8 +117,13 @@ export default function SignBridge({
   useEffect(() => {
     let cancelled = false;
     clfRef.current
-      .load("/model/model.json", "/model/labels.json")
-      .then(() => { if (!cancelled) setModelState("ready"); })
+      .load(asset("/model/model.json"), asset("/model/labels.json"))
+      .then(() => {
+        if (!cancelled) {
+          setVocabSize(clfRef.current.vocabulary.length);
+          setModelState("ready");
+        }
+      })
       .catch((e) => {
         if (cancelled) return;
         setModelError(e instanceof Error ? e.message : String(e));
@@ -208,7 +214,7 @@ export default function SignBridge({
     []
   );
 
-  const loop = useCallback(() => {
+  const loop = useCallback(function loop() {
     if (!runningRef.current) return;
     const video = videoRef.current;
     if (video && video.readyState >= 2) {
@@ -230,19 +236,16 @@ export default function SignBridge({
         // segmenter watches hand motion and hands over only the sign itself.
         const segment = segRef.current.push(res.frame, hasHands);
         const seg = segRef.current;
+        const reject = seg.lastReject;
 
         // A window thrown out for having no hands is worth saying out loud , 
         // it is the difference between "the app is broken" and "you are framed
         // wrong", and the user cannot tell those apart from silence.
-        if (segRef.current.lastReject === "no-hands") {
+        if (reject === "no-hands") {
           setLive({ gloss: "", conf: 0, progress: 0 });
           setNotice("no hands detected. Step back so both hands are in frame");
-        } else if (segRef.current.lastReject === "one-hand") {
-          // Every training clip is two-handed, so a one-handed window is out of
-          // distribution and the model answers confidently anyway (Truck, Car,
-          // Mouse at ~0.76). Say what to fix rather than announce a guess.
-          setLive({ gloss: "", conf: 0, progress: 0 });
-          setNotice("only one hand visible. Bring both hands into frame");
+        } else if (reject === "one-hand") {
+          setNotice("only one hand visible. Confirm the sign below or bring both hands into frame");
         } else if (hasHands) {
           setNotice(null);
         }
@@ -258,14 +261,15 @@ export default function SignBridge({
 
         if (segment) {
           const pred = clfRef.current.predict(segment, aspect);
-          const g = gateRef.current.once(pred);
+          const confirmOnly = reject === "one-hand";
+          const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
           setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
 
           // Below the confident band, show what else it considered rather than
           // discarding the sign. The right answer is in this list far more often
           // than it is the top entry.
           setCandidates(
-            certainty(pred.conf) === "confident"
+            certainty(pred.conf) === "confident" && !confirmOnly
               ? []
               : clfRef.current.predictTop(segment, aspect, 5)
           );
@@ -476,7 +480,7 @@ export default function SignBridge({
           <div className="mark">से</div>
           <div>
             <h1>Setu</h1>
-            <p>{clfRef.current.vocabulary.length || "..."} signs available</p>
+            <p>{vocabSize || "..."} signs available</p>
           </div>
         </div>
         <span className={`status ${lmState === "error" || modelState === "error" ? "err" : ready ? "ok" : "busy"}`}>

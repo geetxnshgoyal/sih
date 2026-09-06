@@ -6,7 +6,10 @@ import {
 } from "@mediapipe/tasks-vision";
 import { assembleFrame, type Landmark, type PointFrame } from "../lib/features";
 
-const CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm";
+// Keep this in sync with app/package-lock.json. The JS wrapper and Wasm files
+// are version-coupled; loading 0.10.x Wasm with the installed 1.x wrapper can
+// leave the detector stuck in "Preparing..." on real browsers.
+const CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
 const HOLISTIC_MODEL =
   "https://storage.googleapis.com/mediapipe-models/holistic_landmarker/holistic_landmarker/float16/latest/holistic_landmarker.task";
 
@@ -45,10 +48,18 @@ export function useLandmarkers() {
     (async () => {
       try {
         const fileset = await FilesetResolver.forVisionTasks(CDN);
-        const lm = await HolisticLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: HOLISTIC_MODEL, delegate: "GPU" },
-          runningMode: "VIDEO",
-        });
+        let lm: HolisticLandmarker;
+        try {
+          lm = await HolisticLandmarker.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: HOLISTIC_MODEL, delegate: "GPU" },
+            runningMode: "VIDEO",
+          });
+        } catch {
+          lm = await HolisticLandmarker.createFromOptions(fileset, {
+            baseOptions: { modelAssetPath: HOLISTIC_MODEL, delegate: "CPU" },
+            runningMode: "VIDEO",
+          });
+        }
         if (cancelled) { lm.close(); return; }
         ref.current = lm;
         setState("ready");

@@ -4,6 +4,7 @@ import { useSession } from '../../context/SessionContext';
 import SignPlayer from '../SignPlayer';
 import { speak } from '../../lib/speech';
 import { createRecogniser, textToGlosses, type SignLibrary } from '../../lib/reverse';
+import { asset } from '../../lib/assetUrl';
 
 export function DoctorViewScreen() {
   const { selectedLang, activeProjection, projectToPatient, isSlowMode, setIsSlowMode } = useSession();
@@ -23,7 +24,7 @@ export function DoctorViewScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/model/_signs.json').then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => { if (!cancelled) setLibrary(data); }).catch(() => { if (!cancelled) setLibraryError('Sign playback is unavailable. Written messages still work.'); });
+    fetch(asset('/model/_signs.json')).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => { if (!cancelled) setLibrary(data); }).catch(() => { if (!cancelled) setLibraryError('Sign playback is unavailable. Written messages still work.'); });
     return () => { cancelled = true; };
   }, []);
   useEffect(() => { setIndex(0); }, [sequenceKey, activeProjection?.timestamp, replay]);

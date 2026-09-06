@@ -1,9 +1,11 @@
 import { Activity, Settings2 } from 'lucide-react';
 import { useSession, type ActiveView } from '../../context/SessionContext';
 
-export const navigation: { view: ActiveView; label: string }[] = [
+type NavView = Exclude<ActiveView, 'diagnostics' | 'devices'>;
+
+export const navigation: { view: NavView; label: string }[] = [
   { view: 'home', label: 'Overview' }, { view: 'bridge', label: 'Consultation' },
-  { view: 'language', label: 'Languages' }, { view: 'transcript', label: 'Transcript' },
+  { view: 'capture', label: 'Capture' }, { view: 'language', label: 'Languages' }, { view: 'transcript', label: 'Transcript' },
   { view: 'phrases', label: 'Phrases' }, { view: 'summary', label: 'Summary' },
 ];
 

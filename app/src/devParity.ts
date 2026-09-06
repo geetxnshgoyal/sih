@@ -16,7 +16,7 @@ export async function checkModelParity() {
     const [ref, labels, model] = await Promise.all([
       fetch(asset("/model/_ref.json")).then((r) => r.json()),
       fetch(asset("/model/labels.json")).then((r) => r.json()) as Promise<string[]>,
-      tf.loadGraphModel("/model/model.json"),
+      tf.loadGraphModel(asset("/model/model.json")),
     ]);
 
     const rows: number[][] = ref.input;
@@ -53,7 +53,7 @@ export async function checkClipParity() {
     const [clips, labels, model] = await Promise.all([
       fetch(asset("/model/_demo.json")).then((r) => r.json()),
       fetch(asset("/model/labels.json")).then((r) => r.json()) as Promise<string[]>,
-      tf.loadGraphModel("/model/model.json"),
+      tf.loadGraphModel(asset("/model/model.json")),
     ]);
     console.log("[clip] name              py-pred          ts-pred          py-conf ts-conf");
     for (const c of clips) {

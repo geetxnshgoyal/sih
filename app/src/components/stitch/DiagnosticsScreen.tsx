@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Settings2 } from 'lucide-react';
+import { asset } from '../../lib/assetUrl';
 export function DiagnosticsScreen() {
   const [checking, setChecking] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   async function runChecks() {
     setChecking(true); setResults([]);
-    const checks = await Promise.allSettled(['/model/model.json', '/model/_signs.json'].map(async path => { const response = await fetch(path); if (!response.ok) throw new Error('Unavailable'); const data = await response.json(); return path.includes('_signs') ? `${Object.keys(data).length} sign recordings available` : 'Recognition model manifest available'; }));
+    const checks = await Promise.allSettled(['/model/model.json', '/model/_signs.json'].map(async path => { const response = await fetch(asset(path)); if (!response.ok) throw new Error('Unavailable'); const data = await response.json(); return path.includes('_signs') ? `${Object.keys(data).length} sign recordings available` : 'Recognition model manifest available'; }));
     setResults([`Secure browser context: ${window.isSecureContext ? 'yes' : 'no'}`, `Device access API: ${navigator.mediaDevices ? 'available' : 'unavailable'}`, `Speech input: ${('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) ? 'supported' : 'not supported; use text input'}`, ...checks.map((r, i) => r.status === 'fulfilled' ? r.value : `${i === 0 ? 'Recognition model' : 'Sign library'} unavailable. Check the model files and try again.`)]);
     setChecking(false);
   }
