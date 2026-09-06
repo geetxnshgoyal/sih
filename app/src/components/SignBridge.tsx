@@ -78,6 +78,13 @@ export default function SignBridge({
   const [modelState, setModelState] = useState<"loading" | "ready" | "error">("loading");
   const [modelError, setModelError] = useState<string | null>(null);
   const [vocabSize, setVocabSize] = useState(0);
+  // The list, not just the count. A fluent signer sitting down in front of this
+  // will sign naturally and get nothing, because they will sign words outside
+  // an 83-sign vocabulary and in connected sentences rather than one citation
+  // form at a time. Showing "83 signs available" without showing WHICH 83 makes
+  // that look like a broken detector instead of a stated limit.
+  const [vocab, setVocab] = useState<string[]>([]);
+  const [showVocab, setShowVocab] = useState(false);
   const [running, setRunning] = useState(false);
   const [ownLang, setOwnLang] = useState<LangCode>("hi-IN");
   const lang = langProp ?? ownLang;
@@ -130,6 +137,8 @@ export default function SignBridge({
       .then(() => {
         if (!cancelled) {
           setVocabSize(clfRef.current.vocabulary.length);
+          setVocab([...clfRef.current.vocabulary].sort((a, b) =>
+            a.localeCompare(b, undefined, { sensitivity: "base" })));
           setModelState("ready");
         }
       })
@@ -521,13 +530,34 @@ export default function SignBridge({
           <div className="mark">से</div>
           <div>
             <h1>Setu</h1>
-            <p>{vocabSize || "..."} signs available</p>
+            <button
+              className="vocab-toggle"
+              onClick={() => setShowVocab((v) => !v)}
+              aria-expanded={showVocab}
+              disabled={!vocabSize}
+            >
+              {vocabSize || "..."} signs available{vocabSize ? (showVocab ? " (hide)" : " (see the list)") : ""}
+            </button>
           </div>
         </div>
         <span className={`status ${lmState === "error" || modelState === "error" ? "err" : ready ? "ok" : "busy"}`}>
           <i /> {status}
         </span>
       </header>
+
+      {showVocab && (
+        <section className="vocab-list" aria-label="Signs this model knows">
+          <p className="vocab-note">
+            These are the only signs recognition can produce. Anything else,
+            and any sentence signed continuously rather than one sign at a
+            time, will not be recognised. For everything else, use the phrase
+            board below, which is exact.
+          </p>
+          <div className="vocab-grid">
+            {vocab.map((v) => <span key={v}>{v}</span>)}
+          </div>
+        </section>
+      )}
 
       <div className="bridge-content">
         <section className="card stage-card">

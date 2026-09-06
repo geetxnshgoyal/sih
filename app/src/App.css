@@ -1069,3 +1069,30 @@ code{
 
 .about-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .about-credit a:hover{opacity:1}
+
+/* ---------------------------------------------------------------------------
+   The vocabulary, shown on request. A signer needs to know WHICH 83 signs are
+   recognised: without the list, signing anything else looks like a broken
+   detector rather than a stated limit, which is the wrong thing to conclude and
+   the wrong thing to demo.
+   --------------------------------------------------------------------------- */
+.vocab-toggle{
+  margin:3px 0 0;padding:0;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:12px;color:var(--muted,#8a94a6);
+  text-decoration:underline;text-underline-offset:2px;
+}
+.vocab-toggle:hover:not(:disabled){color:var(--ink,#e7e9e6)}
+.vocab-toggle:disabled{cursor:default;text-decoration:none}
+.vocab-list{
+  padding:12px 14px 14px;border-top:1px solid var(--line-2,rgba(128,128,128,.22));
+}
+.vocab-note{margin:0 0 10px;font-size:12.5px;line-height:1.55;opacity:.75;max-width:64ch}
+.vocab-grid{
+  display:flex;flex-wrap:wrap;gap:6px;
+  max-height:210px;overflow-y:auto;
+}
+.vocab-grid span{
+  font-size:12px;padding:4px 9px;border-radius:999px;
+  border:1px solid var(--line-2,rgba(128,128,128,.28));
+  background:rgba(128,128,128,.07);white-space:nowrap;
+}
