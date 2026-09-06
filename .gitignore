@@ -70,3 +70,7 @@ models/tflite/
 data/isl_sentences/
 data/translate.npz
 models/translate/
+
+# ISH Shiksha landmarks: derived from their videos, rebuilt by
+# train/fetch_shiksha.py. Not ours to redistribute.
+data/shiksha_landmarks/
