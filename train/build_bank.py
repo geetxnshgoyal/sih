@@ -29,6 +29,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "train"))
+import clip_io  # noqa: E402
 import features  # noqa: E402
 
 SOURCES = {
@@ -46,24 +47,15 @@ def norm(s: str) -> str:
 
 
 def clip_features(path: Path) -> np.ndarray | None:
-    try:
-        with np.load(path) as npz:
-            if "pose" not in npz or "lh" not in npz or "rh" not in npz:
-                return None
-            present = (np.abs(npz["lh"]).sum(axis=(1, 2)) > 0) | \
-                      (np.abs(npz["rh"]).sum(axis=(1, 2)) > 0)
-            idx = np.flatnonzero(present)
-            if idx.size < MIN_ACTIVE:
-                return None
-            lo = max(int(idx[0]) - PAD, 0)
-            hi = min(int(idx[-1]) + PAD + 1, len(present))
-            pts = np.concatenate([npz["pose"][:, :features.POSE_KEEP, :3],
-                                  npz["lh"][:, :, :3], npz["rh"][:, :, :3]],
-                                 axis=1).astype(np.float64)[lo:hi]
-            aspect = float(npz["aspect"]) if "aspect" in npz else 1.0
-    except Exception:
-        return None
-    if pts.shape[0] < MIN_ACTIVE or not (0.2 < aspect < 5.0):
+    """One landmark npz -> the shared feature contract.
+
+    The aspect comes from clip_io, which raises rather than defaulting to 1.0.
+    That default was a bug in four files at once: the 13,662 Government
+    dictionary clips carry no aspect field and are 16:9, so every one of them
+    was processed as though a widescreen body were square.
+    """
+    pts, aspect = clip_io.load_points(path, features.POSE_KEEP, MIN_ACTIVE, PAD)
+    if pts is None:
         return None
     v = features.extract(pts, aspect)
     return v if np.all(np.isfinite(v)) else None

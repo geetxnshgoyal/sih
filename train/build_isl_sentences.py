@@ -43,11 +43,13 @@ Aspect ratio is measured per video and stored beside the landmarks, never
 assumed. That mistake has been made twice already.
 """
 import argparse
+import random
 import json
 import os
 import re
 import shutil
 import tempfile
+import time
 from pathlib import Path
 
 import numpy as np
@@ -57,6 +59,23 @@ OUT = ROOT / "data" / "isl_sentences"
 INDEX = OUT / "index.jsonl"
 CHANNEL = "https://www.youtube.com/@ISHNews/videos"
 TARGET_FPS = 15.0
+
+# YouTube rate-limits anonymous downloads. The first run of this script had no
+# pacing at all and was cut off after about 166 bulletins: 212 of its 214
+# failures were "Sign in to confirm you're not a bot", and because nothing
+# noticed, it then burned through every remaining bulletin failing instantly,
+# which is exactly the behaviour that earns a longer block.
+PAUSE_BETWEEN = (2.0, 5.0)    # seconds, randomised, between bulletins
+BLOCK_LIMIT = 3               # consecutive rate-limit errors before stopping
+
+
+class RateLimited(Exception):
+    """YouTube asked for a login. Stop; do not hammer the remaining list."""
+
+
+def _is_block(exc: BaseException) -> bool:
+    m = str(exc).lower()
+    return "not a bot" in m or "sign in to confirm" in m
 MAX_MINUTES = 15
 MIN_CUE_S, MAX_CUE_S = 1.0, 20.0
 N_POSE, N_HAND = 33, 21
@@ -112,7 +131,9 @@ def process(vid: str, title: str, work: Path, complexity: int) -> int:
     try:
         with yt_dlp.YoutubeDL(sub_opts) as ydl:
             ydl.download([f"https://www.youtube.com/watch?v={vid}"])
-    except Exception:
+    except Exception as exc:
+        if _is_block(exc):
+            raise RateLimited(str(exc)) from exc
         return 0
     vtts = sorted(work.glob(f"{vid}*.vtt"))
     if not vtts:
@@ -131,7 +152,9 @@ def process(vid: str, title: str, work: Path, complexity: int) -> int:
     try:
         with yt_dlp.YoutubeDL(v_opts) as ydl:
             ydl.download([f"https://www.youtube.com/watch?v={vid}"])
-    except Exception:
+    except Exception as exc:
+        if _is_block(exc):
+            raise RateLimited(str(exc)) from exc
         return 0
     files = [f for f in work.glob(f"{vid}.*") if f.suffix != ".vtt"]
     if not files:
@@ -204,23 +227,51 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=25)
     ap.add_argument("--complexity", type=int, default=0, choices=[0, 1, 2])
+    ap.add_argument("--scan", type=int, default=1200,
+                    help="how many bulletins to LIST before filtering out built ones")
     args = ap.parse_args()
 
     import yt_dlp
     OUT.mkdir(parents=True, exist_ok=True)
     with yt_dlp.YoutubeDL({"quiet": True, "extract_flat": "in_playlist",
                            "skip_download": True,
-                           "playlistend": args.limit * 3}) as ydl:
+                           # list generously: 171 bulletins are already built, so
+                           # a window sized to --limit never reaches a new one
+                           "playlistend": max(args.scan, args.limit * 3)}) as ydl:
         info = ydl.extract_info(CHANNEL, download=False)
     vids = [e for e in (info or {}).get("entries", [])
             if e and e.get("id") and 0 < (e.get("duration") or 0) <= MAX_MINUTES * 60]
-    print(f"{len(vids)} bulletins listed, taking {args.limit}\n")
+    # Skip what is already built BEFORE taking --limit, or every re-run spends
+    # its whole budget re-listing the same finished bulletins and adds nothing.
+    fresh = [v for v in vids if not (OUT / v["id"] / "_done").exists()]
+    print(f"{len(vids)} bulletins listed, {len(vids) - len(fresh)} already built, "
+          f"taking {min(args.limit, len(fresh))} of {len(fresh)} remaining\n")
 
     work = Path(tempfile.mkdtemp(prefix="isl-"))
     total = done = 0
+    blocked = 0
+    stopped = False
     try:
-        for v in vids[: args.limit]:
-            n = process(v["id"], (v.get("title") or "")[:110], work, args.complexity)
+        for i, v in enumerate(fresh[: args.limit]):
+            if i:
+                time.sleep(random.uniform(*PAUSE_BETWEEN))
+            try:
+                n = process(v["id"], (v.get("title") or "")[:110], work, args.complexity)
+            except RateLimited as exc:
+                blocked += 1
+                print(f"  rate-limited ({blocked}/{BLOCK_LIMIT}) on {v['id']}",
+                      flush=True)
+                if blocked >= BLOCK_LIMIT:
+                    print(f"\n  STOPPING: YouTube is asking for a login.\n"
+                          f"  {str(exc)[:120]}\n"
+                          f"  Everything built so far is kept. Try again later;\n"
+                          f"  bulletins already done are skipped automatically.",
+                          flush=True)
+                    stopped = True
+                    break
+                time.sleep(30)
+                continue
+            blocked = 0
             if n:
                 done += 1
                 total += n
@@ -230,6 +281,8 @@ def main() -> int:
         shutil.rmtree(work, ignore_errors=True)
 
     print(f"\n{total} sentence pairs from {done} bulletins -> {OUT.relative_to(ROOT)}")
+    if stopped:
+        print("  stopped early on a rate limit; re-run to continue")
     return 0
 
 
