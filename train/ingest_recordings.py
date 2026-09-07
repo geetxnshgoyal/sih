@@ -63,6 +63,27 @@ def main() -> int:
         print("nothing to ingest")
         return 1
 
+    valid = []
+    seen = set()
+    for take in takes:
+        try:
+            seq = np.asarray(take['frames'], dtype=np.float64)
+            gloss = take['gloss'].strip()
+            if not gloss or seq.ndim != 3 or seq.shape[1:] != (features.N_POINTS, 3) or len(seq) < 4 or not np.isfinite(seq).all():
+                raise ValueError('invalid label or landmark shape')
+            hands = np.any(seq[:, 23:65, :2] != 0, axis=(1, 2))
+            pose = np.linalg.norm(seq[:, 11, :2] - seq[:, 12, :2], axis=1)
+            if hands.mean() < .6 or (pose > .02).mean() < .8:
+                raise ValueError('a signing hand and shoulders must be visible')
+            # Re-importing the same take must not inflate its training count.
+            import hashlib
+            key = (gloss, hashlib.sha256(seq.tobytes()).hexdigest())
+            if key in seen:
+                continue
+            seen.add(key); valid.append({**take, 'gloss': gloss})
+        except (ValueError, KeyError, TypeError) as error:
+            print(f"skipping invalid take: {error}")
+    takes = valid
     counts: dict[str, int] = {}
     for t in takes:
         gloss = str(t.get("gloss", "")).strip()
@@ -113,6 +134,7 @@ def main() -> int:
     # would measure nothing; signer is a single constant.
     signer = np.zeros(kept, dtype=np.int32)
 
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(OUT, X=X, y=y, signer=signer, labels=np.array(keep))
     print(f"\n{kept} takes across {len(keep)} signs -> {OUT.relative_to(ROOT)}")
     for g in keep:

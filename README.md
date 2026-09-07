@@ -1,5 +1,9 @@
 # Setu: ISL ↔ Regional Language Bridge
 
+For the current runtime, recording, training and verification workflow, read
+[train/README.md](train/README.md). It documents the September 2026 pipeline repairs
+and distinguishes bundled model assets from missing training data.
+
 > **New here? Read [HANDOFF.md](HANDOFF.md) first.** It covers the environment
 > setup (three venvs, and why), the three bugs that made the camera path fail,
 > the invariants you must not break, and what is left to do.
