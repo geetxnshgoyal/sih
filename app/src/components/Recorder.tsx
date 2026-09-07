@@ -23,7 +23,10 @@ import { segmentQuality } from "../lib/segment";
  */
 
 const COUNTDOWN = 3;
-const CAPTURE_MS = 2200;
+// Please starts at the lips, travels down, then finishes with a short shake.
+// A 2.2 s window clipped that ending motion on slower signers, producing a
+// training example that looked like a static pose. Keep the full gesture.
+const CAPTURE_MS = 3200;
 
 type Take = { gloss: string; frames: PointFrame[]; at: number; aspect: number; durationMs: number };
 
@@ -194,6 +197,7 @@ export default function Recorder() {
       <div className="record-lead">
         <p className="eyebrow">Community data collection</p>
         <h2>Collect clean examples from the same camera used in the demo.</h2>
+        <p className="muted">For moving signs such as Please, keep the full path in frame: start at the lips, move down, and finish the finger shake before the capture ends.</p>
       </div>
       <div className="card">
         <div className="card-h">
@@ -226,7 +230,7 @@ export default function Recorder() {
             <input
               className="say"
               value={gloss}
-              placeholder="Sign label, e.g. Hello"
+              placeholder="Sign label, e.g. Please"
               onChange={(e) => setGloss(e.target.value)}
             />
             <button
