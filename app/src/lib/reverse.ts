@@ -10,7 +10,10 @@
  * later without touching the matching logic.
  */
 
-export type SignFrame = number[][];        // 65 points x 3
+// 65 points x [x, y], shoulder-anchored and shoulder-scaled. Depth is not
+// stored: SignPlayer reads p[0] and p[1] only, so the z column was a third of
+// a 3 MB file doing nothing. See train/export_signs.py.
+export type SignFrame = number[][];
 export type SignLibrary = Record<string, SignFrame[]>;
 
 /**
