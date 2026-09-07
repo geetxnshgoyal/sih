@@ -324,33 +324,65 @@ export default function SignBridge({
         }
 
         if (segment) {
-          const pred = clfRef.current.predict(segment, aspect);
-          const confirmOnly = reject === "one-hand";
-          const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
-          setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
-
-          // Below the confident band, show what else it considered rather than
-          // discarding the sign. The right answer is in this list far more often
-          // than it is the top entry.
-          const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
-          setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5) : []);
-
-          // When the classifier is unsure, the sign may simply not be one of
-          // its 83. Only then is the dictionary worth searching, and only then
-          // is its own weaker accuracy an improvement on having no answer.
-          if (unsure && bankRef.current.ready) {
-            const e = clfRef.current.embed(segment, aspect);
-            setDict(e ? bankRef.current.lookup(e, 4) : []);
-          } else {
+          // A segment whose shoulders were never found cannot be classified:
+          // everything downstream is anchored on them, and the model answers
+          // confidently about nothing when they are missing. This is an else
+          // rather than an early return because requestAnimationFrame(loop)
+          // is at the BOTTOM of this function: returning here would stop the
+          // camera loop for good.
+          if (!clfRef.current.usable(segment, aspect)) {
+            setLive({ gloss: "", conf: 0, progress: 0 });
+            setCandidates([]);
             setDict([]);
-          }
+            setNotice("your shoulders are not in frame. Step back so your head and both shoulders are visible");
+          } else {
+            // A segment whose shoulders were never found cannot be classified:
+            // everything downstream is anchored on them, and the model answers
+            // confidently about nothing when they are missing. Say so rather than
+            // returning a wrong word or an unexplained silence.
+            const pred = clfRef.current.predict(segment, aspect);
+            const confirmOnly = reject === "one-hand";
+            const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
+            setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
 
-          if (g.fire) {
-            const l = langRef.current;
-            const now = Date.now();
-            const finished = uttRef.current.add(g.fire, now, g.conf);
-            if (finished) emit(finished.glosses, finished.at, l, finished.conf);
-            setPending(uttRef.current.pending);
+            // Below the confident band, show what else it considered rather than
+            // discarding the sign. The right answer is in this list far more often
+            // than it is the top entry.
+            const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
+            setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5) : []);
+
+            // The dictionary runs on EVERY segment, not only when the
+            // classifier doubts itself.
+            //
+            // The first version gated it on low confidence, which sounds right
+            // and is wrong. A closed-set classifier cannot answer "not one of
+            // mine": asked to read a sign outside its 83 it must still pick one,
+            // and softmax is perfectly capable of being certain about it.
+            // Measured on real clips of words it was never trained on, it said
+            // "Man" at 86% for water and "Alright" at 74% for help, both in the
+            // confident band, both spoken aloud, and both with the dictionary
+            // suppressed precisely because it was confident. The dictionary had
+            // water and help right.
+            //
+            // Score cannot arbitrate either. Where the dictionary is right the
+            // median top-1 cosine is 0.832 and where it is wrong it is 0.780,
+            // so any threshold that keeps most correct answers is barely better
+            // than a coin toss. Nothing here can tell the two apart, so nothing
+            // here pretends to: both readings are shown and a person decides.
+            if (bankRef.current.ready) {
+              const e = clfRef.current.embed(segment, aspect);
+              setDict(e ? bankRef.current.lookup(e, 4) : []);
+            } else {
+              setDict([]);
+            }
+
+            if (g.fire) {
+              const l = langRef.current;
+              const now = Date.now();
+              const finished = uttRef.current.add(g.fire, now, g.conf);
+              if (finished) emit(finished.glosses, finished.at, l, finished.conf);
+              setPending(uttRef.current.pending);
+            }
           }
         } else {
           setLive({ gloss: null, conf: 0, progress: seg.progress });
@@ -658,7 +690,7 @@ export default function SignBridge({
                   {dict.length > 0 && (
                     <div className="dict">
                       <div className="dict-head">
-                        not one of the {vocabSize}? closest of {bankSize} dictionary signs
+                        closest of {bankSize} dictionary signs, beyond the {vocabSize} above
                       </div>
                       <div className="cands">
                         {dict.map((d) => (
