@@ -145,8 +145,9 @@ export default function SignBridge({
   const [dict, setDict] = useState<BankMatch[]>([]);
   const [recording, setRecording] = useState(false);
   const [recFrames, setRecFrames] = useState(0);
+  const [recHands, setRecHands] = useState<"both" | "one" | "none">("none");
   const [recResult, setRecResult] = useState<
-    { gloss: string; conf: number; dict: BankMatch[] }[] | null>(null);
+    { gloss: string; conf: number; bothHands: boolean; dict: BankMatch[] }[] | null>(null);
   const [bankSize, setBankSize] = useState(0);
   const [live, setLive] = useState<{ gloss: string | null; conf: number; progress: number }>(
     { gloss: null, conf: 0, progress: 0 }
@@ -354,20 +355,40 @@ export default function SignBridge({
     const reads = pieces.map((piece) => {
       const pred = clfRef.current.predict(piece, aspect);
       const e = clfRef.current.embed(piece, aspect);
+      // The SAME guard the live path applies, which record mode was missing.
+      // Measured on 400 clips against this model, zeroing the hand landmarks:
+      //
+      //   both hands      conf 0.73, 53 distinct answers
+      //   no hands        conf 0.75, 15 distinct, 'we' 176/400, 'Month' 167/400
+      //   right missing   conf 0.77, 18 distinct, 'Restaurant' 210/400
+      //
+      // Confidence is as high or HIGHER when the hands are gone, so no
+      // threshold on it can catch this. Counting hands is the only thing that
+      // can, and a read that fails must never be spoken.
+      const bothHands = SignSegmenter.hasBothHands(piece);
       return {
         gloss: pred.gloss ?? "",
         conf: pred.conf,
+        bothHands,
         dict: e && bankRef.current.ready ? bankRef.current.lookup(e, 3) : [],
       };
     }).filter((r) => r.gloss);
 
     setRecResult(reads);
-    setNotice(null);
-    if (reads.length) {
-      const mean = reads.reduce((a, r) => a + r.conf, 0) / reads.length;
-      emit(reads.map((r) => r.gloss), new Date().toLocaleTimeString(),
-           langRef.current, mean);
+    const speakable = reads.filter((r) => r.bothHands);
+    if (!speakable.length) {
+      setNotice(
+        "both hands were not in frame for that sign, so it was not read aloud. " +
+        "Step back and keep both hands visible."
+      );
+      return;
     }
+    setNotice(speakable.length < reads.length
+      ? "some signs had a hand out of frame and were left out"
+      : null);
+    const mean = speakable.reduce((a, r) => a + r.conf, 0) / speakable.length;
+    emit(speakable.map((r) => r.gloss), new Date().toLocaleTimeString(),
+         langRef.current, mean);
   }, [emit]);
 
   const toggleRecord = useCallback(() => {
@@ -379,6 +400,7 @@ export default function SignBridge({
     setCandidates([]);
     setDict([]);
     segRef.current.reset();
+    setRecHands("none");
     recordingRef.current = true;
     setRecording(true);
   }, [finishRecording]);
@@ -415,6 +437,11 @@ export default function SignBridge({
         if (recordingRef.current) {
           recordRef.current.push(res.frame);
           setRecFrames(recordRef.current.length);
+          // Live, not after the fact. Finding out that a hand was out of frame
+          // once the recording is already spoiled is the actual failure: the
+          // model answers anyway, at full confidence, from an attractor class.
+          setRecHands(res.left && res.right ? "both"
+                    : res.left || res.right ? "one" : "none");
           rafRef.current = requestAnimationFrame(loop);
           return;
         }
@@ -880,9 +907,13 @@ export default function SignBridge({
               </button>
             </div>
             {recording && (
-              <p className="rec-hint">
-                Recording. Sign, then press stop. For more than one sign, pause
-                about a second between them.
+              <p className={`rec-hint${recHands === "both" ? " ok" : " bad"}`}>
+                {recHands === "both"
+                  ? "Both hands visible. Sign, then press stop. Pause about a second between signs."
+                  : recHands === "one"
+                  ? "Only ONE hand visible. Bring the other into frame, or this will not be read."
+                  : "Hands NOT visible. Step back so both hands are in the picture."}
+                {` · ${(recFrames / CAPTURE_FPS).toFixed(1)}s`}
               </p>
             )}
             {recResult && !recording && (
@@ -891,10 +922,11 @@ export default function SignBridge({
                   read {recResult.length === 1 ? "1 sign" : `${recResult.length} signs`}
                 </div>
                 {recResult.map((r, i) => (
-                  <div className="rec-row" key={i}>
+                  <div className={`rec-row${r.bothHands ? "" : " weak"}`} key={i}>
                     <span className="rec-n">{i + 1}</span>
                     <span className="rec-g">{r.gloss}</span>
                     <span className="cand-c">{Math.round(r.conf * 100)}%</span>
+                    {!r.bothHands && <span className="rec-warn">one hand only, not spoken</span>}
                     {r.dict.length > 0 && (
                       <span className="rec-d">
                         or {r.dict.map((d) => d.word).join(", ")}

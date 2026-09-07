@@ -157,7 +157,7 @@ export class SignSegmenter {
    * Reject a window that does not hold enough real hand data to be a sign.
    * This is the guard that stops a confident label being produced from nothing.
    */
-  private static hasEnoughHands(frames: PointFrame[]): boolean {
+  static hasEnoughHands(frames: PointFrame[]): boolean {
     if (frames.length === 0) return false;
     let withHands = 0;
     for (const f of frames) if (SignSegmenter.frameHasHand(f)) withHands++;
@@ -178,7 +178,7 @@ export class SignSegmenter {
    * marks them via lastReject and still returns the segment; SignBridge then
    * shows candidates but blocks automatic speech.
    */
-  private static hasBothHands(frames: PointFrame[]): boolean {
+  static hasBothHands(frames: PointFrame[]): boolean {
     if (frames.length === 0) return false;
     let bothCount = 0;
     for (const f of frames) {
@@ -356,7 +356,7 @@ export function splitRecording(frames: PointFrame[], minGap = SIGN_GAP_FRAMES, q
     while (hi > lo && smooth[hi - 1] <= quiet) hi--;      // trim trailing rest
     const piece = frames.slice(lo, hi);
     if (piece.length >= SignSegmenter.MIN_FRAMES &&
-        SignSegmenter["hasEnoughHands"](piece)) out.push(piece);
+        SignSegmenter.hasEnoughHands(piece)) out.push(piece);
   }
   return out;
 }

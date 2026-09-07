@@ -1124,3 +1124,7 @@ code{
        min-width:13px}
 .rec-g{font-size:15px;font-weight:600;color:var(--ink)}
 .rec-d{font-size:11.5px;color:var(--faint)}
+.rec-hint.ok{color:var(--sign)}
+.rec-hint.bad{color:var(--warn);font-weight:600}
+.rec-row.weak{opacity:.62}
+.rec-warn{font-size:11px;color:var(--warn)}
