@@ -6,7 +6,9 @@
  * with this seam in it.
  */
 import * as tf from "@tensorflow/tfjs";
-import { extractFeatures, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame } from "./features";
+import {
+  extractFeatures, anchorableCount, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame,
+} from "./features";
 import { fetchJson } from "./assets";
 import type { Prediction } from "./gate";
 import { calibrate, TEMPERATURE } from "./calibrate";
@@ -16,6 +18,21 @@ import { calibrate, TEMPERATURE } from "./calibrate";
 // 256-d embedding feeding it. See train/export_tfjs.py.
 const OUT_PROBS = "Identity";
 const OUT_EMBED = "Identity_1";
+
+/**
+ * How much of a clip must carry a usable pose before it is worth classifying.
+ *
+ * Everything downstream is anchored on the shoulders. When MediaPipe finds the
+ * hands but loses the pose, both shoulders arrive as (0,0), anchor()'s 1e-6
+ * clamp multiplies every coordinate by a million, and standardise() renormalises
+ * the result into a vector that looks entirely ordinary. Measured on exactly
+ * that input the model answered "alive" at 99.6% confidence, in the "confident"
+ * band, which the app speaks aloud.
+ *
+ * A majority is the bar: below it the sign is being read off frames that mostly
+ * had no body in them, and no answer is the correct answer.
+ */
+const MIN_ANCHORED = 0.5;
 
 export class GlossClassifier {
   private model: tf.GraphModel | null = null;
@@ -79,6 +96,7 @@ export class GlossClassifier {
    */
   predictTop(frames: PointFrame[], aspect: number, k = 3): { gloss: string; conf: number }[] {
     if (!this.model || frames.length === 0) return [];
+    if (!this.usable(frames, aspect)) return [];
     const probs = tf.tidy(() => {
       const feats = extractFeatures(frames, aspect);
       const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
@@ -94,6 +112,7 @@ export class GlossClassifier {
   /** Runs the model over a rolling buffer of frames. `aspect` = width / height. */
   predict(frames: PointFrame[], aspect: number): Prediction {
     if (!this.model || frames.length === 0) return { gloss: null, conf: 0 };
+    if (!this.usable(frames, aspect)) return { gloss: null, conf: 0 };
 
     const probs = tf.tidy(() => {
       const feats = extractFeatures(frames, aspect);
@@ -130,6 +149,7 @@ export class GlossClassifier {
    */
   embed(frames: PointFrame[], aspect: number): Float32Array | null {
     if (!this.model || frames.length === 0) return null;
+    if (!this.usable(frames, aspect)) return null;
     // not tf.tidy: it can only return tensors and containers, and this returns
     // a plain array or null, so the two tensors are disposed by hand
     const feats = extractFeatures(frames, aspect);
@@ -149,6 +169,12 @@ export class GlossClassifier {
       input.dispose();
       outs?.forEach(t => t.dispose());
     }
+  }
+
+  /** Are enough frames anchorable for the answer to mean anything? */
+  usable(frames: PointFrame[], aspect: number): boolean {
+    if (frames.length === 0) return false;
+    return anchorableCount(frames, aspect) / frames.length >= MIN_ANCHORED;
   }
 
   dispose() { ++this.generation; this.model?.dispose(); this.model = null; this.labels = []; }

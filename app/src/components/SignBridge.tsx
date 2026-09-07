@@ -5,7 +5,7 @@ import { GlossClassifier } from "../lib/classifier";
 import { SignBank, type BankMatch } from "../lib/bank";
 import { StabilityGate, FLOOR, NEEDED } from "../lib/gate";
 import { SEQ_LEN, type PointFrame } from "../lib/features";
-import { SignSegmenter } from "../lib/segment";
+import { SignSegmenter, splitRecording, SIGN_GAP_FRAMES } from "../lib/segment";
 import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
@@ -17,6 +17,31 @@ const BUFFER = SEQ_LEN * 2;
 /** Predict every Nth frame. Landmarks still run every frame so the overlay
  *  stays smooth; inference at ~10Hz is plenty for the stability gate. */
 const PREDICT_EVERY = 3;
+
+/**
+ * The rate the segmenter is fed at, in frames per second.
+ *
+ * Every corpus here is resampled to 15 fps before a single feature is computed
+ * (TARGET_FPS in the extractors). The app was feeding the segmenter on every
+ * requestAnimationFrame instead, so on a 60 Hz display it ran four times
+ * faster than anything it was tuned against, and every frame-counted threshold
+ * silently meant a quarter of what it says:
+ *
+ *     MIN_FRAMES 12    0.80 s as tuned    0.20 s at 60 Hz
+ *     QUIET_FRAMES 6   0.40 s as tuned    0.10 s at 60 Hz
+ *     MAX_FRAMES 90    6.0 s as tuned     1.5 s at 60 Hz
+ *
+ * Worse, motionEnergy measures displacement PER FRAME, so the same physical
+ * movement sampled four times as often reads as a quarter of the energy, and
+ * START = 0.012 became four times harder to reach. The result is a segmenter
+ * that starts late, on the fastest instant of a sign, and is ended 0.1 s later
+ * by any hold: it captures a position rather than a movement.
+ *
+ * Sampling on wall-clock time also makes a fast phone and a slow one behave
+ * identically, which frame counting never could.
+ */
+const CAPTURE_FPS = 15;
+const CAPTURE_INTERVAL_MS = 1000 / CAPTURE_FPS;
 
 type Entry = {
   gloss: string;
@@ -73,10 +98,23 @@ export default function SignBridge({
   const bankRef = useRef(new SignBank());
   const rafRef = useRef<number>(0);
   const tickRef = useRef(0);
+  const lastCaptureRef = useRef(0);
   const runningRef = useRef(false);
   const frameTimes = useRef<number[]>([]);
   const handFramesRef = useRef(0);
   const segRef = useRef(new SignSegmenter());
+  /**
+   * Record mode: the frames captured between pressing record and stopping.
+   *
+   * The live segmenter has to decide "has the sign ended?" from what it has
+   * seen so far. Measured on five real clips of Thank you and Good Morning it
+   * emitted nothing at all, while the same clips classified whole gave
+   * Thank you 99% and Morning 97%. Recording removes the guess: the model was
+   * trained on clips trimmed to exactly one sign, and a recording is that,
+   * with a person choosing the boundaries instead of a motion threshold.
+   */
+  const recordRef = useRef<PointFrame[]>([]);
+  const recordingRef = useRef(false);
   const uttRef = useRef(new UtteranceBuilder());
 
   const { state: lmState, error: lmError, detect } = useLandmarkers();
@@ -108,6 +146,11 @@ export default function SignBridge({
    */
   const [candidates, setCandidates] = useState<{ gloss: string; conf: number }[]>([]);
   const [dict, setDict] = useState<BankMatch[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [recFrames, setRecFrames] = useState(0);
+  const [recHands, setRecHands] = useState<"both" | "one" | "none">("none");
+  const [recResult, setRecResult] = useState<
+    { gloss: string; conf: number; bothHands: boolean; dict: BankMatch[] }[] | null>(null);
   const [bankSize, setBankSize] = useState(0);
   const [live, setLive] = useState<{ gloss: string | null; conf: number; progress: number }>(
     { gloss: null, conf: 0, progress: 0 }
@@ -281,6 +324,90 @@ export default function SignBridge({
     []
   );
 
+  /**
+   * Stop recording and read back what was signed.
+   *
+   * One recording can hold one sign or several. splitRecording cuts it at
+   * pauses of 1.2 s or longer, which is the only threshold measured that keeps
+   * a compound sign whole while still separating two signs (see
+   * SIGN_GAP_FRAMES). Each piece is then exactly the shape of a training clip,
+   * which is the condition the model's 68.3% top-1 was measured under.
+   */
+  const finishRecording = useCallback(() => {
+    recordingRef.current = false;
+    setRecording(false);
+    const frames = recordRef.current;
+    recordRef.current = [];
+    setRecFrames(0);
+
+    const video = videoRef.current;
+    const aspect = video && video.videoHeight
+      ? video.videoWidth / video.videoHeight : 16 / 9;
+
+    const pieces = splitRecording(frames);
+    if (!pieces.length) {
+      setRecResult(null);
+      setNotice(
+        frames.length < SIGN_GAP_FRAMES
+          ? "too short. Hold record while you sign, then stop"
+          : "no hands found in that recording. Step back so both hands are in frame"
+      );
+      return;
+    }
+
+    const reads = pieces.map((piece) => {
+      const pred = clfRef.current.predict(piece, aspect);
+      const e = clfRef.current.embed(piece, aspect);
+      // The SAME guard the live path applies, which record mode was missing.
+      // Measured on 400 clips against this model, zeroing the hand landmarks:
+      //
+      //   both hands      conf 0.73, 53 distinct answers
+      //   no hands        conf 0.75, 15 distinct, 'we' 176/400, 'Month' 167/400
+      //   right missing   conf 0.77, 18 distinct, 'Restaurant' 210/400
+      //
+      // Confidence is as high or HIGHER when the hands are gone, so no
+      // threshold on it can catch this. Counting hands is the only thing that
+      // can, and a read that fails must never be spoken.
+      const bothHands = SignSegmenter.hasBothHands(piece);
+      return {
+        gloss: pred.gloss ?? "",
+        conf: pred.conf,
+        bothHands,
+        dict: e && bankRef.current.ready ? bankRef.current.lookup(e, 3) : [],
+      };
+    }).filter((r) => r.gloss);
+
+    setRecResult(reads);
+    const speakable = reads.filter((r) => r.bothHands);
+    if (!speakable.length) {
+      setNotice(
+        "both hands were not in frame for that sign, so it was not read aloud. " +
+        "Step back and keep both hands visible."
+      );
+      return;
+    }
+    setNotice(speakable.length < reads.length
+      ? "some signs had a hand out of frame and were left out"
+      : null);
+    const mean = speakable.reduce((a, r) => a + r.conf, 0) / speakable.length;
+    emit(speakable.map((r) => r.gloss), new Date().toLocaleTimeString(),
+         langRef.current, mean);
+  }, [emit]);
+
+  const toggleRecord = useCallback(() => {
+    if (recordingRef.current) { finishRecording(); return; }
+    recordRef.current = [];
+    setRecFrames(0);
+    setRecResult(null);
+    setNotice(null);
+    setCandidates([]);
+    setDict([]);
+    segRef.current.reset();
+    setRecHands("none");
+    recordingRef.current = true;
+    setRecording(true);
+  }, [finishRecording]);
+
   const loop = useCallback(function loop() {
     if (!runningRef.current) return;
     const video = videoRef.current;
@@ -291,11 +418,36 @@ export default function SignBridge({
       // classifying a body stretched by whatever shape this webcam happens to
       // be. Read it live rather than assuming 16:9, see lib/features.ts.
       const aspect = video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
-      const res = detect(video, performance.now());
+      const nowMs = performance.now();
+      const res = detect(video, nowMs);
       if (res) {
+        // Draw at the display's rate, sample at the corpus's rate. The overlay
+        // should look smooth; the segmenter must see the same 15 fps every
+        // training clip was resampled to. See CAPTURE_FPS.
         draw(res.pose, res.left, res.right, res.face);
+        const due = nowMs - lastCaptureRef.current >= CAPTURE_INTERVAL_MS;
+        if (!due) {
+          rafRef.current = requestAnimationFrame(loop);
+          return;
+        }
+        lastCaptureRef.current = nowMs;
         tickRef.current++;
         const hasHands = !!res.left || !!res.right;
+
+        // Record mode owns the frames. The automatic segmenter is not merely
+        // unnecessary here, it is the thing being replaced, so it does not run
+        // at all and cannot emit a competing answer mid-recording.
+        if (recordingRef.current) {
+          recordRef.current.push(res.frame);
+          setRecFrames(recordRef.current.length);
+          // Live, not after the fact. Finding out that a hand was out of frame
+          // once the recording is already spoiled is the actual failure: the
+          // model answers anyway, at full confidence, from an attractor class.
+          setRecHands(res.left && res.right ? "both"
+                    : res.left || res.right ? "one" : "none");
+          rafRef.current = requestAnimationFrame(loop);
+          return;
+        }
 
         // Segment first, classify second. The model was trained on clips
         // trimmed to one sign; classifying a rolling window that also contains
@@ -327,34 +479,61 @@ export default function SignBridge({
         }
 
         if (segment) {
-          const predictions = clfRef.current.predictTop(segment, aspect, 5);
-          const pred = predictions[0] ?? { gloss: null, conf: 0 };
-          const confirmOnly = confirmBeforeSend || reject === "one-hand";
-          const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
-          setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
-
-          // Below the confident band, show what else it considered rather than
-          // discarding the sign. The right answer is in this list far more often
-          // than it is the top entry.
-          const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
-          setCandidates(unsure ? predictions : []);
-
-          // When the classifier is unsure, the sign may simply not be one of
-          // its 83. Only then is the dictionary worth searching, and only then
-          // is its own weaker accuracy an improvement on having no answer.
-          if (unsure && bankRef.current.ready) {
-            const e = clfRef.current.embed(segment, aspect);
-            setDict(e ? bankRef.current.lookup(e, 4) : []);
-          } else {
+          // A segment whose shoulders were never found cannot be classified:
+          // everything downstream is anchored on them, and the model answers
+          // confidently about nothing when they are missing. This is an else
+          // rather than an early return because requestAnimationFrame(loop)
+          // is at the BOTTOM of this function: returning here would stop the
+          // camera loop for good.
+          if (!clfRef.current.usable(segment, aspect)) {
+            setLive({ gloss: "", conf: 0, progress: 0 });
+            setCandidates([]);
             setDict([]);
-          }
+            setNotice("your shoulders are not in frame. Step back so your head and both shoulders are visible");
+          } else {
+            const pred = clfRef.current.predict(segment, aspect);
+            const confirmOnly = confirmBeforeSend || reject === "one-hand";
+            const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
+            setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
 
-          if (g.fire) {
-            const l = langRef.current;
-            const now = Date.now();
-            const finished = uttRef.current.add(g.fire, now, g.conf);
-            if (finished) emit(finished.glosses, finished.at, l, finished.conf);
-            setPending(uttRef.current.pending);
+            // Below the confident band, show what else it considered rather than
+            // discarding the sign. The right answer is in this list far more often
+            // than it is the top entry.
+            const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
+            setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5) : []);
+
+            // The dictionary runs on EVERY segment, not only when the
+            // classifier doubts itself.
+            //
+            // The first version gated it on low confidence, which sounds right
+            // and is wrong. A closed-set classifier cannot answer "not one of
+            // mine": asked to read a sign outside its 83 it must still pick one,
+            // and softmax is perfectly capable of being certain about it.
+            // Measured on real clips of words it was never trained on, it said
+            // "Man" at 86% for water and "Alright" at 74% for help, both in the
+            // confident band, both spoken aloud, and both with the dictionary
+            // suppressed precisely because it was confident. The dictionary had
+            // water and help right.
+            //
+            // Score cannot arbitrate either. Where the dictionary is right the
+            // median top-1 cosine is 0.832 and where it is wrong it is 0.780,
+            // so any threshold that keeps most correct answers is barely better
+            // than a coin toss. Nothing here can tell the two apart, so nothing
+            // here pretends to: both readings are shown and a person decides.
+            if (bankRef.current.ready) {
+              const e = clfRef.current.embed(segment, aspect);
+              setDict(e ? bankRef.current.lookup(e, 4) : []);
+            } else {
+              setDict([]);
+            }
+
+            if (g.fire) {
+              const l = langRef.current;
+              const now = Date.now();
+              const finished = uttRef.current.add(g.fire, now, g.conf);
+              if (finished) emit(finished.glosses, finished.at, l, finished.conf);
+              setPending(uttRef.current.pending);
+            }
           }
         } else {
           // In confirmation mode the last completed reading is a pending
@@ -536,6 +715,7 @@ export default function SignBridge({
     bufferRef.current = [];
     gateRef.current.reset();
     handFramesRef.current = 0;
+    lastCaptureRef.current = 0;
     segRef.current.reset();
     uttRef.current.reset();
     setPending([]);
@@ -675,7 +855,7 @@ export default function SignBridge({
                   {dict.length > 0 && (
                     <div className="dict">
                       <div className="dict-head">
-                        not one of the {vocabSize}? closest of {bankSize} dictionary signs
+                        closest of {bankSize} dictionary signs, beyond the {vocabSize} above
                       </div>
                       <div className="cands">
                         {dict.map((d) => (
@@ -717,6 +897,16 @@ export default function SignBridge({
               <button className="go" onClick={start} disabled={!ready || running}>
                 <Camera size={17} /> Start camera
               </button>
+              <button
+                className={recording ? "rec on" : "rec"}
+                onClick={toggleRecord}
+                disabled={!running}
+                title="Record a sign, then stop. Pause about a second between signs."
+              >
+                {recording
+                  ? `Stop and read (${(recFrames / CAPTURE_FPS).toFixed(1)}s)`
+                  : "Record a sign"}
+              </button>
               <button onClick={stop} disabled={!running}>
                 <Square size={16} /> Stop
               </button>
@@ -729,6 +919,36 @@ export default function SignBridge({
                 <RotateCcw size={16} /> Clear
               </button>
             </div>
+            {recording && (
+              <p className={`rec-hint${recHands === "both" ? " ok" : " bad"}`}>
+                {recHands === "both"
+                  ? "Both hands visible. Sign, then press stop. Pause about a second between signs."
+                  : recHands === "one"
+                  ? "Only ONE hand visible. Bring the other into frame, or this will not be read."
+                  : "Hands NOT visible. Step back so both hands are in the picture."}
+                {` · ${(recFrames / CAPTURE_FPS).toFixed(1)}s`}
+              </p>
+            )}
+            {recResult && !recording && (
+              <div className="rec-out">
+                <div className="rec-out-head">
+                  read {recResult.length === 1 ? "1 sign" : `${recResult.length} signs`}
+                </div>
+                {recResult.map((r, i) => (
+                  <div className={`rec-row${r.bothHands ? "" : " weak"}`} key={i}>
+                    <span className="rec-n">{i + 1}</span>
+                    <span className="rec-g">{r.gloss}</span>
+                    <span className="cand-c">{Math.round(r.conf * 100)}%</span>
+                    {!r.bothHands && <span className="rec-warn">one hand only, not spoken</span>}
+                    {r.dict.length > 0 && (
+                      <span className="rec-d">
+                        or {r.dict.map((d) => d.word).join(", ")}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {camError && <div className="err-box">{camError}</div>}
           </div>
         </section>
