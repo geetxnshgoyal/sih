@@ -18,6 +18,31 @@ const BUFFER = SEQ_LEN * 2;
  *  stays smooth; inference at ~10Hz is plenty for the stability gate. */
 const PREDICT_EVERY = 3;
 
+/**
+ * The rate the segmenter is fed at, in frames per second.
+ *
+ * Every corpus here is resampled to 15 fps before a single feature is computed
+ * (TARGET_FPS in the extractors). The app was feeding the segmenter on every
+ * requestAnimationFrame instead, so on a 60 Hz display it ran four times
+ * faster than anything it was tuned against, and every frame-counted threshold
+ * silently meant a quarter of what it says:
+ *
+ *     MIN_FRAMES 12    0.80 s as tuned    0.20 s at 60 Hz
+ *     QUIET_FRAMES 6   0.40 s as tuned    0.10 s at 60 Hz
+ *     MAX_FRAMES 90    6.0 s as tuned     1.5 s at 60 Hz
+ *
+ * Worse, motionEnergy measures displacement PER FRAME, so the same physical
+ * movement sampled four times as often reads as a quarter of the energy, and
+ * START = 0.012 became four times harder to reach. The result is a segmenter
+ * that starts late, on the fastest instant of a sign, and is ended 0.1 s later
+ * by any hold: it captures a position rather than a movement.
+ *
+ * Sampling on wall-clock time also makes a fast phone and a slow one behave
+ * identically, which frame counting never could.
+ */
+const CAPTURE_FPS = 15;
+const CAPTURE_INTERVAL_MS = 1000 / CAPTURE_FPS;
+
 type Entry = {
   gloss: string;
   text: string;
@@ -70,6 +95,7 @@ export default function SignBridge({
   const bankRef = useRef(new SignBank());
   const rafRef = useRef<number>(0);
   const tickRef = useRef(0);
+  const lastCaptureRef = useRef(0);
   const runningRef = useRef(false);
   const frameTimes = useRef<number[]>([]);
   const handFramesRef = useRef(0);
@@ -288,9 +314,19 @@ export default function SignBridge({
       // classifying a body stretched by whatever shape this webcam happens to
       // be. Read it live rather than assuming 16:9, see lib/features.ts.
       const aspect = video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
-      const res = detect(video, performance.now());
+      const nowMs = performance.now();
+      const res = detect(video, nowMs);
       if (res) {
+        // Draw at the display's rate, sample at the corpus's rate. The overlay
+        // should look smooth; the segmenter must see the same 15 fps every
+        // training clip was resampled to. See CAPTURE_FPS.
         draw(res.pose, res.left, res.right, res.face);
+        const due = nowMs - lastCaptureRef.current >= CAPTURE_INTERVAL_MS;
+        if (!due) {
+          rafRef.current = requestAnimationFrame(loop);
+          return;
+        }
+        lastCaptureRef.current = nowMs;
         tickRef.current++;
         const hasHands = !!res.left || !!res.right;
 
@@ -558,6 +594,7 @@ export default function SignBridge({
     bufferRef.current = [];
     gateRef.current.reset();
     handFramesRef.current = 0;
+    lastCaptureRef.current = 0;
     segRef.current.reset();
     uttRef.current.reset();
     setPending([]);
