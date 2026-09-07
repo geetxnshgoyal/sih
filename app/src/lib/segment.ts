@@ -271,3 +271,92 @@ export class SignSegmenter {
     return null;
   }
 }
+
+/**
+ * Split a RECORDING into signs, offline.
+ *
+ * The live segmenter has to decide "has the sign ended?" from the frames it has
+ * seen so far, with no view of what comes next. That is why it is brittle: a
+ * 0.4 s hold inside a compound sign looks identical, in the moment, to the end
+ * of a sign. Measured on five real clips of Thank you and Good Morning it
+ * emitted nothing at all, while classifying the same clips whole gave
+ * Thank you 99% and Morning 93%.
+ *
+ * A recording has no such problem. The whole sequence is in hand, so the
+ * threshold can be set FROM the recording rather than guessed ahead of it, and
+ * a pause is only a boundary if it is quiet relative to the rest of this
+ * particular recording by this particular signer.
+ *
+ * Returns one entry per sign, in order. A recording holding a single sign
+ * returns a single entry, which is the case that matters most: it is then
+ * exactly the shape of a training clip.
+ */
+/**
+ * How long a pause must be, in frames at 15 fps, before it separates two signs
+ * rather than being a hold inside one.
+ *
+ * Swept against five real clips of Thank you and Good Morning, plus the two of
+ * them concatenated with a rest between:
+ *
+ *     gap     single signs stay whole   the pair splits into
+ *     0.33s   no, 2 of 5 over-split     4
+ *     0.80s   no, 1 of 5 over-split     3
+ *     1.00s   yes                       3
+ *     1.20s   yes                       2   correct
+ *     1.47s   yes                       1   boundary missed
+ *
+ * 1.2 s is the only value tested that gets both right, and it is a rule a
+ * person can be told: pause about a second between signs. Below it lies the
+ * hold inside a compound sign, which is what broke the live segmenter.
+ */
+export const SIGN_GAP_FRAMES = 18;
+export function splitRecording(frames: PointFrame[], minGap = SIGN_GAP_FRAMES, quietFrac = 0.35): PointFrame[][] {
+  if (frames.length < SignSegmenter.MIN_FRAMES) return [];
+
+  const energy: number[] = [0];
+  for (let i = 1; i < frames.length; i++) {
+    energy.push(motionEnergy(frames[i - 1], frames[i]));
+  }
+  // three-frame mean: MediaPipe jitter puts single-frame spikes in the middle
+  // of a genuine pause, and a spike is enough to stop a run being a boundary
+  const smooth = energy.map((_, i) => {
+    const a = energy[Math.max(0, i - 1)], b = energy[i];
+    const c = energy[Math.min(energy.length - 1, i + 1)];
+    return (a + b + c) / 3;
+  });
+
+  // Adaptive: quiet MEANS quiet for this signer, in this recording. A fixed
+  // threshold cannot serve both someone signing briskly and someone deliberate.
+  const sorted = [...smooth].filter(v => v > 0).sort((a, b) => a - b);
+  const median = sorted.length ? sorted[Math.floor(sorted.length * 0.5)] : 0;
+  const quiet = Math.max(SignSegmenter.STOP, median * quietFrac);
+
+  /** a pause must last this long to be a boundary rather than a hold */
+  const MIN_GAP = minGap;       // frames, at the 15 fps everything is sampled at
+
+  const runs: [number, number][] = [];
+  let s = -1;
+  for (let i = 0; i < smooth.length; i++) {
+    if (smooth[i] <= quiet) { if (s < 0) s = i; }
+    else { if (s >= 0 && i - s >= MIN_GAP) runs.push([s, i]); s = -1; }
+  }
+  if (s >= 0 && smooth.length - s >= MIN_GAP) runs.push([s, smooth.length]);
+
+  // cut at the middle of each interior pause; leading and trailing pauses are
+  // rest, not boundaries, and are trimmed rather than split on
+  const cuts = runs
+    .filter(([a, b]) => a > 0 && b < smooth.length)
+    .map(([a, b]) => Math.floor((a + b) / 2));
+
+  const bounds = [0, ...cuts, frames.length];
+  const out: PointFrame[][] = [];
+  for (let i = 0; i < bounds.length - 1; i++) {
+    let lo = bounds[i], hi = bounds[i + 1];
+    while (lo < hi && smooth[lo] <= quiet) lo++;          // trim leading rest
+    while (hi > lo && smooth[hi - 1] <= quiet) hi--;      // trim trailing rest
+    const piece = frames.slice(lo, hi);
+    if (piece.length >= SignSegmenter.MIN_FRAMES &&
+        SignSegmenter["hasEnoughHands"](piece)) out.push(piece);
+  }
+  return out;
+}

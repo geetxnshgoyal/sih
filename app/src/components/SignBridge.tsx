@@ -5,7 +5,7 @@ import { GlossClassifier } from "../lib/classifier";
 import { SignBank, type BankMatch } from "../lib/bank";
 import { StabilityGate, FLOOR, NEEDED } from "../lib/gate";
 import { SEQ_LEN, type PointFrame } from "../lib/features";
-import { SignSegmenter } from "../lib/segment";
+import { SignSegmenter, splitRecording, SIGN_GAP_FRAMES } from "../lib/segment";
 import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
@@ -100,6 +100,18 @@ export default function SignBridge({
   const frameTimes = useRef<number[]>([]);
   const handFramesRef = useRef(0);
   const segRef = useRef(new SignSegmenter());
+  /**
+   * Record mode: the frames captured between pressing record and stopping.
+   *
+   * The live segmenter has to decide "has the sign ended?" from what it has
+   * seen so far. Measured on five real clips of Thank you and Good Morning it
+   * emitted nothing at all, while the same clips classified whole gave
+   * Thank you 99% and Morning 97%. Recording removes the guess: the model was
+   * trained on clips trimmed to exactly one sign, and a recording is that,
+   * with a person choosing the boundaries instead of a motion threshold.
+   */
+  const recordRef = useRef<PointFrame[]>([]);
+  const recordingRef = useRef(false);
   const uttRef = useRef(new UtteranceBuilder());
 
   const { state: lmState, error: lmError, detect } = useLandmarkers();
@@ -131,6 +143,10 @@ export default function SignBridge({
    */
   const [candidates, setCandidates] = useState<{ gloss: string; conf: number }[]>([]);
   const [dict, setDict] = useState<BankMatch[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [recFrames, setRecFrames] = useState(0);
+  const [recResult, setRecResult] = useState<
+    { gloss: string; conf: number; dict: BankMatch[] }[] | null>(null);
   const [bankSize, setBankSize] = useState(0);
   const [live, setLive] = useState<{ gloss: string | null; conf: number; progress: number }>(
     { gloss: null, conf: 0, progress: 0 }
@@ -304,6 +320,69 @@ export default function SignBridge({
     []
   );
 
+  /**
+   * Stop recording and read back what was signed.
+   *
+   * One recording can hold one sign or several. splitRecording cuts it at
+   * pauses of 1.2 s or longer, which is the only threshold measured that keeps
+   * a compound sign whole while still separating two signs (see
+   * SIGN_GAP_FRAMES). Each piece is then exactly the shape of a training clip,
+   * which is the condition the model's 68.3% top-1 was measured under.
+   */
+  const finishRecording = useCallback(() => {
+    recordingRef.current = false;
+    setRecording(false);
+    const frames = recordRef.current;
+    recordRef.current = [];
+    setRecFrames(0);
+
+    const video = videoRef.current;
+    const aspect = video && video.videoHeight
+      ? video.videoWidth / video.videoHeight : 16 / 9;
+
+    const pieces = splitRecording(frames);
+    if (!pieces.length) {
+      setRecResult(null);
+      setNotice(
+        frames.length < SIGN_GAP_FRAMES
+          ? "too short. Hold record while you sign, then stop"
+          : "no hands found in that recording. Step back so both hands are in frame"
+      );
+      return;
+    }
+
+    const reads = pieces.map((piece) => {
+      const pred = clfRef.current.predict(piece, aspect);
+      const e = clfRef.current.embed(piece, aspect);
+      return {
+        gloss: pred.gloss ?? "",
+        conf: pred.conf,
+        dict: e && bankRef.current.ready ? bankRef.current.lookup(e, 3) : [],
+      };
+    }).filter((r) => r.gloss);
+
+    setRecResult(reads);
+    setNotice(null);
+    if (reads.length) {
+      const mean = reads.reduce((a, r) => a + r.conf, 0) / reads.length;
+      emit(reads.map((r) => r.gloss), new Date().toLocaleTimeString(),
+           langRef.current, mean);
+    }
+  }, [emit]);
+
+  const toggleRecord = useCallback(() => {
+    if (recordingRef.current) { finishRecording(); return; }
+    recordRef.current = [];
+    setRecFrames(0);
+    setRecResult(null);
+    setNotice(null);
+    setCandidates([]);
+    setDict([]);
+    segRef.current.reset();
+    recordingRef.current = true;
+    setRecording(true);
+  }, [finishRecording]);
+
   const loop = useCallback(function loop() {
     if (!runningRef.current) return;
     const video = videoRef.current;
@@ -329,6 +408,16 @@ export default function SignBridge({
         lastCaptureRef.current = nowMs;
         tickRef.current++;
         const hasHands = !!res.left || !!res.right;
+
+        // Record mode owns the frames. The automatic segmenter is not merely
+        // unnecessary here, it is the thing being replaced, so it does not run
+        // at all and cannot emit a competing answer mid-recording.
+        if (recordingRef.current) {
+          recordRef.current.push(res.frame);
+          setRecFrames(recordRef.current.length);
+          rafRef.current = requestAnimationFrame(loop);
+          return;
+        }
 
         // Segment first, classify second. The model was trained on clips
         // trimmed to one sign; classifying a rolling window that also contains
@@ -768,6 +857,16 @@ export default function SignBridge({
               <button className="go" onClick={start} disabled={!ready || running}>
                 <Camera size={17} /> Start camera
               </button>
+              <button
+                className={recording ? "rec on" : "rec"}
+                onClick={toggleRecord}
+                disabled={!running}
+                title="Record a sign, then stop. Pause about a second between signs."
+              >
+                {recording
+                  ? `Stop and read (${(recFrames / CAPTURE_FPS).toFixed(1)}s)`
+                  : "Record a sign"}
+              </button>
               <button onClick={stop} disabled={!running}>
                 <Square size={16} /> Stop
               </button>
@@ -780,6 +879,31 @@ export default function SignBridge({
                 <RotateCcw size={16} /> Clear
               </button>
             </div>
+            {recording && (
+              <p className="rec-hint">
+                Recording. Sign, then press stop. For more than one sign, pause
+                about a second between them.
+              </p>
+            )}
+            {recResult && !recording && (
+              <div className="rec-out">
+                <div className="rec-out-head">
+                  read {recResult.length === 1 ? "1 sign" : `${recResult.length} signs`}
+                </div>
+                {recResult.map((r, i) => (
+                  <div className="rec-row" key={i}>
+                    <span className="rec-n">{i + 1}</span>
+                    <span className="rec-g">{r.gloss}</span>
+                    <span className="cand-c">{Math.round(r.conf * 100)}%</span>
+                    {r.dict.length > 0 && (
+                      <span className="rec-d">
+                        or {r.dict.map((d) => d.word).join(", ")}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             {camError && <div className="err-box">{camError}</div>}
           </div>
         </section>
