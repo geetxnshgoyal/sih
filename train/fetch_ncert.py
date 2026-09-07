@@ -91,13 +91,24 @@ def safe(name: str) -> str:
     return "".join(c if c.isalnum() or c in " _-" else "_" for c in name)[:80]
 
 
-def catalogue(limit: int) -> list[dict]:
+def catalogue(limit: int, refresh: bool = False) -> list[dict]:
+    if META.exists() and not refresh:
+        try:
+            cached = json.loads(META.read_text())
+            if isinstance(cached, list) and cached:
+                return cached[:limit] if limit else cached
+        except (OSError, json.JSONDecodeError):
+            pass
+
     import yt_dlp
+    # Playlist enumeration occasionally stalls on YouTube API pagination. Keep
+    # retries and timeouts bounded so the coordinator can continue to the next
+    # licensed source and record the failure instead of hanging indefinitely.
     opts = {"quiet": True, "extract_flat": "in_playlist", "skip_download": True,
-            "socket_timeout": 60, "playlistend": 20000}
+            "socket_timeout": 15, "playlistend": 1000, "retries": 0,
+            "extractor_retries": 0, "ignoreerrors": True}
     items: dict[str, dict] = {}
     sources = [f"https://www.youtube.com/playlist?list={p}" for p in PLAYLISTS]
-    sources.append(f"{CHANNEL}/videos")
     for src in sources:
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -207,9 +218,12 @@ def main() -> int:
                     help="process at most this many unfinished clips")
     ap.add_argument("--tier", type=int, choices=[0, 1, 2])
     ap.add_argument("--complexity", type=int, default=1, choices=[0, 1, 2])
+    ap.add_argument("--refresh-catalogue", action="store_true",
+                    help="refresh the cached YouTube playlist catalogue")
     args = ap.parse_args()
 
-    items = sorted(catalogue(args.limit), key=lambda item: priority_key(item["word"]))
+    items = sorted(catalogue(args.limit, args.refresh_catalogue),
+                   key=lambda item: priority_key(item["word"]))
     if args.tier is not None:
         items = [item for item in items if priority_key(item["word"])[0] == args.tier]
     words = sorted({i["word"] for i in items})

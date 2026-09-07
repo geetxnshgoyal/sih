@@ -43,6 +43,7 @@ import multiprocessing as mp_proc
 import os
 import shutil
 import signal
+import ssl
 import sys
 import tempfile
 import urllib.parse
@@ -57,8 +58,59 @@ ROOT = Path(__file__).resolve().parent.parent
 LIST = ROOT / "data" / "meta" / "_islgov_files.json"
 OUT = ROOT / "data" / "islgov_landmarks"
 REPO = "silentone0725/Indian_Sign_Language_Data.gov_Rencoded"
+TREE_API = f"https://huggingface.co/api/datasets/{REPO}/tree/main"
 N_POSE, N_HAND = 33, 21
 CHUNK = 25          # clips per task; small enough that workers get recycled
+MIN_ACTIVE = 8
+TRIM_PAD = 2
+
+
+def tls_context() -> ssl.SSLContext:
+    """Use certifi in Python.org installs whose system CA bundle is missing."""
+    try:
+        import certifi
+        return ssl.create_default_context(cafile=certifi.where())
+    except ImportError:
+        return ssl.create_default_context()
+
+
+def ensure_file_list(refresh: bool = False) -> list[str]:
+    """Fetch and cache the complete public repository tree, resumably by file list."""
+    if LIST.exists() and not refresh:
+        value = json.loads(LIST.read_text())
+        if isinstance(value, list) and value:
+            return value
+
+    url = f"{TREE_API}?recursive=true&expand=false&limit=1000"
+    paths: list[str] = []
+    context = tls_context()
+    page = 0
+    while url:
+        page += 1
+        request = urllib.request.Request(url, headers={"User-Agent": "Setu-ISL-pipeline/2"})
+        with urllib.request.urlopen(request, timeout=30, context=context) as response:
+            entries = json.load(response)
+            link = response.headers.get("Link", "")
+        paths.extend(
+            item["path"] for item in entries
+            if item.get("type") == "file"
+            and Path(item.get("path", "")).suffix.lower() in {".mp4", ".mov", ".webm", ".mkv"}
+        )
+        next_link = None
+        for part in link.split(","):
+            if 'rel="next"' in part:
+                next_link = part[part.find("<") + 1:part.find(">")]
+                break
+        url = next_link
+        print(f"  catalogue page {page}: {len(paths)} videos", flush=True)
+
+    if not paths:
+        raise RuntimeError("Hugging Face repository contained no video files")
+    LIST.parent.mkdir(parents=True, exist_ok=True)
+    temporary = LIST.with_suffix(".tmp")
+    temporary.write_text(json.dumps(paths, indent=1))
+    temporary.replace(LIST)
+    return paths
 
 
 def word_of(path: str) -> str:
@@ -105,7 +157,7 @@ def worker(args) -> tuple[int, int, int]:
                 # FOREVER on a stalled connection, and one hung worker
                 # deadlocks the whole pool: this run stopped dead at
                 # 13,660 of 13,665 with every process at 0% CPU.
-                with urllib.request.urlopen(url, timeout=60) as r, \
+                with urllib.request.urlopen(url, timeout=60, context=tls_context()) as r, \
                         open(tmp_vid, "wb") as fh:
                     shutil.copyfileobj(r, fh)
                 cap = cv2.VideoCapture(tmp_vid)
@@ -139,14 +191,29 @@ def worker(args) -> tuple[int, int, int]:
                 if not pose:
                     failed += 1
                     continue
+                pose_array = np.stack(pose)
+                face_array = np.stack(face)
+                left_array = np.stack(lh)
+                right_array = np.stack(rh)
+                present = ((np.abs(left_array).sum(axis=(1, 2)) > 0)
+                           | (np.abs(right_array).sum(axis=(1, 2)) > 0))
+                active = np.flatnonzero(present)
+                if active.size < MIN_ACTIVE:
+                    failed += 1
+                    continue
+                lo = max(int(active[0]) - TRIM_PAD, 0)
+                hi = min(int(active[-1]) + TRIM_PAD + 1, len(present))
+                if present[lo:hi].mean() < .6:
+                    failed += 1
+                    continue
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 # Atomic write. savez_compressed builds its zip incrementally, so
                 # a kill mid-write leaves a truncated file that still EXISTS and
                 # would be skipped as done on the next run. The temp name must
                 # already end in .npz or savez appends a second suffix.
                 tmp = dest.with_suffix(".tmp.npz")
-                np.savez_compressed(tmp, pose=np.stack(pose), face=np.stack(face),
-                                    lh=np.stack(lh), rh=np.stack(rh),
+                np.savez_compressed(tmp, pose=pose_array[lo:hi], face=face_array[lo:hi],
+                                    lh=left_array[lo:hi], rh=right_array[lo:hi],
                                     aspect=np.float32(aspect), fps=np.float32(target_fps),
                                     source=np.array("islgov"),
                                     source_url=np.array(url), extraction_version=np.int32(2))
@@ -173,9 +240,12 @@ def main() -> int:
                     help="process at most this many unfinished clips")
     ap.add_argument("--tier", type=int, choices=[0, 1, 2],
                     help="only clinical (0), daily (1), or remaining (2) labels")
+    ap.add_argument("--refresh-catalogue", action="store_true",
+                    help="refresh the cached Hugging Face repository tree")
     args = ap.parse_args()
 
-    paths = sorted(json.loads(LIST.read_text()), key=lambda p: priority_key(word_of(p)))
+    paths = sorted(ensure_file_list(args.refresh_catalogue),
+                   key=lambda p: priority_key(word_of(p)))
     if args.tier is not None:
         paths = [p for p in paths if priority_key(word_of(p))[0] == args.tier]
     if args.limit:
@@ -183,9 +253,10 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
 
     todo = [p for p in paths if not (OUT / word_of(p) / (Path(p).stem + ".npz")).exists()]
+    already = len(paths) - len(todo)
     if args.batch_size:
         todo = todo[:args.batch_size]
-    print(f"{len(paths)} clips listed, {len(paths) - len(todo)} already extracted, "
+    print(f"{len(paths)} clips listed, {already} already extracted, "
           f"{len(todo)} to do, {args.workers} workers", flush=True)
     if not todo:
         return 0
