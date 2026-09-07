@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
-import { loadSignLibrary } from '../lib/signLibrary';
-import type { SignLibrary } from '../lib/reverse';
+import { useCallback, useEffect, useState } from 'react';
+import { loadSignCatalog, loadSignClip } from '../lib/signLibrary';
+import type { SignClip, SignLibrary } from '../lib/reverse';
+
 export function useSignLibrary() {
   const [library, setLibrary] = useState<SignLibrary>({});
   const [error, setError] = useState('');
@@ -8,10 +9,28 @@ export function useSignLibrary() {
   useEffect(() => {
     let cancelled = false;
     setError('');
-    loadSignLibrary().then(data => { if (!cancelled) setLibrary(data); }).catch(e => {
-      if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+    loadSignCatalog().then(names => {
+      if (!cancelled) setLibrary(Object.fromEntries(names.map(name => [name, {version: 2, fps: 14, body: []}])));
+    }).catch(reason => {
+      if (!cancelled) setError(reason instanceof Error ? reason.message : String(reason));
     });
     return () => { cancelled = true; };
   }, [attempt]);
-  return { library, error, loading: !error && !Object.keys(library).length, retry: () => setAttempt(n => n + 1) };
+
+  const getClip = useCallback(async (gloss: string): Promise<SignClip | null> => {
+    try {
+      const frames = await loadSignClip(gloss);
+      if (frames) setLibrary(previous => ({ ...previous, [gloss]: frames }));
+      return frames;
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+      return null;
+    }
+  }, []);
+
+  return {
+    library, getClip, error,
+    loading: !error && !Object.keys(library).length,
+    retry: () => setAttempt(value => value + 1),
+  };
 }

@@ -4,7 +4,8 @@ Expand the sign playback library from 96 words to as many as we have clips for.
     .venv-tf/bin/python train/export_signs.py --limit 400
 
 Reads  data/{ncert,shiksha,islgov}_landmarks/<word>/*.npz
-Writes app/public/model/_signs.json   word -> 24 frames x 65 points x [x, y]
+Writes app/public/model/_signs.json   word -> versioned body/optional-face clip
+       app/public/signs/*.json        lazy playback shards (via pipeline.py)
 
 The gap this closes
 -------------------
@@ -21,9 +22,9 @@ auto-fits it to the canvas. That is the output of features.anchor(isotropic(.))
 which every corpus here already passes through. So a playback entry is the same
 pipeline as a training example, stopped one step earlier.
 
-The renderer reads only x and y, never z (verified in SignPlayer.tsx), so z is
-written as 0. The shape stays 65x3 to match the SignFrame type, and a column of
-zeros costs almost nothing once gzipped.
+The renderer uses z for hand layer order. New exports keep x/y/z and include
+the 48-point face subset where available. Legacy body-only entries remain
+valid and receive a neutral avatar face.
 
 Source order is deliberate
 --------------------------
@@ -87,8 +88,8 @@ def wanted_words() -> list[str]:
     return uniq
 
 
-def playback_frames(path: Path) -> list | None:
-    """One landmark npz -> FRAMES x 65 x 3, anchored, z zeroed."""
+def playback_frames(path: Path) -> dict | None:
+    """One landmark npz -> versioned body plus optional face animation."""
     try:
         with np.load(path) as npz:
             if "pose" not in npz:
@@ -103,23 +104,29 @@ def playback_frames(path: Path) -> list | None:
             pts = np.concatenate([npz["pose"][:, :features.POSE_KEEP, :3],
                                   npz["lh"][:, :, :3], npz["rh"][:, :, :3]],
                                  axis=1).astype(np.float64)[lo:hi]
+            face = npz["face"][lo:hi].astype(np.float64) if "face" in npz else None
+            if face is not None and face.shape[1] == 468:
+                from face import FACE_SUBSET
+                face = face[:, FACE_SUBSET]
+            if face is not None and face.shape[1:] != (48, 3):
+                face = None
             aspect = float(npz["aspect"]) if "aspect" in npz else 1.0
     except Exception:
         return None
     if pts.shape[0] < MIN_ACTIVE or not (0.2 < aspect < 5.0):
         return None
-    seq = features.anchor(features.isotropic(pts, aspect))
+    combined = np.concatenate([pts, face], axis=1) if face is not None else pts
+    seq = features.anchor(features.isotropic(combined, aspect))
     if not np.all(np.isfinite(seq)):
         return None
     t = seq.shape[0]
     take = np.round(np.arange(FRAMES) * (t - 1) / max(FRAMES - 1, 1)).astype(int)
-    seq = seq[np.minimum(take, t - 1)]
-    seq = np.round(seq[..., :2], DECIMALS)
-    # x and y only. SignPlayer reads p[0] and p[1] and never p[2], so the depth
-    # column was a third of the file doing nothing. A hand that was never
-    # detected stays exactly zero, which is how the renderer knows not to draw
-    # a collapsed claw where there was no hand.
-    return [[[float(v) for v in p] for p in f] for f in seq]
+    seq = np.round(seq[np.minimum(take, t - 1)], DECIMALS)
+    body = [[[float(v) for v in p] for p in f] for f in seq[:, :65]]
+    result = {"version": 2, "fps": 14, "body": body}
+    if face is not None:
+        result["face"] = [[[float(v) for v in p] for p in f] for f in seq[:, 65:]]
+    return result
 
 
 def main() -> int:

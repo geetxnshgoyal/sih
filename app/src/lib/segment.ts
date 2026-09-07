@@ -57,6 +57,12 @@ export class SignSegmenter {
   get progress() { return this.state === 'idle' ? 0 : Math.min(1, this.samples.length / 8); }
   get lastEnergy() { return this.energy; }
   get lastReject() { return this.rejected; }
+  /** Finish the current live sign when the signer chooses its boundary. */
+  flush(): PointFrame[] | null {
+    if (this.state !== 'signing' || !this.samples.length) return null;
+    this.state = 'idle';
+    return this.finish(this.samples.slice());
+  }
   reset() {
     this.state = 'idle'; this.samples = []; this.preroll = []; this.prev = null;
     this.quietAt = null; this.gapAt = null; this.energy = 0; this.rejected = null;

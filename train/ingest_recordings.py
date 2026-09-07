@@ -23,7 +23,8 @@ import features
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "own.npz"
-FORMATS = {"setu-recordings-v1", "setu-recordings-v2"}
+FORMATS = {"setu-recordings-v1", "setu-recordings-v2", "setu-recordings-v3"}
+FACE_POINTS = 48
 
 
 def main() -> int:
@@ -67,7 +68,8 @@ def main() -> int:
     seen = set()
     for take in takes:
         try:
-            seq = np.asarray(take['frames'], dtype=np.float64)
+            raw_body = take.get('body', take.get('frames'))
+            seq = np.asarray(raw_body, dtype=np.float64)
             gloss = take['gloss'].strip()
             if not gloss or seq.ndim != 3 or seq.shape[1:] != (features.N_POINTS, 3) or len(seq) < 4 or not np.isfinite(seq).all():
                 raise ValueError('invalid label or landmark shape')
@@ -104,6 +106,8 @@ def main() -> int:
     label_id = {g: i for i, g in enumerate(keep)}
     X = np.zeros((len(takes), features.SEQ_LEN, features.N_POINTS, features.N_DIMS),
                  dtype=np.float32)
+    X_face = np.zeros((len(takes), features.SEQ_LEN, FACE_POINTS, 3), dtype=np.float32)
+    face_mask = np.zeros((len(takes), features.SEQ_LEN), dtype=np.float32)
     y = np.zeros(len(takes), dtype=np.int32)
 
     kept = 0
@@ -111,7 +115,7 @@ def main() -> int:
         gloss = str(t.get("gloss", "")).strip()
         if gloss not in label_id:
             continue
-        seq = np.asarray(t.get("frames", []), dtype=np.float64)   # (T, 65, 3) unit coords
+        seq = np.asarray(t.get("body", t.get("frames", [])), dtype=np.float64)   # (T, 65, 3) unit coords
         if seq.ndim != 3 or seq.shape[1] != features.N_POINTS:
             print(f"  ! bad shape {seq.shape} for {gloss}, skipped")
             continue
@@ -122,20 +126,42 @@ def main() -> int:
         # they were: but a v1 file recorded on a 4:3 camera is silently wrong
         # and should be re-recorded rather than trusted.
         aspect = float(t.get("aspect") or 16 / 9)
-        arr = features.resample(features.anchor(features.isotropic(seq, aspect)))
+        raw_face = t.get("face")
+        face = np.zeros((len(seq), FACE_POINTS, 3), dtype=np.float64)
+        available = np.zeros(len(seq), dtype=np.float32)
+        if isinstance(raw_face, list) and len(raw_face) == len(seq):
+            for frame_i, frame in enumerate(raw_face):
+                if frame is None:
+                    continue
+                candidate = np.asarray(frame, dtype=np.float64)
+                if candidate.shape == (FACE_POINTS, 3) and np.isfinite(candidate).all():
+                    face[frame_i] = candidate
+                    available[frame_i] = 1
+        # Anchor body and face together so hand-to-lip geometry shares one
+        # coordinate system. Missing face frames are zeroed again after the
+        # transform; otherwise subtracting the shoulder midpoint would turn
+        # an absent face into plausible-looking points.
+        combined = np.concatenate([seq, face], axis=1)
+        arr = features.resample(features.anchor(features.isotropic(combined, aspect)))
         if not np.all(np.isfinite(arr)):
             continue
-        X[kept] = arr
+        indices = np.round(np.linspace(0, len(seq) - 1, features.SEQ_LEN)).astype(int)
+        sampled_mask = available[indices]
+        X[kept] = arr[:, :features.N_POINTS]
+        X_face[kept] = arr[:, features.N_POINTS:] * sampled_mask[:, None, None]
+        face_mask[kept] = sampled_mask
         y[kept] = label_id[gloss]
         kept += 1
 
-    X, y = X[:kept], y[:kept]
+    X, X_face, face_mask, y = X[:kept], X_face[:kept], face_mask[:kept], y[:kept]
     # every take is the same person in the same room, so a held-out group here
     # would measure nothing; signer is a single constant.
     signer = np.zeros(kept, dtype=np.int32)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(OUT, X=X, y=y, signer=signer, labels=np.array(keep))
+    np.savez_compressed(OUT, X=X, X_face=X_face, face_mask=face_mask,
+                        y=y, signer=signer, labels=np.array(keep),
+                        capture_format=np.array("setu-recordings-v3"))
     print(f"\n{kept} takes across {len(keep)} signs -> {OUT.relative_to(ROOT)}")
     for g in keep:
         print(f"  {g:22s} {counts[g]}")

@@ -30,9 +30,9 @@ It is worth extracting anyway, for two things it IS good for:
   - VOCABULARY. 1,183 words have 2+ clips, which is the honest ceiling for
     expanding past the current 264 classes.
 
-Face mesh is not extracted. FACE_MODE is HEAD_ONLY, the FULL_FACE ablation
-measured a regression (ARCHITECTURE.md 9), and refine_face_landmarks is a large
-fraction of per-frame cost. Turning it off roughly halves the run.
+The compact 48-point eyebrow, eye and lip subset is retained for the new
+optional face stream. Iris refinement remains disabled. The deployed
+HEAD_ONLY model is unchanged until the candidate passes evaluation.
 
 Licence: MIT. Unlike CISLR this is redistributable, so the fetch is reproducible
 by anyone with no account and no licence acceptance.
@@ -50,6 +50,8 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
+from pipeline_words import priority_key
+from face import FACE_SUBSET
 
 ROOT = Path(__file__).resolve().parent.parent
 LIST = ROOT / "data" / "meta" / "_islgov_files.json"
@@ -83,7 +85,7 @@ def worker(args) -> tuple[int, int, int]:
 
     holistic = mp.solutions.holistic.Holistic(
         static_image_mode=False, model_complexity=complexity,
-        refine_face_landmarks=False,          # HEAD_ONLY; see the docstring
+        refine_face_landmarks=False,          # 468-point mesh; iris refinement is unnecessary
         min_detection_confidence=0.5, min_tracking_confidence=0.5,
     )
     done = skipped = failed = 0
@@ -107,6 +109,8 @@ def worker(args) -> tuple[int, int, int]:
                         open(tmp_vid, "wb") as fh:
                     shutil.copyfileobj(r, fh)
                 cap = cv2.VideoCapture(tmp_vid)
+                width, height = int(cap.get(3)), int(cap.get(4))
+                aspect = width / height if height else 1.0
                 # Sample at a fixed rate rather than taking every frame. Two
                 # reasons, and the second matters more than the speed:
                 #   - these entries average ~900 frames and are resampled to 32
@@ -117,7 +121,7 @@ def worker(args) -> tuple[int, int, int]:
                 #     makes a 32-frame window mean the same duration everywhere.
                 src_fps = cap.get(cv2.CAP_PROP_FPS) or target_fps
                 stride = max(1, int(round(src_fps / target_fps)))
-                pose, lh, rh = [], [], []
+                pose, face, lh, rh = [], [], [], []
                 fi = -1
                 while True:
                     ok, frame = cap.read()
@@ -128,6 +132,7 @@ def worker(args) -> tuple[int, int, int]:
                         continue
                     res = holistic.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
                     pose.append(to_array(res.pose_landmarks, N_POSE, 4))
+                    face.append(to_array(res.face_landmarks, 468, 3)[FACE_SUBSET])
                     lh.append(to_array(res.left_hand_landmarks, N_HAND, 3))
                     rh.append(to_array(res.right_hand_landmarks, N_HAND, 3))
                 cap.release()
@@ -140,8 +145,11 @@ def worker(args) -> tuple[int, int, int]:
                 # would be skipped as done on the next run. The temp name must
                 # already end in .npz or savez appends a second suffix.
                 tmp = dest.with_suffix(".tmp.npz")
-                np.savez_compressed(tmp, pose=np.stack(pose),
-                                    lh=np.stack(lh), rh=np.stack(rh))
+                np.savez_compressed(tmp, pose=np.stack(pose), face=np.stack(face),
+                                    lh=np.stack(lh), rh=np.stack(rh),
+                                    aspect=np.float32(aspect), fps=np.float32(target_fps),
+                                    source=np.array("islgov"),
+                                    source_url=np.array(url), extraction_version=np.int32(2))
                 tmp.replace(dest)
                 done += 1
             except Exception:  # noqa: BLE001
@@ -161,14 +169,22 @@ def main() -> int:
     ap.add_argument("--target-fps", type=float, default=15.0,
                     help="resample each clip to this rate before inference")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--batch-size", type=int, default=0,
+                    help="process at most this many unfinished clips")
+    ap.add_argument("--tier", type=int, choices=[0, 1, 2],
+                    help="only clinical (0), daily (1), or remaining (2) labels")
     args = ap.parse_args()
 
-    paths = json.loads(LIST.read_text())
+    paths = sorted(json.loads(LIST.read_text()), key=lambda p: priority_key(word_of(p)))
+    if args.tier is not None:
+        paths = [p for p in paths if priority_key(word_of(p))[0] == args.tier]
     if args.limit:
         paths = paths[: args.limit]
     OUT.mkdir(parents=True, exist_ok=True)
 
     todo = [p for p in paths if not (OUT / word_of(p) / (Path(p).stem + ".npz")).exists()]
+    if args.batch_size:
+        todo = todo[:args.batch_size]
     print(f"{len(paths)} clips listed, {len(paths) - len(todo)} already extracted, "
           f"{len(todo)} to do, {args.workers} workers", flush=True)
     if not todo:

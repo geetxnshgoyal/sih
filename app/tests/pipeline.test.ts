@@ -4,6 +4,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { textToGlosses } from '../src/lib/reverse.ts';
 import { validateSignLibrary } from '../src/lib/signLibrary.ts';
+import { parseRecordings } from '../src/lib/modelChecks.ts';
+import { FACE_SUBSET, selectFace } from '../src/lib/face.ts';
 import { SignSegmenter, segmentQuality } from '../src/lib/segment.ts';
 import { StabilityGate } from '../src/lib/gate.ts';
 import { UtteranceBuilder } from '../src/lib/sentence.ts';
@@ -14,6 +16,29 @@ test('all bundled playback clips contain complete finite frames and distinct ani
   const clips = Object.values(library).map(x => JSON.stringify(x));
   assert.equal(new Set(clips).size, clips.length);
   assert.throws(() => validateSignLibrary({ Hello: [] }));
+});
+test('sharded playback index covers every legacy sign exactly once', () => {
+  const index = JSON.parse(readFileSync(new URL('../public/signs/index.json', import.meta.url), 'utf8'));
+  assert.equal(index.version, 1);
+  assert.equal(index.count, Object.keys(library).length);
+  assert.deepEqual(new Set(Object.keys(index.glosses)), new Set(Object.keys(library)));
+  assert.ok(index.shards.length > 1);
+});
+test('v3 camera recordings retain body compatibility and the curated face subset', () => {
+  const face = Array.from({length:468}, (_, i) => ({x:i/1000,y:i/900,z:i/800}));
+  assert.equal(selectFace(face)?.length, FACE_SUBSET.length);
+  const body = Array.from({length:4}, () => frame().map(p => [p.x,p.y,p.z]));
+  assert.deepEqual(parseRecordings({format:'setu-recordings-v3',takes:[{
+    gloss:'please', body, face:Array.from({length:4},()=>[]), faceAvailable:true,
+  }]}), [{true:'please',frames:body}]);
+});
+test('please remains a confirmable dictionary sign until it has enough training data', () => {
+  const labels = JSON.parse(readFileSync(new URL('../public/model/labels.json', import.meta.url), 'utf8'));
+  const bank = JSON.parse(readFileSync(new URL('../public/model/_bank.json', import.meta.url), 'utf8'));
+  const index = bank.words.indexOf('please');
+  assert.equal(labels.some((label:string) => label.toLowerCase() === 'please'), false);
+  assert.ok(index >= 0);
+  assert.ok(bank.refs[index] < 10);
 });
 test('longest phrase matching consumes each word once and keeps intentional repeats', () => {
   assert.deepEqual(textToGlosses('How are you? Hello Hello. Thank you', library), {
@@ -57,6 +82,17 @@ test('an unbroken gesture times out without firing repeatedly', () => {
   const s=new SignSegmenter();let count=0;let timedOut=false;
   for(let t=0;t<15000;t+=33) {if(s.push(frame((t/33)%2 ? .3:0),true,t))count++; if(s.lastReject==='too-long') timedOut=true;}
   assert.equal(count,0);assert.equal(timedOut,true);
+});
+test('manual finish preserves a moving face-adjacent sign without waiting for quiet', () => {
+  const s = new SignSegmenter();
+  for(let t=0;t<1200;t+=67) {
+    const f=frame(Math.max(0,(t-200)/1000*.12));
+    for(let i=23;i<44;i++) f[i].y=.2+t/1200*.16+((i%2)*.004);
+    s.push(f,true,t);
+  }
+  const result=s.flush();
+  assert.ok(result && result.length >= 4);
+  assert.equal(segmentQuality(result),null);
 });
 test('cooldown rejects duplicate detections but preserves different and later repeated signs', () => {
   const g=new StabilityGate();assert.equal(g.once({gloss:'Hello',conf:.99},0).fire,'Hello');

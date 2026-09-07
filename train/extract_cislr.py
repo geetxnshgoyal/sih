@@ -34,6 +34,8 @@ from pathlib import Path
 import cv2
 import mediapipe as mp
 import numpy as np
+from pipeline_words import priority_key
+from face import FACE_SUBSET
 
 ROOT = Path(__file__).resolve().parent.parent
 ZIP = ROOT / "data" / "cislr" / "CISLR_v1.5-a_videos" / "CISLR_v1.5-a_videos.zip"
@@ -60,6 +62,8 @@ def extract_clip(path: Path, holistic) -> dict[str, np.ndarray] | None:
     cap = cv2.VideoCapture(str(path))
     if not cap.isOpened():
         return None
+    width, height = int(cap.get(3)), int(cap.get(4))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 15.0
     pose, face, lh, rh = [], [], [], []
     while True:
         ok, frame = cap.read()
@@ -73,22 +77,32 @@ def extract_clip(path: Path, holistic) -> dict[str, np.ndarray] | None:
     cap.release()
     if not pose:
         return None
-    return {"pose": np.stack(pose), "face": np.stack(face),
-            "lh": np.stack(lh), "rh": np.stack(rh)}
+    return {"pose": np.stack(pose), "face": np.stack(face)[:, FACE_SUBSET],
+            "lh": np.stack(lh), "rh": np.stack(rh),
+            "aspect": np.float32(width / height if height else 1.0),
+            "fps": np.float32(fps)}
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--complexity", type=int, default=1, choices=[0, 1, 2])
     ap.add_argument("--limit", type=int, default=0, help="stop after N clips (smoke test)")
+    ap.add_argument("--batch-size", type=int, default=0,
+                    help="process at most this many unfinished clips")
+    ap.add_argument("--tier", type=int, choices=[0, 1, 2])
     args = ap.parse_args()
 
     if not ZIP.exists():
         print(f"missing {ZIP.relative_to(ROOT)}, run data/fetch_cislr.sh with FETCH_ALL=1")
         return 1
-    todo = json.loads(TODO.read_text())
+    todo = sorted(json.loads(TODO.read_text()), key=lambda item: priority_key(item["gloss"]))
+    if args.tier is not None:
+        todo = [item for item in todo if priority_key(item["gloss"])[0] == args.tier]
     if args.limit:
         todo = todo[: args.limit]
+    if args.batch_size:
+        todo = [item for item in todo
+                if not (OUT / item["gloss"] / f'{item["uid"]}.npz').exists()][:args.batch_size]
 
     OUT.mkdir(parents=True, exist_ok=True)
     WORK.mkdir(parents=True, exist_ok=True)
@@ -126,7 +140,9 @@ def main() -> int:
                 # exists and would be skipped as done. The temp name must
                 # already end in .npz or savez appends a second suffix.
                 tmp = dest.with_suffix(".tmp.npz")
-                np.savez_compressed(tmp, **data)
+                np.savez_compressed(tmp, **data, source=np.array("cislr"),
+                                    source_url=np.array(item.get("path", "")),
+                                    extraction_version=np.int32(2))
                 tmp.replace(dest)
                 done += 1
                 if done % 25 == 0:

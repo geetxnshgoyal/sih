@@ -3,14 +3,13 @@ import { Mic, Square, Send, Volume2, RotateCcw, MessageSquare, Hand } from 'luci
 import { useSession } from '../../context/SessionContext';
 import SignPlayer from '../SignPlayer';
 import { speak } from '../../lib/speech';
-import { createRecogniser, textToGlosses, type SignLibrary } from '../../lib/reverse';
-import { asset } from '../../lib/assetUrl';
+import { createRecogniser, textToGlosses } from '../../lib/reverse';
+import { useSignLibrary } from '../../hooks/useSignLibrary';
 
 export function DoctorViewScreen() {
   const { selectedLang, activeProjection, projectToPatient, isSlowMode, setIsSlowMode } = useSession();
   const [input, setInput] = useState('');
-  const [library, setLibrary] = useState<SignLibrary>({});
-  const [libraryError, setLibraryError] = useState('');
+  const { library, getClip, error: libraryError } = useSignLibrary();
   const [listening, setListening] = useState(false);
   const [error, setError] = useState('');
   const [index, setIndex] = useState(0);
@@ -20,13 +19,10 @@ export function DoctorViewScreen() {
   const { matched, skipped } = textToGlosses(text, library);
   const sequenceKey = matched.join('|');
   const current = matched[index];
-  const frames = current ? library[current] : null;
+  const clip = current ? library[current] : null;
+  const frames = clip?.body ?? null;
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(asset('/model/_signs.json')).then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(data => { if (!cancelled) setLibrary(data); }).catch(() => { if (!cancelled) setLibraryError('Sign playback is unavailable. Written messages still work.'); });
-    return () => { cancelled = true; };
-  }, []);
+  useEffect(() => { if (current && !frames?.length) void getClip(current); }, [current, frames, getClip]);
   useEffect(() => { setIndex(0); }, [sequenceKey, activeProjection?.timestamp, replay]);
   useEffect(() => {
     if (!frames || index >= matched.length - 1) return;
@@ -56,7 +52,7 @@ export function DoctorViewScreen() {
     <div className="flex items-center justify-between"><div><span className="eyebrow-label">Live consultation · Doctor view</span><h1 className="text-display-md font-bold mt-2">Speak. Type. Connect.</h1><p className="text-secondary mt-2">Your latest message appears in the patient view.</p></div><a href="#transcript" className="secondary-action"><MessageSquare size={18}/>View transcript</a></div>
     <div className="grid lg:grid-cols-12 gap-6 items-start">
       <section className="content-card lg:col-span-7"><div className="flex items-center justify-between mb-4"><h2 className="text-headline-md font-semibold">Sign playback</h2><span className="text-label-sm text-secondary">{matched.length ? `${index + 1} of ${matched.length} signs` : 'Waiting for a message'}</span></div>
-        <div className="rounded-xl bg-surface-container-low min-h-[300px] flex flex-col items-center justify-center p-5">{frames ? <><SignPlayer key={`${activeProjection?.timestamp}-${replay}-${index}`} frames={frames} fps={isSlowMode ? 10 : 14}/><span className="text-headline-md text-primary mt-3 font-semibold">{current}</span></> : <div className="empty-state"><Hand size={40} className="mx-auto mb-4 text-primary"/><p>{text ? 'No matching sign recording for this message.' : 'Send a message to play available signs.'}</p></div>}</div>
+        <div className="rounded-xl bg-surface-container-low min-h-[300px] flex flex-col items-center justify-center p-5">{frames?.length ? <><SignPlayer key={`${activeProjection?.timestamp}-${replay}-${index}`} frames={frames} faceFrames={clip?.face} fps={isSlowMode ? 10 : clip?.fps ?? 14}/><span className="text-headline-md text-primary mt-3 font-semibold">{current}</span></> : current ? <p role="status">Loading {current}…</p> : <div className="empty-state"><Hand size={40} className="mx-auto mb-4 text-primary"/><p>{text ? 'No matching sign recording for this message.' : 'Send a message to play available signs.'}</p></div>}</div>
         {text && (matched.length !== 1 || skipped.length > 0 || current?.localeCompare(text, undefined, { sensitivity: 'base' }) !== 0) && <p className="text-body-xl mt-5 leading-relaxed">{activeProjection?.text}</p>}
         {(libraryError || (skipped.length > 0 && text)) && <p role="status" className="text-label-md text-secondary mt-3">{libraryError || 'Some words have no sign recording. The complete message is shown as text.'}</p>}
         <div className="flex flex-wrap gap-3 mt-5"><button className="secondary-action" disabled={!frames} onClick={() => {setIndex(0); setReplay(r => r + 1);}}><RotateCcw size={18}/>Replay signs</button><button className="secondary-action" aria-pressed={isSlowMode} onClick={() => setIsSlowMode(!isSlowMode)}>{isSlowMode ? 'Speed: slow' : 'Speed: normal'}</button></div>

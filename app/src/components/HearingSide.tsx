@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Mic, SendHorizontal, Square } from "lucide-react";
 import SignPlayer from "./SignPlayer";
-import { createRecogniser, textToGlosses, type SignLibrary } from "../lib/reverse";
+import { createRecogniser, textToGlosses } from "../lib/reverse";
 import { LANGUAGES, type LangCode } from "../lib/speech";
-import { asset } from "../lib/assetUrl";
+import { useSignLibrary } from "../hooks/useSignLibrary";
 
 /**
  * Direction B: the hearing person's half of the conversation.
@@ -21,7 +21,7 @@ export default function HearingSide({
   lang: LangCode;
   synonyms?: Record<string, string>;
 }) {
-  const [library, setLibrary] = useState<SignLibrary>({});
+  const { library, getClip } = useSignLibrary();
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState("");
   const [queue, setQueue] = useState<string[]>([]);
@@ -33,10 +33,6 @@ export default function HearingSide({
   const timerRef = useRef<number>(0);
 
   useEffect(() => {
-    fetch(asset("/model/_signs.json"))
-      .then((r) => r.json())
-      .then(setLibrary)
-      .catch(() => setLibrary({}));
     setSupported(!!createRecogniser(lang));
     return () => { window.clearTimeout(timerRef.current); };
   }, [lang]);
@@ -86,7 +82,9 @@ export default function HearingSide({
   }
 
   const current = queue[at];
-  const frames = current ? library[current] ?? null : null;
+  const clip = current ? library[current] ?? null : null;
+  const frames = clip?.body ?? null;
+  useEffect(() => { if (current && !frames?.length) void getClip(current); }, [current, frames, getClip]);
   const langLabel = LANGUAGES.find((l) => l.code === lang)?.label ?? lang;
 
   return (
@@ -97,7 +95,7 @@ export default function HearingSide({
       </div>
 
       <div className="hearing-stage">
-        <SignPlayer frames={frames} />
+        <SignPlayer frames={frames} faceFrames={clip?.face} fps={clip?.fps ?? 14} />
         <div className="hearing-gloss">
           {current ? (
             <>
