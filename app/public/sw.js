@@ -15,7 +15,7 @@
 // release cached the 264-class model cache-first and never bumped, so every
 // returning visitor kept being served a superseded model while the site
 // advertised a better one.
-const VERSION = "setu-v7";
+const VERSION = "setu-v11";
 const SHELL = `${VERSION}-shell`;
 const MODEL = `${VERSION}-model`;
 

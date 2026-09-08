@@ -1129,3 +1129,7 @@ code{
 .rec-hint.bad{color:var(--warn);font-weight:600}
 .rec-row.weak{opacity:.62}
 .rec-warn{font-size:11px;color:var(--warn)}
+/* What the tracker actually sees. Added because the face mesh was being drawn
+   at alpha 0.34 against a bright room and reported as not working at all. */
+.tracked{margin:9px 0 0;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+         color:var(--faint);line-height:1.5}

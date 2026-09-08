@@ -51,6 +51,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "train"))
+import clip_io  # noqa: E402
 import features  # noqa: E402
 
 POSE_KEEP = features.POSE_KEEP
@@ -80,24 +81,8 @@ def norm(s: str) -> str:
 
 def clip_features(path: Path) -> np.ndarray | None:
     """One landmark npz -> the shared 32x65x3 feature contract."""
-    try:
-        with np.load(path) as npz:
-            if "pose" not in npz:
-                return None
-            present = (np.abs(npz["lh"]).sum(axis=(1, 2)) > 0) | \
-                      (np.abs(npz["rh"]).sum(axis=(1, 2)) > 0)
-            idx = np.flatnonzero(present)
-            if idx.size < MIN_ACTIVE:
-                return None
-            lo = max(int(idx[0]) - PAD, 0)
-            hi = min(int(idx[-1]) + PAD + 1, len(present))
-            pose = npz["pose"][:, :POSE_KEEP, :3]
-            pts = np.concatenate([pose, npz["lh"][:, :, :3], npz["rh"][:, :, :3]],
-                                 axis=1).astype(np.float64)[lo:hi]
-            aspect = float(npz["aspect"]) if "aspect" in npz else 1.0
-    except Exception:
-        return None
-    if pts.shape[0] < MIN_ACTIVE:
+    pts, aspect = clip_io.load_points(path, POSE_KEEP, MIN_ACTIVE, PAD)
+    if pts is None:
         return None
     v = features.extract(pts, aspect)
     return v.reshape(features.SEQ_LEN, features.N_POINTS, features.N_DIMS) \

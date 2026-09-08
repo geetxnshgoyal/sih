@@ -152,6 +152,9 @@ def warm_start(model, n_classes) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--vocab", choices=["clinical", "universal"], default="clinical")
+    ap.add_argument("--extra", action="store_true",
+                    help="fold in data/dict_extra.npz: dictionary clips of "
+                         "classes already in the set, as their own signer group")
     args = ap.parse_args()
     vocab = CLINICAL if args.vocab == "clinical" else UNIVERSAL
     out_dir = OUT_BASE / args.vocab
@@ -161,6 +164,27 @@ def main() -> int:
     d = np.load(DATA, allow_pickle=True)
     X, y, signer, corpus = d["X"], d["y"], d["signer"], d["corpus"]
     labels = [str(s) for s in d["labels"]]
+
+    # Extra SIGNERS, not extra classes. The measured history here is blunt:
+    # five training-side changes did nothing, cutting the vocabulary 264 -> 83
+    # gave +8.4, and adding CISLR (different people, words already in the set)
+    # gave +3.4. Signer diversity is the lever. These are dictionary clips of
+    # classes already trained on, in their own signer group so leave-one-group
+    # -out still means what it says.
+    if args.extra:
+        ep = ROOT / "data" / "dict_extra.npz"
+        if not ep.exists():
+            print(f"missing {ep.name}, run train/preprocess_dict_extra.py first")
+            return 1
+        e = np.load(ep, allow_pickle=True)
+        assert [str(s) for s in e["labels"]] == labels, "label sets differ"
+        assert e["X"].shape[1:] == X.shape[1:], "feature shape differs"
+        X = np.concatenate([X, e["X"]])
+        y = np.concatenate([y, e["y"]])
+        signer = np.concatenate([signer, e["signer"]])
+        corpus = np.concatenate([corpus, e["corpus"]])
+        print(f"folded in {len(e['X'])} dictionary clips as signer group "
+              f"{int(e['signer'][0])}")
     index = {l: i for i, l in enumerate(labels)}
     rng = np.random.default_rng(SEED)
     tf.random.set_seed(SEED)

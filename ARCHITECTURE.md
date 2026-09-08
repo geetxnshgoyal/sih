@@ -1106,6 +1106,37 @@ still a modelling problem.
    surface the product tells clinicians to rely on. This has been outstanding
    longest and is not a technical task.
 
+### Dictionary clips as extra signers: helps CISLR, hurts INCLUDE
+
+Tried because signer diversity is the one lever with a positive track record
+here: adding CISLR was worth +3.4, while five training-side changes did nothing
+between them. `train/preprocess_dict_extra.py` finds dictionary clips whose word
+is ALREADY one of the 83 and adds them as extra examples in their own signer
+group. 295 clips, no new classes, `train_clinical.py --extra`.
+
+Leave-one-group-out, same protocol, same recipe:
+
+| held-out corpus | baseline | with extra signers | delta |
+|---|---|---|---|
+| INCLUDE, n=1478 | 67.7% [65.3-70.1] | 64.6% [62.1-67.0] | **-3.1** |
+| INCLUDE top-5 | 90.0% | 88.1% | -1.9 |
+| CISLR, n=190 | 25.8% [20.1-32.4] | 35.3% [28.8-42.3] | **+9.5** |
+| CISLR top-5 | 42.6% | 58.9% | **+16.3** |
+
+Neither reaches significance: the 95% intervals overlap on both. The honest
+reading is that it moves accuracy TOWARDS the dictionary domain and away from
+INCLUDE, which is what adding 295 studio clips to 1,668 should do.
+
+Not shipped, because the headline number is the INCLUDE one and it went down.
+But the CISLR top-5 gain of 16.3 points is large, and CISLR is the only
+held-out CORPUS available rather than merely a held-out signer, so it is the
+best proxy on hand for unfamiliar filming conditions. If the app is failing on
+a live webcam in an unfamiliar room, this arm is pointing at something real and
+deserves a better-powered test: more dictionary clips, or a held-out set that
+is not INCLUDE.
+
+Reproduce: `train/train_clinical.py --vocab universal --extra`.
+
 ### Settled by measurement, do not repeat
 
 | tried | result |

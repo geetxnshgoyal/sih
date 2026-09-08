@@ -149,6 +149,7 @@ export default function SignBridge({
   const [recording, setRecording] = useState(false);
   const [recFrames, setRecFrames] = useState(0);
   const [recHands, setRecHands] = useState<"both" | "one" | "none">("none");
+  const [tracked, setTracked] = useState({ pose: 0, left: 0, right: 0, face: 0 });
   const [recResult, setRecResult] = useState<
     { gloss: string; conf: number; bothHands: boolean; dict: BankMatch[] }[] | null>(null);
   const [bankSize, setBankSize] = useState(0);
@@ -275,18 +276,27 @@ export default function SignBridge({
       }
     }
 
-    // Face mesh, drawn faintly: it is confirmation that tracking is alive, not
-    // a claim that the model reads expression. Every 4th point keeps 468 dots
-    // from becoming a solid mask over the signer's face.
+    // Face mesh. Confirmation that tracking is alive, not a claim that the
+    // model reads expression.
+    //
+    // This was drawn at alpha 0.34 and radius 1.1, which is invisible against a
+    // bright room, and the tracker was reported as "not capturing face points"
+    // when it was returning all 468 every frame. Legibility on a washed-out
+    // camera image is the whole job here, so: every 2nd point, larger, opaque
+    // enough to survive a white background, with a dark halo so it reads on
+    // pale skin and pale walls alike.
     const mesh = face as { x: number; y: number }[] | null;
     if (mesh && mesh.length) {
-      ctx.fillStyle = "rgba(72,207,171,.34)";
-      for (let i = 0; i < mesh.length; i += 4) {
+      ctx.strokeStyle = "rgba(0,0,0,.30)";
+      ctx.lineWidth = 0.6;
+      ctx.fillStyle = "rgba(72,207,171,.85)";
+      for (let i = 0; i < mesh.length; i += 2) {
         const p = mesh[i];
         if (!p) continue;
         ctx.beginPath();
-        ctx.arc(p.x * w, p.y * h, 1.1, 0, Math.PI * 2);
+        ctx.arc(p.x * w, p.y * h, 1.7, 0, Math.PI * 2);
         ctx.fill();
+        ctx.stroke();
       }
     }
   }, []);
@@ -462,6 +472,12 @@ export default function SignBridge({
         // should look smooth; the segmenter must see the same 15 fps every
         // training clip was resampled to. See CAPTURE_FPS.
         draw(res.pose, res.left, res.right, res.face);
+        if (tickRef.current % 8 === 0) {
+          setTracked({
+            pose: res.pose?.length ?? 0, left: res.left?.length ?? 0,
+            right: res.right?.length ?? 0, face: res.face?.length ?? 0,
+          });
+        }
         const due = nowMs - lastCaptureRef.current >= CAPTURE_INTERVAL_MS;
         if (!due) {
           rafRef.current = requestAnimationFrame(loop);
@@ -911,6 +927,13 @@ export default function SignBridge({
                 <RotateCcw size={16} /> Clear
               </button>
             </div>
+            <p className="tracked">
+              tracking: pose {tracked.pose} · left hand {tracked.left} ·
+              right hand {tracked.right} · face {tracked.face} points
+              {tracked.face > 0
+                ? " (face is tracked and drawn; the model reads head position, not expression)"
+                : ""}
+            </p>
             {recording && (
               <p className={`rec-hint${recHands === "both" ? " ok" : " bad"}`}>
                 {recHands === "both"

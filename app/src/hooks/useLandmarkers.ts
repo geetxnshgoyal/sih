@@ -6,6 +6,7 @@ import fallbackLoader from '@mediapipe/tasks-vision/vision_wasm_nosimd_internal.
 import fallbackBinary from '@mediapipe/tasks-vision/vision_wasm_nosimd_internal.wasm?url';
 import { assembleFrame, type Landmark, type PointFrame } from '../lib/features';
 import { selectFace, type FaceFrame } from '../lib/face';
+import { asset } from '../lib/assetUrl';
 
 export type LoadState = 'loading' | 'ready' | 'error';
 export type DetectResult = {
@@ -35,7 +36,13 @@ export function useLandmarkers() {
         };
         if (cancelled) return;
         const create = (delegate: 'GPU' | 'CPU') => HolisticLandmarker.createFromOptions(fileset, {
-          baseOptions: { modelAssetPath: '/vision/holistic_landmarker.task', delegate },
+          // asset(), not a bare '/vision/...'. GitHub Pages serves this app from
+          // /sih/, so a root-absolute path resolves to the domain root and 404s.
+          // The camera then dies in production while working perfectly on the
+          // dev server, which is the exact failure lib/assetUrl.ts exists to
+          // prevent. The WASM paths above are Vite ?url imports and are already
+          // base-aware; this string was the only one that was not.
+          baseOptions: { modelAssetPath: asset('/vision/holistic_landmarker.task'), delegate },
           runningMode: 'VIDEO',
         });
         try { instance = await create('GPU'); }

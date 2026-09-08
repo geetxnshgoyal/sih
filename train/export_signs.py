@@ -43,6 +43,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "train"))
+import clip_io  # noqa: E402
 import features  # noqa: E402
 
 OUT = ROOT / "app" / "public" / "model" / "_signs.json"
@@ -90,31 +91,25 @@ def wanted_words() -> list[str]:
 
 def playback_frames(path: Path) -> dict | None:
     """One landmark npz -> versioned body plus optional face animation."""
+    pts, aspect = clip_io.load_points(path, features.POSE_KEEP, MIN_ACTIVE, PAD)
+    if pts is None:
+        return None
+    face = None
     try:
         with np.load(path) as npz:
-            if "pose" not in npz:
-                return None
             present = (np.abs(npz["lh"]).sum(axis=(1, 2)) > 0) | \
                       (np.abs(npz["rh"]).sum(axis=(1, 2)) > 0)
             idx = np.flatnonzero(present)
-            if idx.size < MIN_ACTIVE:
-                return None
             lo = max(int(idx[0]) - PAD, 0)
             hi = min(int(idx[-1]) + PAD + 1, len(present))
-            pts = np.concatenate([npz["pose"][:, :features.POSE_KEEP, :3],
-                                  npz["lh"][:, :, :3], npz["rh"][:, :, :3]],
-                                 axis=1).astype(np.float64)[lo:hi]
             face = npz["face"][lo:hi].astype(np.float64) if "face" in npz else None
             if face is not None and face.shape[1] == 468:
                 from face import FACE_SUBSET
                 face = face[:, FACE_SUBSET]
             if face is not None and face.shape[1:] != (48, 3):
                 face = None
-            aspect = float(npz["aspect"]) if "aspect" in npz else 1.0
     except Exception:
-        return None
-    if pts.shape[0] < MIN_ACTIVE or not (0.2 < aspect < 5.0):
-        return None
+        face = None
     combined = np.concatenate([pts, face], axis=1) if face is not None else pts
     seq = features.anchor(features.isotropic(combined, aspect))
     if not np.all(np.isfinite(seq)):

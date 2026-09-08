@@ -51,7 +51,10 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
-BANK = ROOT / "run" / "bank83.npz"
+import os
+# Must be built from the SAME model that ships, or the live embedding and the
+# reference vectors live in different spaces and every lookup is noise.
+BANK = ROOT / "run" / os.environ.get("SETU_BANK", "bank_clinical.npz")
 OUT = ROOT / "app" / "public" / "model" / "_bank.json"
 
 # Deliberate vocabulary. Medical first, then the words needed to hold any

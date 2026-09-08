@@ -28,7 +28,17 @@ ROOT = Path(__file__).resolve().parent.parent
 # Police. Carrying two models meant two temperatures, two label sets and two
 # caches to invalidate, and the first release already shipped a stale one that
 # way. One model, one number to quote, one thing to keep honest.
-_SRC = ROOT / "models" / "universal"
+import os
+# Which vocabulary ships. Measured on held-out INCLUDE signers, same protocol:
+#
+#     clinical    38 classes   75.1% top-1   95.5% top-5   <- ships
+#     universal   83 classes   68.1% top-1   90.4% top-5
+#     general    264 classes   55.0% top-1   83.0% top-5
+#
+# 38 clinical classes beat 83 by 7.0 points top-1 and 5.1 top-5 while covering
+# the words a hospital needs. The words the classifier drops are not lost: the
+# 116-word dictionary bank and the 145-phrase board both still carry them.
+_SRC = ROOT / "models" / os.environ.get("SETU_VOCAB", "clinical")
 MODEL = _SRC / "gloss_classifier.keras"
 LABELS = _SRC / "labels.json"
 METRICS = _SRC / "metrics.json"
