@@ -44,7 +44,7 @@
  * REFIT AFTER ANY RETRAIN. T belongs to the weights, not the architecture, and
  * train_clinical.py prints the new value.
  */
-export const TEMPERATURE = 1.69;
+export const TEMPERATURE = 1.29;
 
 /**
  * Re-apply softmax at temperature T to already-softmaxed probabilities.

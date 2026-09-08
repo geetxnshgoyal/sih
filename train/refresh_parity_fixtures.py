@@ -31,7 +31,11 @@ sys.path.insert(0, str(ROOT / "train"))
 import features  # noqa: E402
 
 OUT = ROOT / "app" / "public" / "model"
-KERAS = ROOT / "models" / "universal" / "gloss_classifier.keras"
+import os
+# Follow whatever export_tfjs.py ships, or the fixtures are regenerated against
+# a model the browser is not running and the parity check silently compares the
+# wrong things. That is how it drifted to 264 classes last time.
+KERAS = ROOT / "models" / os.environ.get("SETU_VOCAB", "clinical") / "gloss_classifier.keras"
 
 
 def main() -> int:
