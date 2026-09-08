@@ -64,12 +64,15 @@ export default function SignBridge({
   onLang,
   compact = false,
   showDetails = false,
+  confirmBeforeSend = false,
   onRecognized,
 }: {
   lang?: LangCode;
   onLang?: (l: LangCode) => void;
   compact?: boolean;
   showDetails?: boolean;
+  /** Keep camera guesses out of the conversation until the signer chooses one. */
+  confirmBeforeSend?: boolean;
   onRecognized?: (text: string) => void;
 } = {}) {
   const recognizedRef = useRef(onRecognized);
@@ -504,12 +507,8 @@ export default function SignBridge({
             setDict([]);
             setNotice("your shoulders are not in frame. Step back so your head and both shoulders are visible");
           } else {
-            // A segment whose shoulders were never found cannot be classified:
-            // everything downstream is anchored on them, and the model answers
-            // confidently about nothing when they are missing. Say so rather than
-            // returning a wrong word or an unexplained silence.
             const pred = clfRef.current.predict(segment, aspect);
-            const confirmOnly = reject === "one-hand";
+            const confirmOnly = confirmBeforeSend || reject === "one-hand";
             const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
             setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
 
@@ -553,7 +552,13 @@ export default function SignBridge({
             }
           }
         } else {
-          setLive({ gloss: null, conf: 0, progress: seg.progress });
+          // In confirmation mode the last completed reading is a pending
+          // choice. Keep it visible with its shortlist instead of showing the
+          // contradictory combination from the old UI: "no sign" beside a
+          // stale predicted-word button.
+          setLive((previous) => confirmBeforeSend && previous.gloss
+            ? previous
+            : { gloss: null, conf: 0, progress: seg.progress });
         }
 
 
@@ -573,7 +578,7 @@ export default function SignBridge({
       if (tickRef.current % 15 === 0) setFps(frameTimes.current.length);
     }
     rafRef.current = requestAnimationFrame(loop);
-  }, [detect, draw, framing, emit]);
+  }, [detect, draw, framing, emit, confirmBeforeSend]);
 
   /**
    * Replay real ISL clips from the held-out group through the exact same
@@ -801,7 +806,7 @@ export default function SignBridge({
                 <div>
                   {/* "Current sign" rather than "Detecting": it names what the
                       reader is looking at instead of what the machine is doing. */}
-                  <div className="hud-k">Current sign</div>
+                  <div className="hud-k">{confirmBeforeSend ? "Possible sign" : "Current sign"}</div>
                   {/* Three bands, not one floor. The classifier no longer drops
                       low-confidence reads silently, so an uncertain one is shown
                       AND marked: the clinician can confirm it instead of the
@@ -816,7 +821,12 @@ export default function SignBridge({
                     {live.gloss ??
                       (diag && !diag.left && !diag.right ? "hands not visible" : "no sign")}
                   </div>
-                  {live.gloss && certainty(live.conf) !== "confident" && (
+                  {live.gloss && confirmBeforeSend && (
+                    <div className="hud-confirm">
+                      Choose the correct sign below before it is sent
+                    </div>
+                  )}
+                  {live.gloss && !confirmBeforeSend && certainty(live.conf) !== "confident" && (
                     <div className="hud-confirm">
                       {Math.round(live.conf * 100)}% confident. Pick below if this is wrong
                     </div>
@@ -848,6 +858,8 @@ export default function SignBridge({
                             if (finished) emit(finished.glosses, finished.at, l, c.conf);
                             setPending(uttRef.current.pending);
                             setCandidates([]);
+                            setDict([]);
+                            setLive({ gloss: null, conf: 0, progress: 0 });
                           }}
                         >
                           {c.gloss}
@@ -873,6 +885,7 @@ export default function SignBridge({
                               setPending(uttRef.current.pending);
                               setCandidates([]);
                               setDict([]);
+                              setLive({ gloss: null, conf: 0, progress: 0 });
                             }}
                           >
                             {d.word}
@@ -890,7 +903,7 @@ export default function SignBridge({
                   </div>
                 )}
                 <div className="ring" style={{ ["--p" as string]: live.progress }}>
-                  <span>{live.progress >= 1 ? "OK" : "HOLD"}</span>
+                  <span>{confirmBeforeSend && live.gloss ? "PICK" : live.progress >= 1 ? "OK" : "HOLD"}</span>
                 </div>
               </div>
             )}

@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Download, Dot, Square } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
-import { SEQ_LEN, type PointFrame } from "../lib/features";
+import { type PointFrame } from "../lib/features";
+import { segmentQuality } from "../lib/segment";
 
 /**
  * Record your own signs, in your room, on your camera.
  *
  * Everything trained so far comes from 7 signers in one Chennai school at one
  * fixed distance. That model reaches ~52% on held-out INCLUDE signers and much
- * less on a laptop webcam, and no amount of augmentation closed the gap , 
+ * less on a laptop webcam, and no amount of augmentation closed the gap —
  * three attempts each made it measurably worse.
  *
  * Recording here removes the domain gap instead of modelling around it: same
@@ -16,7 +17,7 @@ import { SEQ_LEN, type PointFrame } from "../lib/features";
  * vocabulary recorded this way is a far easier problem than 264 classes of
  * someone else's footage.
  *
- * Output is a JSON file of raw unit-coordinate frames, the same thing
+ * Output is a JSON file of raw unit-coordinate frames — the same thing
  * features.to_unit() produces from the INCLUDE pickles, so train/preprocess.py
  * ingests it with no new code path.
  */
@@ -24,16 +25,18 @@ import { SEQ_LEN, type PointFrame } from "../lib/features";
 const COUNTDOWN = 3;
 const CAPTURE_MS = 2200;
 
-type Take = { gloss: string; frames: PointFrame[]; at: number; aspect: number };
+type Take = { gloss: string; frames: PointFrame[]; at: number; aspect: number; durationMs: number };
 
 export default function Recorder() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef(0);
-  const countdownRef = useRef<number | null>(null);
-  const captureTimerRef = useRef<number | null>(null);
   const runningRef = useRef(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const countdownRef = useRef(0);
+  const endRef = useRef(0);
+  const generation = useRef(0);
+  const [starting, setStarting] = useState(false);
   const bufRef = useRef<PointFrame[]>([]);
   const capturingRef = useRef(false);
 
@@ -46,11 +49,18 @@ export default function Recorder() {
   const [hands, setHands] = useState(false);
   const [camError, setCamError] = useState<string | null>(null);
 
-  const loop = useCallback(function loop() {
+  const loop = useCallback(function recordFrame() {
     if (!runningRef.current) return;
     const video = videoRef.current;
     if (video && video.readyState >= 2) {
-      const res = detect(video, performance.now());
+      let res;
+      try { res = detect(video, performance.now()); }
+      catch (error) {
+        runningRef.current = false; capturingRef.current = false;
+        streamRef.current?.getTracks().forEach(t => t.stop());
+        clearInterval(countdownRef.current); clearTimeout(endRef.current);
+        setLive(false); setPhase('idle'); setCamError(String(error)); return;
+      }
       if (res) {
         setHands(!!res.left || !!res.right);
         if (capturingRef.current) bufRef.current.push(res.frame);
@@ -71,112 +81,84 @@ export default function Recorder() {
         }
       }
     }
-    rafRef.current = requestAnimationFrame(loop);
+    rafRef.current = requestAnimationFrame(recordFrame);
   }, [detect]);
 
   async function start() {
-    setCamError(null);
-    if (state !== "ready") {
-      setCamError(error ? `Landmarker: ${error}` : "Camera tools are still preparing.");
-      return;
-    }
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCamError("Camera access is unavailable in this browser or page context.");
-      return;
-    }
+    if (starting || runningRef.current) return;
+    const current = ++generation.current;
+    setStarting(true); setCamError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
         audio: false,
       });
-      const v = videoRef.current;
-      const cv = canvasRef.current;
-      if (!v || !cv) {
-        stream.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (current !== generation.current || !videoRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
       streamRef.current = stream;
+      const v = videoRef.current;
       v.srcObject = stream;
       await v.play();
+      if (current !== generation.current || !canvasRef.current) { stream.getTracks().forEach(t => t.stop()); return; }
+      const cv = canvasRef.current;
       cv.width = v.videoWidth || 1280;
       cv.height = v.videoHeight || 720;
       runningRef.current = true;
-      setLive(true);
+      setLive(true); setStarting(false);
       rafRef.current = requestAnimationFrame(loop);
     } catch (e) {
+      streamRef.current?.getTracks().forEach(t => t.stop()); setStarting(false);
       setCamError(e instanceof Error ? e.message : String(e));
     }
   }
 
-  function clearTimers() {
-    if (countdownRef.current !== null) window.clearInterval(countdownRef.current);
-    if (captureTimerRef.current !== null) window.clearTimeout(captureTimerRef.current);
-    countdownRef.current = null;
-    captureTimerRef.current = null;
-  }
-
   function stop() {
-    runningRef.current = false;
-    capturingRef.current = false;
-    clearTimers();
+    generation.current++; runningRef.current = false; capturingRef.current = false;
+    clearInterval(countdownRef.current); clearTimeout(endRef.current);
+    setPhase('idle'); setStarting(false);
     cancelAnimationFrame(rafRef.current);
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
+    (videoRef.current?.srcObject as MediaStream | null)?.getTracks().forEach((t) => t.stop());
     if (videoRef.current) videoRef.current.srcObject = null;
-    bufRef.current = [];
     setLive(false);
-    setHands(false);
-    setPhase("idle");
-    setCount(0);
   }
 
-  useEffect(() => () => { stop(); }, []);
+  useEffect(() => () => {
+    generation.current++; runningRef.current = false; capturingRef.current = false;
+    cancelAnimationFrame(rafRef.current); clearInterval(countdownRef.current); clearTimeout(endRef.current);
+    streamRef.current?.getTracks().forEach(t => t.stop());
+  }, []);
 
   /** Countdown, then capture a fixed window so every take is comparable. */
   function record() {
-    if (!gloss.trim()) {
-      setCamError("Enter a sign label before recording.");
-      return;
-    }
-    if (!live || !runningRef.current) {
-      setCamError("Start the camera before recording.");
-      return;
-    }
-    if (phase !== "idle") return;
-    setCamError(null);
+    if (!gloss.trim() || !live) return;
     setPhase("counting");
     setCount(COUNTDOWN);
     let n = COUNTDOWN;
-    countdownRef.current = window.setInterval(() => {
+    const tick = countdownRef.current = window.setInterval(() => {
       n -= 1;
       setCount(n);
       if (n > 0) return;
-      if (countdownRef.current !== null) window.clearInterval(countdownRef.current);
-      countdownRef.current = null;
+      window.clearInterval(tick);
       bufRef.current = [];
       capturingRef.current = true;
       setPhase("capturing");
-      captureTimerRef.current = window.setTimeout(() => {
-        captureTimerRef.current = null;
+      endRef.current = window.setTimeout(() => {
         capturingRef.current = false;
         const frames = bufRef.current.slice();
         setPhase("idle");
-        if (frames.length >= SEQ_LEN) {
-          // Record the camera's aspect ratio with the take. MediaPipe's
-          // coordinates are aspect-dependent, so frames without it cannot be
-          // put into the model's coordinate space later: see features.ts.
-          const v = videoRef.current;
-          const aspect = v && v.videoHeight ? v.videoWidth / v.videoHeight : 16 / 9;
-          setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now(), aspect }]);
-          setCamError(null);
+        const rejected = segmentQuality(frames);
+        if (!rejected || rejected === 'one-hand') {
+          const video = videoRef.current;
+          const aspect = video?.videoHeight ? video.videoWidth / video.videoHeight : 0;
+          if (!aspect) { setCamError('Camera dimensions are unavailable. Record the take again.'); return; }
+          setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now(), aspect, durationMs: CAPTURE_MS }]);
+          setCamError(rejected === 'one-hand' ? 'Saved with one hand tracked. Verify that this is an intentional one-handed sign.' : null);
         } else {
           setCamError(
-            `Only ${frames.length} frames captured (need ${SEQ_LEN}). Keep both hands in frame for the whole take.`
+            `Recording rejected (${rejected}, ${frames.length} frames). Keep shoulders and both hands visible, including the resting hand.`
           );
         }
       }, CAPTURE_MS);
-    }, 700);
+    }, 1000);
   }
 
   function download() {
@@ -185,13 +167,12 @@ export default function Recorder() {
     const payload = {
       format: "setu-recordings-v2",
       points: 65,
-      note: "unit coordinates, pose 0-22 + left hand 23-43 + right hand 44-64; "
-        + "per-take `aspect` is the camera's width/height, required to map "
-        + "these into the model's isotropic space (v2 added this field)",
+      note: "unit coordinates, pose 0-22 + left hand 23-43 + right hand 44-64",
       takes: takes.map((t) => ({
         gloss: t.gloss,
-        recorded_at: new Date(t.at).toISOString(),
         aspect: t.aspect,
+        durationMs: t.durationMs,
+        recorded_at: new Date(t.at).toISOString(),
         frames: t.frames.map((f) => f.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)])),
       })),
     };
@@ -236,8 +217,8 @@ export default function Recorder() {
         <div className="card-b">
           <div className="row">
             {!live ? (
-              <button className="go" onClick={start} disabled={state !== "ready"}>
-                <Camera size={17} /> {state === "ready" ? "Start camera" : "Preparing..."}
+              <button className="go" onClick={start} disabled={state !== "ready" || starting}>
+                <Camera size={17} /> {starting ? "Opening…" : state === "ready" ? "Start camera" : "Preparing..."}
               </button>
             ) : (
               <button onClick={stop}><Square size={16} /> Stop camera</button>

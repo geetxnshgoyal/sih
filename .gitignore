@@ -18,6 +18,7 @@ data/*
 .venv/
 .venv-tf/
 .venv-mp/
+.venv-camera/
 __pycache__/
 *.pyc
 node_modules/

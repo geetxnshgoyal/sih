@@ -129,6 +129,12 @@ export class UtteranceBuilder {
     if (this.glosses.length && now - this.lastAt > UTTERANCE_GAP_MS) {
       finished = this.flushAt(new Date(this.lastAt));
     }
+    // A held gesture can be segmented more than once. Treat consecutive copies
+    // inside one utterance as the same sign so a single response cannot become
+    // "healthy healthy" merely because the camera fired twice.
+    if (this.glosses.at(-1)?.localeCompare(gloss, undefined, { sensitivity: "base" }) === 0) {
+      return finished;
+    }
     this.glosses.push(gloss);
     this.confs.push(conf);
     this.lastAt = now;
@@ -140,6 +146,10 @@ export class UtteranceBuilder {
     if (!this.glosses.length) return null;
     if (now - this.lastAt <= UTTERANCE_GAP_MS) return null;
     return this.flushAt(new Date(this.lastAt));
+  }
+
+  flush(): Utterance | null {
+    return this.glosses.length ? this.flushAt(new Date(this.lastAt)) : null;
   }
 
   private flushAt(when: Date): Utterance {

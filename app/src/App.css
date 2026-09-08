@@ -692,9 +692,10 @@ code{
   border-bottom:1px solid var(--line);
 }
 .signplayer{
-  width:100%;
+  width:min(100%,420px);
   height:auto;
-  max-height:360px;
+  max-height:none;
+  aspect-ratio:420/380;
   border:1px solid #D8DEEF;
   border-radius:8px;
   background:#FFFFFF;

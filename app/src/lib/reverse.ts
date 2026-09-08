@@ -1,3 +1,4 @@
+import { PHRASES } from "./speech";
 /**
  * Direction B: spoken language back into ISL.
  *
@@ -38,12 +39,12 @@ const SYNONYMS: Record<string, string> = {
   road: "Street or Road", street: "Street or Road", सड़क: "Street or Road",
   toilet: "Bathroom", washroom: "Bathroom", restroom: "Bathroom",
   phone: "Telephone", mobile: "Cell phone",
-  home: "House", घर: "House", food: "Restaurant", khana: "Restaurant",
-  police: "Police", पुलिस: "Police", help: "Police",
+  home: "House", घर: "House",
+  police: "Police", पुलिस: "Police",
   cheap: "cheap", costly: "expensive", big: "big large", small: "small little",
   hot: "hot", cold: "cold", quick: "fast", slow: "slow",
   ill: "sick", unwell: "sick", bimar: "sick",
-  now: "Time", when: "Time", today: "Today", tomorrow: "Tomorrow",
+   today: "Today", tomorrow: "Tomorrow",
   yesterday: "Yesterday", morning: "Morning", night: "Night",
   me: "I", my: "I", mine: "I", your: "you", us: "we", them: "they",
 };
@@ -65,40 +66,33 @@ export function textToGlosses(
   matched: string[];
   skipped: string[];
 } {
-  // Domain entries win on collision: "station" means Train Station at an enquiry
-  // desk even though the shared map has other ideas.
-  const synonyms = { ...SYNONYMS, ...extraSynonyms };
-
+  const normalize = (value: string) => value.normalize('NFC').toLowerCase()
+    .replace(/[^\p{L}\p{N}\p{M}\s]/gu, ' ').trim().replace(/\s+/g, ' ');
   const known = new Map<string, string>();
-  for (const g of Object.keys(library)) known.set(g.toLowerCase(), g);
-
-  const words = text
-    .toLowerCase()
-    // \p{M} matters: every Indic vowel sign is a combining mark, so stripping
-    // marks turns नमस्ते into "नमस त" and no Devanagari input ever matches.
-    .replace(/[^\p{L}\p{N}\p{M}\s]/gu, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-
+  for (const g of Object.keys(library)) known.set(normalize(g), g);
+  // Match the longest complete phrase, including aliases containing spaces.
+  // Resolve alias targets without case sensitivity; never substitute an absent clip.
+  const lookup = new Map(known);
+  for (const [gloss, translations] of Object.entries(PHRASES)) {
+    const target = known.get(normalize(gloss));
+    if (target) for (const phrase of Object.values(translations)) if (phrase) lookup.set(normalize(phrase), target);
+  }
+  for (const [alias, target] of Object.entries({ ...SYNONYMS, ...extraSynonyms })) {
+    const gloss = known.get(normalize(target));
+    if (gloss && !known.has(normalize(alias))) lookup.set(normalize(alias), gloss);
+  }
+  const words = normalize(text).split(' ').filter(Boolean);
+  const maxWords = Math.max(1, ...Array.from(lookup.keys(), key => key.split(' ').length));
   const matched: string[] = [];
   const skipped: string[] = [];
-
-  for (let i = 0; i < words.length; i++) {
-    // try a two-word phrase first ("thank you", "how are you" style)
-    const two = `${words[i]} ${words[i + 1] ?? ""}`.trim();
-    const three = `${two} ${words[i + 2] ?? ""}`.trim();
-
-    if (known.has(three)) { matched.push(known.get(three)!); i += 2; continue; }
-    if (known.has(two))   { matched.push(known.get(two)!);   i += 1; continue; }
-
-    const w = words[i];
-    if (known.has(w)) { matched.push(known.get(w)!); continue; }
-    // The library guard matters: a synonym may point at a gloss the classifier
-    // knows but which has no bundled pose frames (Location, Temple, Paper).
-    // Matching it would queue a sign that renders as an empty player, so it is
-    // treated as unmatched and reported in `skipped` instead.
-    if (synonyms[w] && library[synonyms[w]]) { matched.push(synonyms[w]); continue; }
-    skipped.push(w);
+  for (let i = 0; i < words.length;) {
+    let size = Math.min(maxWords, words.length - i);
+    for (; size > 0; size--) {
+      const gloss = lookup.get(words.slice(i, i + size).join(' '));
+      if (gloss) { matched.push(gloss); break; }
+    }
+    if (size) i += size;
+    else skipped.push(words[i++]);
   }
   return { matched, skipped };
 }
