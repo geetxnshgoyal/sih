@@ -10,8 +10,8 @@ const HAND_BONES = [
 const PALM = [0, 5, 9, 13, 17] as const;
 const LEFT_BASE = 23;
 const RIGHT_BASE = 44;
-const LOGICAL_WIDTH = 420;
-const LOGICAL_HEIGHT = 380;
+const LOGICAL_WIDTH = 480;
+const LOGICAL_HEIGHT = 420;
 const RENDER_SCALE = 2;
 type XY = readonly [number, number];
 
@@ -34,7 +34,7 @@ function drawAvatar(
   const w = LOGICAL_WIDTH, h = LOGICAL_HEIGHT;
   ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   const { minX, maxX, minY, maxY } = bounds;
-  const scale = Math.min(w / Math.max(maxX - minX, .001), h / Math.max(maxY - minY, .001)) * .70;
+  const scale = Math.min(w / Math.max(maxX - minX, .001), h / Math.max(maxY - minY, .001)) * .82;
   const ox = w / 2 - ((minX + maxX) / 2) * scale;
   const oy = h / 2 - ((minY + maxY) / 2) * scale + 12;
   const point = (n: number): XY => [frame[n][0] * scale + ox, frame[n][1] * scale + oy];
@@ -100,59 +100,41 @@ function drawAvatar(
     const values = frame.slice(base, base + 21).map(p => p[2]).filter(Number.isFinite);
     return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
   };
-  const trackedHands = [LEFT_BASE, RIGHT_BASE].filter(base => trackedHand(frame, base));
-  const handsByDepth = [...trackedHands].sort((a, b) => depth(b) - depth(a));
+  const handsByDepth = [LEFT_BASE, RIGHT_BASE]
+    .filter(base => trackedHand(frame, base))
+    .sort((a, b) => depth(b) - depth(a));
 
-  const drawHand = (base: number, map: (n: number) => XY = point, detail = false) => {
-    const p = (n: number) => map(base + n);
+  const drawHand = (base: number) => {
+    const p = (n: number) => point(base + n);
+    // A local light outline separates hands from clothing, skin and the face
+    // while retaining the original landmark positions and hand proportions.
+    ctx.strokeStyle = "rgba(247, 253, 255, .96)";
+    ctx.lineWidth = 7;
+    line(ctx, PALM.map(p), true);
+    ctx.stroke();
+    for (const [a, b] of HAND_BONES) {
+      line(ctx, [p(a), p(b)]);
+      ctx.stroke();
+    }
     ctx.fillStyle = "#e7ad86";
     ctx.strokeStyle = "#342015";
-    ctx.lineWidth = detail ? 2.6 : 2;
+    ctx.lineWidth = 2;
     line(ctx, PALM.map(p), true);
     ctx.fill();
     ctx.stroke();
     for (const [a, b] of HAND_BONES) {
-      ctx.strokeStyle = "#342015"; ctx.lineWidth = detail ? 5 : 4.8; line(ctx, [p(a), p(b)]); ctx.stroke();
-      ctx.strokeStyle = "#f0b58d"; ctx.lineWidth = detail ? 2.4 : 2.5; line(ctx, [p(a), p(b)]); ctx.stroke();
+      ctx.strokeStyle = "#342015"; ctx.lineWidth = 4.5; line(ctx, [p(a), p(b)]); ctx.stroke();
+      ctx.strokeStyle = "#f0b58d"; ctx.lineWidth = 2.2; line(ctx, [p(a), p(b)]); ctx.stroke();
     }
     for (const joint of [4, 8, 12, 16, 20]) {
       const q = p(joint);
       ctx.fillStyle = "#fffaf6";
       ctx.strokeStyle = "#342015";
-      ctx.lineWidth = detail ? 1.5 : 1;
-      ctx.beginPath(); ctx.arc(q[0], q[1], detail ? 2.8 : 1.8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(q[0], q[1], 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
   };
   for (const base of handsByDepth) drawHand(base);
-
-  // Always show each tracked hand at a readable scale. The sign itself stays
-  // in its true position; the insets expose finger configuration and contact.
-  for (const base of trackedHands) {
-    const cx = base === LEFT_BASE ? 69 : w - 69;
-    const cy = 68;
-    const radius = 58;
-    const raw = frame.slice(base, base + 21);
-    const xs = raw.map(p => p[0]), ys = raw.map(p => p[1]);
-    const minHX = Math.min(...xs), maxHX = Math.max(...xs);
-    const minHY = Math.min(...ys), maxHY = Math.max(...ys);
-    const detailScale = radius * 1.36 / Math.max(maxHX - minHX, maxHY - minHY, .001);
-    const map = (n: number): XY => {
-      const p = frame[n];
-      return [(p[0] - (minHX + maxHX) / 2) * detailScale + cx,
-              (p[1] - (minHY + maxHY) / 2) * detailScale + cy];
-    };
-    ctx.save();
-    ctx.shadowColor = "rgba(12, 61, 78, .16)";
-    ctx.shadowBlur = 8;
-    ctx.fillStyle = "rgba(255,255,255,.98)";
-    ctx.strokeStyle = "#0f667a";
-    ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.shadowColor = "transparent";
-    ctx.clip();
-    drawHand(base, map, true);
-    ctx.restore();
-  }
 }
 
 /** A readable illustrated signer driven directly by exported landmarks. */
