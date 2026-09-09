@@ -19,11 +19,48 @@ python3 train/test_parity.py
 python3 train/test_pipeline.py
 ```
 
-Current checkout audit: 264 recognition labels, 96 playback recordings, all
-classifier weight shards present. `data/Pose_Signs`, `data/dataset.npz`,
-`data/own.npz`, and `models/gloss_classifier.keras` are absent. No retraining
-has been performed during this repair. The bundled model's historical held-out
-group score is about 52%; it is not evidence of reliable clinical translation.
+Use `train/status.py` for current counts. The deployed browser model remains
+separate from every candidate training run; no data command promotes weights.
+
+## Download and extract in resumable batches
+
+Use the coordinator for future collection. It processes clinical signs first,
+publishes landmark files atomically, records provenance under `data/meta`,
+and resumes when the same command is run again:
+
+```sh
+bash train/setup_pipeline.sh
+.venv-mp/bin/python train/pipeline.py sync --priority clinical --batch-size 100
+.venv-mp/bin/python train/pipeline.py status
+.venv-mp/bin/python train/pipeline.py validate
+.venv-mp/bin/python train/pipeline.py retry-failed --batch-size 100
+```
+
+Each adapter keeps source video only in a temporary directory. It extracts
+pose, both hands, the 48-point eyebrow/eye/lip subset when available, aspect
+ratio and FPS, then deletes the video. The manifest retains URL, source,
+licence declaration, checksum, label and extraction version. INCLUDE's
+published pose archive has no full face mesh and remains body-only.
+
+After one or more batches, build the optional-face tensor and lazy playback
+shards:
+
+```sh
+.venv-mp/bin/python train/preprocess_face_motion.py
+.venv-mp/bin/python train/pipeline.py export-playback
+```
+
+Long training remains a separate command:
+
+```sh
+.venv-tf/bin/python train/train_face_motion.py
+.venv-tf/bin/python train/train_face_motion.py --personal
+.venv-tf/bin/python train/export_face_motion.py
+```
+
+It writes `models/face-motion-candidate` only. Direct classes require at
+least ten clips across three conservative source/signer groups. Sparse classes
+remain dictionary shortlist entries; this trainer cannot overwrite deployment.
 
 ## Bring recordings into the model
 

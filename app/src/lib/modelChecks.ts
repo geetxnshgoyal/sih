@@ -7,13 +7,17 @@ import type { PointFrame } from './features';
 
 export type Clip = { true: string; frames: number[][][] };
 export function parseRecordings(data: unknown): Clip[] {
-  const doc = data as { format?: string; takes?: { gloss: string; frames: number[][][] }[] };
-  if (doc?.format !== 'setu-recordings-v1' || !Array.isArray(doc.takes) || !doc.takes.length) throw new Error('Choose a nonempty Setu recordings JSON file.');
+  const doc = data as { format?: string; takes?: { gloss: string; frames?: number[][][]; body?: number[][][] }[] };
+  if (!['setu-recordings-v1', 'setu-recordings-v2', 'setu-recordings-v3'].includes(doc?.format ?? '') ||
+      !Array.isArray(doc.takes) || !doc.takes.length) {
+    throw new Error('Choose a nonempty Setu recordings JSON file.');
+  }
   return doc.takes.map(t => {
-    if (!t || typeof t.gloss !== 'string' || !t.gloss.trim() || !Array.isArray(t.frames) || t.frames.length < 4 || t.frames.length > 2000 || t.frames.some(f => !Array.isArray(f) || f.length !== 65 || f.some(p => !Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite)))) {
+    const frames = t?.body ?? t?.frames;
+    if (!t || typeof t.gloss !== 'string' || !t.gloss.trim() || !Array.isArray(frames) || frames.length < 4 || frames.length > 2000 || frames.some(f => !Array.isArray(f) || f.length !== 65 || f.some(p => !Array.isArray(p) || p.length !== 3 || !p.every(Number.isFinite)))) {
       throw new Error('Invalid recording: each take needs 4–2000 frames of 65 finite 3D landmarks.');
     }
-    return { true: t.gloss, frames: t.frames };
+    return { true: t.gloss, frames };
   });
 }
 export async function evaluateClips(clips: Clip[]): Promise<{ expected: string; predicted: string; score: number; accepted: boolean; reason: string | null }[]> {

@@ -5,12 +5,13 @@ import wasmBinary from '@mediapipe/tasks-vision/vision_wasm_internal.wasm?url';
 import fallbackLoader from '@mediapipe/tasks-vision/vision_wasm_nosimd_internal.js?url';
 import fallbackBinary from '@mediapipe/tasks-vision/vision_wasm_nosimd_internal.wasm?url';
 import { assembleFrame, type Landmark, type PointFrame } from '../lib/features';
+import { selectFace, type FaceFrame } from '../lib/face';
 import { asset } from '../lib/assetUrl';
 
 export type LoadState = 'loading' | 'ready' | 'error';
 export type DetectResult = {
   frame: PointFrame; pose: Landmark[] | null; left: Landmark[] | null;
-  right: Landmark[] | null; face: Landmark[] | null;
+  right: Landmark[] | null; face: Landmark[] | null; faceFrame: FaceFrame | null;
 };
 
 /** One Holistic coordinate contract for both training and camera input. */
@@ -78,7 +79,7 @@ export function useLandmarkers() {
     const left = points(result.leftHandLandmarks);
     const right = points(result.rightHandLandmarks);
     const face = points(result.faceLandmarks);
-    return { frame: assembleFrame(pose, left, right), pose, left, right, face };
+    return { frame: assembleFrame(pose, left, right), pose, left, right, face, faceFrame: selectFace(face) };
   }, []);
   return { state, error, detect, retry: () => setAttempt(n => n + 1) };
 }

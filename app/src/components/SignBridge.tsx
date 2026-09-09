@@ -5,7 +5,7 @@ import { GlossClassifier } from "../lib/classifier";
 import { SignBank, type BankMatch } from "../lib/bank";
 import { StabilityGate, FLOOR, NEEDED } from "../lib/gate";
 import { SEQ_LEN, type PointFrame } from "../lib/features";
-import { SignSegmenter, splitRecording, SIGN_GAP_FRAMES } from "../lib/segment";
+import { SignSegmenter, splitRecording, SIGN_GAP_FRAMES, segmentQuality } from "../lib/segment";
 import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
@@ -418,6 +418,43 @@ export default function SignBridge({
     setRecording(true);
   }, [finishRecording]);
 
+  const readSegment = useCallback((segment: PointFrame[], reject: ReturnType<typeof segmentQuality>, aspect: number) => {
+    if (!clfRef.current.usable(segment, aspect)) {
+      setLive({ gloss: "", conf: 0, progress: 0 });
+      setCandidates([]);
+      setDict([]);
+      setNotice("your shoulders are not in frame. Step back so your head and both shoulders are visible");
+      return;
+    }
+    const pred = clfRef.current.predict(segment, aspect);
+    const confirmOnly = confirmBeforeSend || reject === "one-hand";
+    const gated = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
+    setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
+    const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
+    setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5) : []);
+    if (bankRef.current.ready) {
+      const embedding = clfRef.current.embed(segment, aspect);
+      setDict(embedding ? bankRef.current.lookup(embedding, 4) : []);
+    } else setDict([]);
+    if (gated.fire) {
+      const now = Date.now();
+      const finished = uttRef.current.add(gated.fire, now, gated.conf);
+      if (finished) emit(finished.glosses, finished.at, langRef.current, finished.conf);
+      setPending(uttRef.current.pending);
+    }
+  }, [confirmBeforeSend, emit]);
+
+  const finishLiveSign = useCallback(() => {
+    const segment = segRef.current.flush();
+    if (!segment) {
+      setNotice("Start the sign first, then press Finish sign at the end of the movement.");
+      return;
+    }
+    const video = videoRef.current;
+    const aspect = video?.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
+    readSegment(segment, segRef.current.lastReject, aspect);
+  }, [readSegment]);
+
   const loop = useCallback(function loop() {
     if (!runningRef.current) return;
     const video = videoRef.current;
@@ -501,56 +538,7 @@ export default function SignBridge({
           // rather than an early return because requestAnimationFrame(loop)
           // is at the BOTTOM of this function: returning here would stop the
           // camera loop for good.
-          if (!clfRef.current.usable(segment, aspect)) {
-            setLive({ gloss: "", conf: 0, progress: 0 });
-            setCandidates([]);
-            setDict([]);
-            setNotice("your shoulders are not in frame. Step back so your head and both shoulders are visible");
-          } else {
-            const pred = clfRef.current.predict(segment, aspect);
-            const confirmOnly = confirmBeforeSend || reject === "one-hand";
-            const g = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
-            setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
-
-            // Below the confident band, show what else it considered rather than
-            // discarding the sign. The right answer is in this list far more often
-            // than it is the top entry.
-            const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
-            setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5) : []);
-
-            // The dictionary runs on EVERY segment, not only when the
-            // classifier doubts itself.
-            //
-            // The first version gated it on low confidence, which sounds right
-            // and is wrong. A closed-set classifier cannot answer "not one of
-            // mine": asked to read a sign outside its 83 it must still pick one,
-            // and softmax is perfectly capable of being certain about it.
-            // Measured on real clips of words it was never trained on, it said
-            // "Man" at 86% for water and "Alright" at 74% for help, both in the
-            // confident band, both spoken aloud, and both with the dictionary
-            // suppressed precisely because it was confident. The dictionary had
-            // water and help right.
-            //
-            // Score cannot arbitrate either. Where the dictionary is right the
-            // median top-1 cosine is 0.832 and where it is wrong it is 0.780,
-            // so any threshold that keeps most correct answers is barely better
-            // than a coin toss. Nothing here can tell the two apart, so nothing
-            // here pretends to: both readings are shown and a person decides.
-            if (bankRef.current.ready) {
-              const e = clfRef.current.embed(segment, aspect);
-              setDict(e ? bankRef.current.lookup(e, 4) : []);
-            } else {
-              setDict([]);
-            }
-
-            if (g.fire) {
-              const l = langRef.current;
-              const now = Date.now();
-              const finished = uttRef.current.add(g.fire, now, g.conf);
-              if (finished) emit(finished.glosses, finished.at, l, finished.conf);
-              setPending(uttRef.current.pending);
-            }
-          }
+          readSegment(segment, reject, aspect);
         } else {
           // In confirmation mode the last completed reading is a pending
           // choice. Keep it visible with its shortlist instead of showing the
@@ -578,7 +566,7 @@ export default function SignBridge({
       if (tickRef.current % 15 === 0) setFps(frameTimes.current.length);
     }
     rafRef.current = requestAnimationFrame(loop);
-  }, [detect, draw, framing, emit, confirmBeforeSend]);
+  }, [detect, draw, framing, emit, confirmBeforeSend, readSegment]);
 
   /**
    * Replay real ISL clips from the held-out group through the exact same
@@ -922,6 +910,10 @@ export default function SignBridge({
                 {recording
                   ? `Stop and read (${(recFrames / CAPTURE_FPS).toFixed(1)}s)`
                   : "Record a sign"}
+              </button>
+              <button onClick={finishLiveSign} disabled={!running || recording}
+                title="Use this after the final motion when automatic capture waits too long.">
+                Finish sign
               </button>
               <button onClick={stop} disabled={!running}>
                 <Square size={16} /> Stop

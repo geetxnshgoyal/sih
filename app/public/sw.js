@@ -15,7 +15,7 @@
 // release cached the 264-class model cache-first and never bumped, so every
 // returning visitor kept being served a superseded model while the site
 // advertised a better one.
-const VERSION = "setu-v10";
+const VERSION = "setu-v11";
 const SHELL = `${VERSION}-shell`;
 const MODEL = `${VERSION}-model`;
 
@@ -33,6 +33,7 @@ const PRECACHE = [
   `${BASE}model/labels.json`,
   `${BASE}model/_phrasebook.json`,
   `${BASE}model/_bank.json`,
+  `${BASE}signs/index.json`,
 ];
 
 self.addEventListener("install", (e) => {
@@ -81,7 +82,7 @@ self.addEventListener("fetch", (e) => {
   // retrained model failed to reach anyone who had already visited. Stale
   // content is served once and heals itself by the next load, without needing
   // a human to remember to bump a version string.
-  const isModel = sameOrigin && url.pathname.includes("/model/");
+  const isModel = sameOrigin && (url.pathname.includes("/model/") || url.pathname.includes("/signs/"));
   if (isModel) {
     e.respondWith((async () => {
       const cache = await caches.open(MODEL);

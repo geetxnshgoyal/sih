@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Download, Dot, Square } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
 import { type PointFrame } from "../lib/features";
+import type { FaceFrame } from "../lib/face";
 import { segmentQuality } from "../lib/segment";
 
 /**
@@ -23,9 +24,13 @@ import { segmentQuality } from "../lib/segment";
  */
 
 const COUNTDOWN = 3;
-const CAPTURE_MS = 2200;
+// Please starts at the lips, travels down, then finishes with a short shake.
+// A 2.2 s window clipped that ending motion on slower signers, producing a
+// training example that looked like a static pose. Keep the full gesture.
+const CAPTURE_MS = 3200;
 
-type Take = { gloss: string; frames: PointFrame[]; at: number; aspect: number; durationMs: number };
+type CaptureFrame = { body: PointFrame; face: FaceFrame | null };
+type Take = { gloss: string; frames: PointFrame[]; face: (FaceFrame | null)[]; at: number; aspect: number; durationMs: number };
 
 export default function Recorder() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -37,7 +42,7 @@ export default function Recorder() {
   const endRef = useRef(0);
   const generation = useRef(0);
   const [starting, setStarting] = useState(false);
-  const bufRef = useRef<PointFrame[]>([]);
+  const bufRef = useRef<CaptureFrame[]>([]);
   const capturingRef = useRef(false);
 
   const { state, error, detect } = useLandmarkers();
@@ -63,7 +68,7 @@ export default function Recorder() {
       }
       if (res) {
         setHands(!!res.left || !!res.right);
-        if (capturingRef.current) bufRef.current.push(res.frame);
+        if (capturingRef.current) bufRef.current.push({ body: res.frame, face: res.faceFrame });
 
         const cv = canvasRef.current;
         const ctx = cv?.getContext("2d");
@@ -143,14 +148,19 @@ export default function Recorder() {
       setPhase("capturing");
       endRef.current = window.setTimeout(() => {
         capturingRef.current = false;
-        const frames = bufRef.current.slice();
+        const captured = bufRef.current.slice();
+        const frames = captured.map(frame => frame.body);
         setPhase("idle");
         const rejected = segmentQuality(frames);
         if (!rejected || rejected === 'one-hand') {
           const video = videoRef.current;
           const aspect = video?.videoHeight ? video.videoWidth / video.videoHeight : 0;
           if (!aspect) { setCamError('Camera dimensions are unavailable. Record the take again.'); return; }
-          setTakes((prev) => [...prev, { gloss: gloss.trim(), frames, at: Date.now(), aspect, durationMs: CAPTURE_MS }]);
+          setTakes((prev) => [...prev, {
+            gloss: gloss.trim(), frames,
+            face: captured.map(frame => frame.face),
+            at: Date.now(), aspect, durationMs: CAPTURE_MS,
+          }]);
           setCamError(rejected === 'one-hand' ? 'Saved with one hand tracked. Verify that this is an intentional one-handed sign.' : null);
         } else {
           setCamError(
@@ -165,15 +175,18 @@ export default function Recorder() {
     // Frames are already in the unit coordinate space that to_unit() produces,
     // so train/preprocess.py can read this directly.
     const payload = {
-      format: "setu-recordings-v2",
+      format: "setu-recordings-v3",
       points: 65,
-      note: "unit coordinates, pose 0-22 + left hand 23-43 + right hand 44-64",
+      facePoints: 48,
+      note: "unit coordinates; body is pose 0-22 + left hand 23-43 + right hand 44-64; face is eyebrows, eyes and lips",
       takes: takes.map((t) => ({
         gloss: t.gloss,
         aspect: t.aspect,
         durationMs: t.durationMs,
         recorded_at: new Date(t.at).toISOString(),
-        frames: t.frames.map((f) => f.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)])),
+        faceAvailable: t.face.some(Boolean),
+        body: t.frames.map((f) => f.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)])),
+        face: t.face.map((f) => f?.map((p) => [+p.x.toFixed(4), +p.y.toFixed(4), +p.z.toFixed(4)]) ?? null),
       })),
     };
     const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
@@ -194,6 +207,7 @@ export default function Recorder() {
       <div className="record-lead">
         <p className="eyebrow">Community data collection</p>
         <h2>Collect clean examples from the same camera used in the demo.</h2>
+        <p className="muted">For moving signs such as Please, keep the full path in frame: start at the lips, move down, and finish the finger shake before the capture ends.</p>
       </div>
       <div className="card">
         <div className="card-h">
@@ -226,7 +240,7 @@ export default function Recorder() {
             <input
               className="say"
               value={gloss}
-              placeholder="Sign label, e.g. Hello"
+              placeholder="Sign label, e.g. Please"
               onChange={(e) => setGloss(e.target.value)}
             />
             <button

@@ -15,7 +15,14 @@ import { PHRASES } from "./speech";
 // stored: SignPlayer reads p[0] and p[1] only, so the z column was a third of
 // a 3 MB file doing nothing. See train/export_signs.py.
 export type SignFrame = number[][];
-export type SignLibrary = Record<string, SignFrame[]>;
+export type SignFaceFrame = number[][];
+export type SignClip = {
+  version: 2;
+  fps: number;
+  body: SignFrame[];
+  face?: (SignFaceFrame | null)[];
+};
+export type SignLibrary = Record<string, SignClip>;
 
 /**
  * Spoken words that should map onto a gloss we can actually play.
