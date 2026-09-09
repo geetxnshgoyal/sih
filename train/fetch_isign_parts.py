@@ -55,8 +55,13 @@ def token() -> str:
 
 def download(name: str, dest: Path, tok: str) -> bool:
     """curl -C -, because resumption is its job and it is not my code."""
-    cmd = ["curl", "-sSL", "-C", "-", "--retry", "8", "--retry-delay", "5",
+    # Measured 1.15 MB/s to this host, so a part is ~11 hours and drops are
+    # expected rather than exceptional. High retry count, and --speed-limit
+    # kills a connection that has genuinely stalled so the retry can start
+    # rather than hanging on a dead socket.
+    cmd = ["curl", "-sSL", "-C", "-", "--retry", "999", "--retry-delay", "10",
            "--retry-all-errors", "--connect-timeout", "30",
+           "--speed-limit", "10000", "--speed-time", "120",
            "-H", f"Authorization: Bearer {tok}", "-o", str(dest), URL.format(name)]
     print(f"  downloading {name} ...", flush=True)
     return subprocess.run(cmd).returncode == 0
@@ -80,6 +85,13 @@ def to_contract(data: np.ndarray) -> np.ndarray | None:
 
 
 def main() -> int:
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--parts", default="abcd",
+                    help="which parts to do this run, e.g. 'a' for just part_aa. "
+                         "At the measured 1.15 MB/s a part is about 11 hours, so "
+                         "doing one at a time is the sane unit of commitment.")
+    args = ap.parse_args()
     from pose_format import Pose
     OUT.mkdir(parents=True, exist_ok=True)
     tok = token()
@@ -111,7 +123,8 @@ def main() -> int:
               flush=True)
         xs, uids, shard = [], [], shard + 1
 
-    for name in PARTS:
+    for c in args.parts:
+        name = f"iSign-poses_v1.1_part_a{c}"
         if name in done:
             print(f"  {name}: already parsed")
             continue
