@@ -1,5 +1,5 @@
 """
-Feature extraction — Python side of the parity contract.
+Feature extraction: Python side of the parity contract.
 
 MUST stay byte-for-byte equivalent to app/src/lib/features.ts.
 Any change here requires the same change there, and `make parity` must pass.
@@ -15,7 +15,7 @@ import numpy as np
 from face import face_block_size
 
 SEQ_LEN = 32
-POSE_KEEP = 23          # pose landmarks 0..22 — includes the 11 head/face points
+POSE_KEEP = 23          # pose landmarks 0..22, includes the 11 head/face points
 FACE_MODE = "HEAD_ONLY" # INCLUDE poses carry no face mesh; see train/face.py
 N_FACE = face_block_size(FACE_MODE)
 N_POINTS = POSE_KEEP + 21 + 21 + N_FACE   # 65 head-only, 113 with full face
@@ -23,7 +23,7 @@ N_DIMS = 3
 FEATURE_SIZE = SEQ_LEN * N_POINTS * N_DIMS
 
 # Head motion survives normalisation because we anchor at the SHOULDER midpoint,
-# not the head — so nod/shake/tilt remain visible to the model.
+# not the head: so nod/shake/tilt remain visible to the model.
 
 # indices into the raw 75-point array
 POSE = slice(0, POSE_KEEP)
@@ -57,8 +57,8 @@ def isotropic(seq: np.ndarray, aspect: float) -> np.ndarray:
     trained on INCLUDE scores 2.1% on CISLR, barely above the 0.38% chance rate
     (ARCHITECTURE.md 5.1).
 
-    Dividing y by the aspect ratio puts every source — either corpus, and any
-    webcam the app runs on — into one isotropic space where a shoulder-width
+    Dividing y by the aspect ratio puts every source, either corpus, and any
+    webcam the app runs on: into one isotropic space where a shoulder-width
     means the same thing horizontally and vertically.
 
     z is left alone: MediaPipe already reports it on roughly the x scale.
@@ -66,6 +66,45 @@ def isotropic(seq: np.ndarray, aspect: float) -> np.ndarray:
     seq = np.asarray(seq, dtype=np.float64).copy()
     seq[..., 1] /= float(aspect)
     return seq
+
+
+# Nose above the shoulder line, in shoulder widths, for a correctly-scaled
+# human. Measured across four independently-produced corpora that are already
+# isotropic: CISLR 0.552, MS-ASL 0.559, WLASL 0.572, AUTSL 0.583.
+ANATOMY_RATIO = 0.578
+ANATOMY_BAND = (0.42, 0.80)
+
+
+def check_isotropy(anchored: np.ndarray, name: str = "corpus") -> float:
+    """Warn if an anchored batch is not in plausible human proportions.
+
+    Accepts (T, N, 3) or (B, T, N, 3) already through anchor().
+
+    This exists because the same bug has now happened twice. MediaPipe's
+    coordinates carry the source video's aspect ratio, so a corpus whose aspect
+    is guessed wrong comes out stretched, and NOTHING downstream complains: the
+    model trains happily and simply fails on anything shaped differently. It
+    cost 2.1% cross-corpus accuracy on INCLUDE, and was about to be repeated on
+    the ISL dictionary, which was assumed square and is in fact 16:9.
+
+    A ratio near 1.0 means the y axis is still stretched by roughly the frame's
+    aspect. Returns the measured ratio so callers can log it.
+    """
+    a = np.asarray(anchored, dtype=np.float64)
+    if a.ndim == 4:
+        a = a.reshape(-1, a.shape[-2], a.shape[-1])
+    span = np.abs(a[:, L_SHOULDER, 0] - a[:, R_SHOULDER, 0])
+    nose = np.abs(a[:, 0, 1] - (a[:, L_SHOULDER, 1] + a[:, R_SHOULDER, 1]) / 2.0)
+    ok = span > 1e-6
+    if not ok.any():
+        return float("nan")
+    ratio = float(np.median(nose[ok] / span[ok]))
+    lo, hi = ANATOMY_BAND
+    if not (lo <= ratio <= hi):
+        print(f"  !! {name}: nose/shoulder = {ratio:.3f}, outside {lo}-{hi}. "
+              f"The aspect ratio is probably wrong "
+              f"(implied {ratio / ANATOMY_RATIO:.2f}x). See features.isotropic.")
+    return ratio
 
 
 def anchor(seq: np.ndarray) -> np.ndarray:
@@ -115,7 +154,7 @@ def extract(seq: np.ndarray, aspect: float) -> np.ndarray:
     """SHARED CONTRACT. unit-coordinate (T,65,3) -> flat float32 features.
 
     `aspect` is the SOURCE FRAME's width / height. It is required, not
-    defaulted: a wrong aspect is silent — the model still returns a confident
+    defaulted: a wrong aspect is silent, the model still returns a confident
     answer, it is just answering about a differently-shaped body. Making every
     caller state it is the only way to keep that from happening again.
 
@@ -130,7 +169,7 @@ def extract(seq: np.ndarray, aspect: float) -> np.ndarray:
 def aspect_of(vid_shape) -> float:
     """Frame width / height for an INCLUDE pose-release clip.
 
-    `vid_shape` is stored (H, W) — (1080, 1920) for every clip in the release,
+    `vid_shape` is stored (H, W), (1080, 1920) for every clip in the release,
     i.e. LANDSCAPE 1920x1080. The docstring at the top of this file calls it
     (W,H); that is the upstream naming, and to_unit's divisor order matches the
     release's own pre-multiplication, so both are left as they are. Verified:
