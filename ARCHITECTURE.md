@@ -283,24 +283,28 @@ version overwrote a single file and destroyed the best model across three runs.
 
 ## 5. Results: and which number to report
 
-Two models ship. The app picks by setting: health loads the clinical one, travel
-keeps the general one.
+ONE model ships: the 38-sign clinical vocabulary.
 
 | model | classes | clips | held-out signer, close range |
 |---|---|---|---|
-| **clinical** (health) | **38** | 740 | **73.9% top-1 / 96.3% top-5** |
-| general (travel) | 264 | 4,894 | 64.8% top-1 / 86.6% top-5 |
+| **clinical** (ships) | **38** | 740 | **73.9% +/- 1.5 top-1 / 95.1% top-5** |
+| universal | 83 | 1,668 | 68.1% top-1 / 90.4% top-5 |
+| general | 264 | 4,894 | 55.0% top-1 / 83.0% top-5 |
 
-Chance is 2.6% and 0.38% respectively. Per-group top-1 for the clinical model:
-**72.9 / 80.5 / 68.2**.
+Chance is 2.6% and 0.38% respectively.
+
+The clinical row is the **mean of five seeds**: 72.7, 72.2, 75.5, 75.4, 73.8.
+The other two rows are single runs, so treat those gaps as approximate. See
+"Seed variance" below for why nothing under about 4.2 points should be claimed
+from one run.
 
 > **Report the held-out-signer number, never a random split.** A random split
 > puts the same person on both sides and inflates by roughly 38 points. Being
 > able to explain that gap is the most credible thing this project can say;
 > most competing work quotes the inflated figure.
 
-**Quote 73.9% for the clinical model, and say what it cannot do in the same
-breath.** It has no sign for *pain*, *water*, *help*, *yes* or *no*: those are
+**Quote 73.9% plus or minus 1.5 for the clinical model, say it is a mean over
+five seeds, and say what it cannot do in the same breath.** It has no sign for *pain*, *water*, *help*, *yes* or *no*: those are
 absent from every ISL corpus available to us, and they live on the phrase board
 instead. A headline accuracy without that sentence is misleading.
 
@@ -1105,6 +1109,82 @@ still a modelling problem.
    machine translation with at least one known Hindi grammatical error, on the
    surface the product tells clinicians to rely on. This has been outstanding
    longest and is not a technical task.
+
+### Dictionary clips as extra signers: helps CISLR, hurts INCLUDE
+
+Tried because signer diversity is the one lever with a positive track record
+here: adding CISLR was worth +3.4, while five training-side changes did nothing
+between them. `train/preprocess_dict_extra.py` finds dictionary clips whose word
+is ALREADY one of the 83 and adds them as extra examples in their own signer
+group. 295 clips, no new classes, `train_clinical.py --extra`.
+
+Leave-one-group-out, same protocol, same recipe:
+
+| held-out corpus | baseline | with extra signers | delta |
+|---|---|---|---|
+| INCLUDE, n=1478 | 67.7% [65.3-70.1] | 64.6% [62.1-67.0] | **-3.1** |
+| INCLUDE top-5 | 90.0% | 88.1% | -1.9 |
+| CISLR, n=190 | 25.8% [20.1-32.4] | 35.3% [28.8-42.3] | **+9.5** |
+| CISLR top-5 | 42.6% | 58.9% | **+16.3** |
+
+Neither reaches significance: the 95% intervals overlap on both. The honest
+reading is that it moves accuracy TOWARDS the dictionary domain and away from
+INCLUDE, which is what adding 295 studio clips to 1,668 should do.
+
+Not shipped, because the headline number is the INCLUDE one and it went down.
+But the CISLR top-5 gain of 16.3 points is large, and CISLR is the only
+held-out CORPUS available rather than merely a held-out signer, so it is the
+best proxy on hand for unfamiliar filming conditions. If the app is failing on
+a live webcam in an unfamiliar room, this arm is pointing at something real and
+deserves a better-powered test: more dictionary clips, or a held-out set that
+is not INCLUDE.
+
+Reproduce: `train/train_clinical.py --vocab universal --extra`.
+
+### Seed variance: the noise floor, measured at last
+
+Five identical runs of the shipping recipe, differing only in seed:
+
+| seed | top-1 | top-5 |
+|---|---|---|
+| 1 | 72.7% | 94.9% |
+| 2 | 72.2% | 93.5% |
+| 3 | 75.5% | 95.6% |
+| 4 | 75.4% | 95.3% |
+| 5 | 73.8% | 96.5% |
+
+**mean 73.9%, standard deviation 1.51, spread 3.3 points.** 95% interval of the
+mean [72.6, 75.2]. Reproduce with `train/train_clinical.py --seed N --tag _sN`.
+
+The 75.1% quoted everywhere before this was a single draw, and it sits at the
+top of that range. The honest figure for the recipe is **73.9% plus or minus
+1.5**; the model that happens to be deployed measured 75.1% on its one run.
+
+**A single-seed comparison must beat about 4.2 points to mean anything**
+(1.96 x sigma x sqrt(2), two independent draws). Applying that to everything on
+record:
+
+| claim | delta | verdict |
+|---|---|---|
+| ArcFace, cross-domain | -18.5 | survives |
+| Borrowed ASL pretraining | +18.4 | survives |
+| Cutting vocabulary, 264 to 83 | +8.4 | survives |
+| Test-time augmentation | -8.1 | survives |
+| Two-stream motion | -7.1 | survives |
+| 83 to 38 clinical | +7.0 | survives |
+| CISLR, 610 new clips | +3.4 | **inside the noise** |
+| Dictionary clips as extra signers | -3.1 | **inside the noise** |
+| SSL on 13,662 ISL clips | +1.3 | **inside the noise** |
+| Hand-dropout augmentation | -0.8 | **inside the noise** |
+| FULL_FACE face mesh | ~0 | inside the noise |
+| SL-GCN | ~0 | inside the noise |
+
+The large results hold. Four smaller ones do not, and **CISLR's +3.4 was used
+as the argument for two later experiments**, both of which then failed. That
+reasoning rested on noise.
+
+Nothing below 4.2 points should be reported from one run again. Either average
+over seeds or do not claim it.
 
 ### Settled by measurement, do not repeat
 
