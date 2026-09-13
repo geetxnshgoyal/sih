@@ -119,11 +119,31 @@ def main() -> int:
             print(f"  {name}: already parsed"); continue
         pf = out / name
         print(f"  downloading {name} ...", flush=True)
-        rc = subprocess.run(["curl", "-sSL", "-C", "-", "--retry", "20",
-                             "--retry-delay", "5", "--retry-all-errors",
-                             "-H", f"Authorization: Bearer {args.token}",
-                             "-o", str(pf), URL.format(name)]).returncode
-        if rc != 0:
+        # Retry HERE, not with curl's --retry. `-C -` fixes its resume offset
+        # when curl starts, and --retry rewinds to that offset inside the same
+        # invocation, discarding everything fetched since. That cost 24 hours
+        # locally: the file reached 9.05 GB and fell back to 0.43 GB. A fresh
+        # curl per attempt re-reads the real file size instead.
+        import time
+        ok, stalled = False, 0
+        for attempt in range(1, 200):
+            before = pf.stat().st_size if pf.exists() else 0
+            rc = subprocess.run(["curl", "-sSL", "-C", "-",
+                                 "--connect-timeout", "30",
+                                 "--speed-limit", "10000", "--speed-time", "120",
+                                 "-H", f"Authorization: Bearer {args.token}",
+                                 "-o", str(pf), URL.format(name)]).returncode
+            after = pf.stat().st_size if pf.exists() else 0
+            if rc == 0:
+                ok = True; break
+            gained = after - before
+            stalled = stalled + 1 if gained <= 0 else 0
+            print(f"    attempt {attempt} exit {rc}, +{gained/1e6:.0f} MB, "
+                  f"now {after/1e9:.2f} GB", flush=True)
+            if stalled >= 12:
+                break
+            time.sleep(5)
+        if not ok:
             print(f"  {name}: download failed, rerun to resume"); return 1
 
         buf = carry_f.read_bytes() if carry_f.exists() else b""
