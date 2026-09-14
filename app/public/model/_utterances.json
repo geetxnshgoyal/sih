@@ -1,0 +1,1098 @@
+{
+ "generated": "2026-09-04T08:44:18+00:00",
+ "model": "facebook/nllb-200-distilled-600M",
+ "entries": {
+  "I|sick": {
+   "en-IN": "I am sick.",
+   "hi-IN": "मैं बीमार हूँ.",
+   "ta-IN": "நான் நோய்வாய்ப்பட்டிருக்கிறேன்.",
+   "te-IN": "నేను అనారోగ్యంతో ఉన్నాను.",
+   "bn-IN": "আমি অসুস্থ।",
+   "mr-IN": "मी आजारी आहे.",
+   "glosses": [
+    "I",
+    "sick"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Doctor": {
+   "en-IN": "I need to see a doctor.",
+   "hi-IN": "मुझे एक डॉक्टर को देखने की जरूरत है.",
+   "ta-IN": "நான் ஒரு மருத்துவரை பார்க்க வேண்டும்.",
+   "te-IN": "నేను ఒక వైద్యుడు చూడాలి.",
+   "bn-IN": "আমাকে ডাক্তারের কাছে যেতে হবে।",
+   "mr-IN": "मला डॉक्टरांना भेटायचं आहे.",
+   "glosses": [
+    "I",
+    "Doctor"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "request"
+  },
+  "I|Medicine": {
+   "en-IN": "I need medicine.",
+   "hi-IN": "मुझे दवा चाहिए।",
+   "ta-IN": "எனக்கு மருந்துகள் தேவை.",
+   "te-IN": "నేను మందు అవసరం.",
+   "bn-IN": "আমার ওষুধ দরকার।",
+   "mr-IN": "मला औषधे हवी आहेत.",
+   "glosses": [
+    "I",
+    "Medicine"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "request"
+  },
+  "I|Medicine|Time": {
+   "en-IN": "When should I take this medicine?",
+   "hi-IN": "मुझे यह दवा कब लेनी चाहिए?",
+   "ta-IN": "இந்த மருந்தை நான் எப்போது எடுக்க வேண்டும்?",
+   "te-IN": "నేను ఈ ఔషధాన్ని ఎప్పుడు తీసుకోవాలి?",
+   "bn-IN": "এই ওষুধটি কখন নেওয়া উচিত?",
+   "mr-IN": "मी हे औषध कधी घ्यावे?",
+   "glosses": [
+    "I",
+    "Medicine",
+    "Time"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "question"
+  },
+  "Doctor|Location": {
+   "en-IN": "Where is the doctor?",
+   "hi-IN": "डॉक्टर कहाँ है?",
+   "ta-IN": "டாக்டர் எங்கே?",
+   "te-IN": "డాక్టర్ ఎక్కడ ఉంది?",
+   "bn-IN": "ডাক্তার কোথায়?",
+   "mr-IN": "डॉक्टर कुठे आहे?",
+   "glosses": [
+    "Doctor",
+    "Location"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "question"
+  },
+  "Hospital|Location": {
+   "en-IN": "Where is the hospital?",
+   "hi-IN": "अस्पताल कहाँ है?",
+   "ta-IN": "மருத்துவமனை எங்கே?",
+   "te-IN": "ఆసుపత్రి ఎక్కడ ఉంది?",
+   "bn-IN": "হাসপাতাল কোথায়?",
+   "mr-IN": "रुग्णालय कुठे आहे?",
+   "glosses": [
+    "Hospital",
+    "Location"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "question"
+  },
+  "Doctor|Time": {
+   "en-IN": "When will the doctor come?",
+   "hi-IN": "डॉक्टर कब आएगा?",
+   "ta-IN": "டாக்டர் எப்போது வருவார்?",
+   "te-IN": "డాక్టర్ ఎప్పుడు వస్తాడు?",
+   "bn-IN": "ডাক্তার কবে আসবে?",
+   "mr-IN": "डॉक्टर कधी येतील?",
+   "glosses": [
+    "Doctor",
+    "Time"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "question"
+  },
+  "Medicine|Price": {
+   "en-IN": "How much does the medicine cost?",
+   "hi-IN": "दवा की कीमत कितनी है?",
+   "ta-IN": "இந்த மருந்து எவ்வளவு செலவாகும்?",
+   "te-IN": "ఔషధం ఎంత ఖర్చవుతుంది?",
+   "bn-IN": "ওষুধের দাম কত?",
+   "mr-IN": "औषधाची किंमत किती आहे?",
+   "glosses": [
+    "Medicine",
+    "Price"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|Doctor|Today": {
+   "en-IN": "I need to see a doctor today.",
+   "hi-IN": "मुझे आज एक डॉक्टर को देखने की जरूरत है।",
+   "ta-IN": "நான் இன்று ஒரு மருத்துவரை பார்க்க வேண்டும்.",
+   "te-IN": "నేను ఒక వైద్యుడు చూడటానికి అవసరం నేడు.",
+   "bn-IN": "আমাকে আজ ডাক্তারের কাছে যেতে হবে।",
+   "mr-IN": "मला आज डॉक्टरांना भेटायचं आहे.",
+   "glosses": [
+    "I",
+    "Doctor",
+    "Today"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "request"
+  },
+  "I|Doctor|Tomorrow": {
+   "en-IN": "I would like to see a doctor tomorrow.",
+   "hi-IN": "मैं कल डॉक्टर से मिलना चाहूँगा।",
+   "ta-IN": "நான் நாளை ஒரு மருத்துவரைப் பார்க்க விரும்புகிறேன்.",
+   "te-IN": "నేను రేపు ఒక వైద్యుడిని చూడాలనుకుంటున్నాను.",
+   "bn-IN": "আমি আগামীকাল ডাক্তারের কাছে যেতে চাই।",
+   "mr-IN": "मला उद्या डॉक्टरांना भेटायचं आहे.",
+   "glosses": [
+    "I",
+    "Doctor",
+    "Tomorrow"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Patient|I": {
+   "en-IN": "I am the patient.",
+   "hi-IN": "मैं रोगी हूँ।",
+   "ta-IN": "நான் நோயாளி.",
+   "te-IN": "నేను రోగిని.",
+   "bn-IN": "আমি রোগী।",
+   "mr-IN": "मी रुग्ण आहे.",
+   "glosses": [
+    "Patient",
+    "I"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Deaf": {
+   "en-IN": "I am Deaf.",
+   "hi-IN": "मैं बहरा हूँ।",
+   "ta-IN": "நான் செவிடன்.",
+   "te-IN": "నేను చెవిటివాడిని.",
+   "bn-IN": "আমি বধির।",
+   "mr-IN": "मी बहिरा आहे.",
+   "glosses": [
+    "I",
+    "Deaf"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Deaf|Sign": {
+   "en-IN": "I am Deaf and I use sign language.",
+   "hi-IN": "मैं बहरा हूँ और मैं सांकेतिक भाषा का प्रयोग करता हूँ।",
+   "ta-IN": "நான் செவிடன், நான் சைகை மொழியைப் பயன்படுத்துகிறேன்.",
+   "te-IN": "నేను చెవిటివాడిని మరియు నేను సంజ్ఞా భాషను ఉపయోగిస్తాను.",
+   "bn-IN": "আমি বধির এবং আমি সাইন ল্যাঙ্গুয়েজ ব্যবহার করি।",
+   "mr-IN": "मी बहिरा आहे आणि मी सांकेतिक भाषा वापरतो.",
+   "glosses": [
+    "I",
+    "Deaf",
+    "Sign"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|sick|Today": {
+   "en-IN": "I have been sick today.",
+   "hi-IN": "मैं आज बीमार रहा हूँ।",
+   "ta-IN": "நான் இன்று நோய்வாய்ப்பட்டிருக்கிறேன்.",
+   "te-IN": "నేను ఈ రోజు అనారోగ్యంతో ఉన్నాను.",
+   "bn-IN": "আমি আজ অসুস্থ হয়ে পড়েছি।",
+   "mr-IN": "आज मी आजारी पडलो आहे.",
+   "glosses": [
+    "I",
+    "sick",
+    "Today"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|hot": {
+   "en-IN": "I have a fever.",
+   "hi-IN": "मुझे बुखार है।",
+   "ta-IN": "எனக்கு காய்ச்சல் உள்ளது.",
+   "te-IN": "నాకు జ్వరం ఉంది.",
+   "bn-IN": "আমার জ্বর আছে।",
+   "mr-IN": "मला ताप आहे.",
+   "glosses": [
+    "I",
+    "hot"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|cold": {
+   "en-IN": "I feel cold.",
+   "hi-IN": "मुझे ठंड लग रही है.",
+   "ta-IN": "நான் குளிர் உணர்கிறேன்.",
+   "te-IN": "నేను చల్లని అనుభూతి.",
+   "bn-IN": "আমার ঠাণ্ডা লাগছে।",
+   "mr-IN": "मला थंडी आहे.",
+   "glosses": [
+    "I",
+    "cold"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|weak": {
+   "en-IN": "I feel weak.",
+   "hi-IN": "मैं कमजोर महसूस कर रहा हूँ.",
+   "ta-IN": "நான் பலவீனமாக உணர்கிறேன்.",
+   "te-IN": "నేను బలహీనంగా భావిస్తున్నాను.",
+   "bn-IN": "আমি দুর্বল বোধ করছি।",
+   "mr-IN": "मी कमकुवत आहे.",
+   "glosses": [
+    "I",
+    "weak"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|healthy": {
+   "en-IN": "I am feeling well.",
+   "hi-IN": "मैं अच्छा महसूस कर रहा हूँ.",
+   "ta-IN": "நான் நன்றாக உணர்கிறேன்.",
+   "te-IN": "నేను మంచి అనుభూతి.",
+   "bn-IN": "আমি ভালো আছি।",
+   "mr-IN": "मला चांगलं वाटत आहे.",
+   "glosses": [
+    "I",
+    "healthy"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Baby|sick": {
+   "en-IN": "My baby is sick.",
+   "hi-IN": "मेरा बच्चा बीमार है।",
+   "ta-IN": "என் குழந்தை நோய்வாய்ப்பட்டிருக்கிறது.",
+   "te-IN": "నా బిడ్డ అనారోగ్యంతో ఉంది.",
+   "bn-IN": "আমার বাচ্চা অসুস্থ।",
+   "mr-IN": "माझं बाळ आजारी आहे.",
+   "glosses": [
+    "Baby",
+    "sick"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Child|sick": {
+   "en-IN": "My child is sick.",
+   "hi-IN": "मेरा बच्चा बीमार है।",
+   "ta-IN": "என் குழந்தை நோய்வாய்ப்பட்டுள்ளது.",
+   "te-IN": "నా బిడ్డ అనారోగ్యంతో ఉంది.",
+   "bn-IN": "আমার বাচ্চা অসুস্থ।",
+   "mr-IN": "माझं बाळ आजारी आहे.",
+   "glosses": [
+    "Child",
+    "sick"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Mother|sick": {
+   "en-IN": "My mother is sick.",
+   "hi-IN": "मेरी माँ बीमार है.",
+   "ta-IN": "என் அம்மா நோய்வாய்ப்பட்டார்.",
+   "te-IN": "నా తల్లి అనారోగ్యంతో ఉంది.",
+   "bn-IN": "আমার মা অসুস্থ।",
+   "mr-IN": "माझी आई आजारी आहे.",
+   "glosses": [
+    "Mother",
+    "sick"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Father|sick": {
+   "en-IN": "My father is sick.",
+   "hi-IN": "मेरे पिता बीमार है.",
+   "ta-IN": "என் தந்தை நோய்வாய்ப்பட்டார்.",
+   "te-IN": "నా తండ్రి అనారోగ్యంతో ఉంది.",
+   "bn-IN": "আমার বাবা অসুস্থ।",
+   "mr-IN": "माझे वडील आजारी आहेत.",
+   "glosses": [
+    "Father",
+    "sick"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Medicine|Time": {
+   "en-IN": "What time is my medicine due?",
+   "hi-IN": "मेरी दवा किस समय आती है?",
+   "ta-IN": "என் மருந்து எத்தனை மணிக்கு வரப்போகிறது?",
+   "te-IN": "నా ఔషధం ఏ సమయంలో వస్తుంది?",
+   "bn-IN": "আমার ওষুধের মেয়াদ কবে?",
+   "mr-IN": "माझ्या औषधाची मुदत किती वाजता आहे?",
+   "glosses": [
+    "Medicine",
+    "Time"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|Bathroom": {
+   "en-IN": "I need to use the bathroom.",
+   "hi-IN": "मुझे बाथरूम का उपयोग करने की जरूरत है।",
+   "ta-IN": "நான் கழிப்பறை பயன்படுத்த வேண்டும்.",
+   "te-IN": "నేను బాత్రూమ్ ఉపయోగించడానికి అవసరం.",
+   "bn-IN": "আমাকে বাথরুমে যেতে হবে।",
+   "mr-IN": "मला बाथरूमला जायचं आहे.",
+   "glosses": [
+    "I",
+    "Bathroom"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "request"
+  },
+  "Bathroom|Location": {
+   "en-IN": "Where is the bathroom?",
+   "hi-IN": "बाथरूम कहाँ है?",
+   "ta-IN": "கழிப்பறை எங்கே?",
+   "te-IN": "బాత్రూమ్ ఎక్కడ ఉంది?",
+   "bn-IN": "বাথরুম কোথায়?",
+   "mr-IN": "बाथरूम कुठे आहे?",
+   "glosses": [
+    "Bathroom",
+    "Location"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "question"
+  },
+  "Doctor|good": {
+   "en-IN": "The doctor is good.",
+   "hi-IN": "डॉक्टर अच्छा है।",
+   "ta-IN": "டாக்டர் நல்லவர்.",
+   "te-IN": "డాక్టర్ మంచి ఉంది.",
+   "bn-IN": "ডাক্তার ভালো।",
+   "mr-IN": "डॉक्टर चांगला आहे.",
+   "glosses": [
+    "Doctor",
+    "good"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Hospital|Today": {
+   "en-IN": "I went to the hospital today.",
+   "hi-IN": "मैं आज अस्पताल गया था।",
+   "ta-IN": "நான் இன்று மருத்துவமனையில் சென்றேன்.",
+   "te-IN": "నేను ఈ రోజు ఆసుపత్రికి వెళ్ళాను.",
+   "bn-IN": "আমি আজ হাসপাতালে গিয়েছিলাম।",
+   "mr-IN": "मी आज रुग्णालयात गेलो.",
+   "glosses": [
+    "I",
+    "Hospital",
+    "Today"
+   ],
+   "domain": "medical",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Train Station|Location": {
+   "en-IN": "Where is the railway station?",
+   "hi-IN": "रेलवे स्टेशन कहाँ है?",
+   "ta-IN": "ரயில் நிலையம் எங்கே?",
+   "te-IN": "రైలు స్టేషన్ ఎక్కడ ఉంది?",
+   "bn-IN": "রেল স্টেশন কোথায়?",
+   "mr-IN": "रेल्वे स्थानक कुठे आहे?",
+   "glosses": [
+    "Train Station",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|train ticket": {
+   "en-IN": "I need a train ticket.",
+   "hi-IN": "मुझे ट्रेन का टिकट चाहिए।",
+   "ta-IN": "எனக்கு ஒரு ரயில் டிக்கெட் தேவை.",
+   "te-IN": "నేను ఒక రైలు టికెట్ అవసరం.",
+   "bn-IN": "আমার ট্রেনের টিকিট দরকার।",
+   "mr-IN": "मला रेल्वे तिकीट हवे आहे.",
+   "glosses": [
+    "I",
+    "train ticket"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "request"
+  },
+  "train ticket|Price": {
+   "en-IN": "How much does a train ticket cost?",
+   "hi-IN": "एक ट्रेन टिकट की कीमत कितनी है?",
+   "ta-IN": "ஒரு ரயில் டிக்கெட் எவ்வளவு செலவாகும்?",
+   "te-IN": "రైలు టికెట్ ఎంత ఖర్చవుతుంది?",
+   "bn-IN": "ট্রেনের টিকিটের দাম কত?",
+   "mr-IN": "रेल्वे तिकिटाची किंमत किती आहे?",
+   "glosses": [
+    "train ticket",
+    "Price"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Train|Time": {
+   "en-IN": "When does the train leave?",
+   "hi-IN": "ट्रेन कब जाती है?",
+   "ta-IN": "ரயில் எப்போது புறப்படுகிறது?",
+   "te-IN": "రైలు ఎప్పుడు బయలుదేరుతుంది?",
+   "bn-IN": "ট্রেন কখন ছাড়বে?",
+   "mr-IN": "ट्रेन कधी निघते?",
+   "glosses": [
+    "Train",
+    "Time"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Bus|Location": {
+   "en-IN": "Where is the bus stop?",
+   "hi-IN": "बस स्टॉप कहाँ है?",
+   "ta-IN": "பேருந்து நிறுத்தம் எங்கே?",
+   "te-IN": "బస్సు స్టాప్ ఎక్కడ ఉంది?",
+   "bn-IN": "বাস স্টেশন কোথায়?",
+   "mr-IN": "बस स्टॉप कुठे आहे?",
+   "glosses": [
+    "Bus",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Bus|Time": {
+   "en-IN": "When does the bus leave?",
+   "hi-IN": "बस कब जाती है?",
+   "ta-IN": "பேருந்து எப்போது புறப்படுகிறது?",
+   "te-IN": "బస్సు ఎప్పుడు బయలుదేరుతుంది?",
+   "bn-IN": "বাস কখন ছাড়বে?",
+   "mr-IN": "बस कधी निघते?",
+   "glosses": [
+    "Bus",
+    "Time"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|Bus": {
+   "en-IN": "I need to take the bus.",
+   "hi-IN": "मुझे बस ले जाना है।",
+   "ta-IN": "நான் பஸ் எடுக்க வேண்டும்.",
+   "te-IN": "నేను బస్సు తీసుకోవాలి.",
+   "bn-IN": "আমাকে বাসে উঠতে হবে।",
+   "mr-IN": "मला बसने जायचं आहे.",
+   "glosses": [
+    "I",
+    "Bus"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "request"
+  },
+  "Restaurant|Location": {
+   "en-IN": "Where can I find a restaurant?",
+   "hi-IN": "मैं एक रेस्तरां कहाँ पा सकता हूँ?",
+   "ta-IN": "நான் எங்கே ஒரு உணவகம் கண்டுபிடிக்க முடியும்?",
+   "te-IN": "నేను ఎక్కడ ఒక రెస్టారెంట్ కనుగొనేందుకు చేయవచ్చు?",
+   "bn-IN": "রেস্তোরাঁ কোথায় পাবো?",
+   "mr-IN": "मला रेस्टॉरंट कुठे मिळेल?",
+   "glosses": [
+    "Restaurant",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Market|Location": {
+   "en-IN": "Where is the market?",
+   "hi-IN": "बाजार कहाँ है?",
+   "ta-IN": "சந்தை எங்கே?",
+   "te-IN": "మార్కెట్ ఎక్కడ ఉంది?",
+   "bn-IN": "বাজার কোথায়?",
+   "mr-IN": "बाजार कुठे आहे?",
+   "glosses": [
+    "Market",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Bank|Location": {
+   "en-IN": "Where is the bank?",
+   "hi-IN": "बैंक कहाँ है?",
+   "ta-IN": "வங்கி எங்கே?",
+   "te-IN": "బ్యాంకు ఎక్కడ ఉంది?",
+   "bn-IN": "ব্যাংক কোথায়?",
+   "mr-IN": "बँक कुठे आहे?",
+   "glosses": [
+    "Bank",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Street or Road|Location": {
+   "en-IN": "Which road is this?",
+   "hi-IN": "यह किस सड़क पर है?",
+   "ta-IN": "இது எந்த சாலை?",
+   "te-IN": "ఇది ఏ రహదారి?",
+   "bn-IN": "এটা কোন রাস্তা?",
+   "mr-IN": "हा कोणता रस्ता आहे?",
+   "glosses": [
+    "Street or Road",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|Money": {
+   "en-IN": "I need to withdraw money.",
+   "hi-IN": "मुझे पैसे निकालने की जरूरत है।",
+   "ta-IN": "நான் பணம் எடுக்க வேண்டும்.",
+   "te-IN": "నేను డబ్బు ఉపసంహరించుకోవాలని.",
+   "bn-IN": "আমাকে টাকা তুলতে হবে।",
+   "mr-IN": "मला पैसे काढायचे आहेत.",
+   "glosses": [
+    "I",
+    "Money"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "request"
+  },
+  "Price": {
+   "en-IN": "How much does this cost?",
+   "hi-IN": "यह कितना खर्च करता है?",
+   "ta-IN": "இது எவ்வளவு செலவாகும்?",
+   "te-IN": "ఇది ఎంత ఖర్చవుతుంది?",
+   "bn-IN": "এর দাম কত?",
+   "mr-IN": "याची किंमत किती आहे?",
+   "glosses": [
+    "Price"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "cheap": {
+   "en-IN": "This is cheap.",
+   "hi-IN": "यह सस्ता है.",
+   "ta-IN": "இது மலிவானது.",
+   "te-IN": "ఇది చౌకగా ఉంది.",
+   "bn-IN": "এটা সস্তা।",
+   "mr-IN": "हे स्वस्त आहे.",
+   "glosses": [
+    "cheap"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "statement"
+  },
+  "expensive": {
+   "en-IN": "This is too expensive.",
+   "hi-IN": "यह बहुत महंगा है.",
+   "ta-IN": "இது மிகவும் விலை உயர்ந்தது.",
+   "te-IN": "ఇది చాలా ఖరీదైనది.",
+   "bn-IN": "এটা খুব ব্যয়বহুল।",
+   "mr-IN": "हे खूप महाग आहे.",
+   "glosses": [
+    "expensive"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Train|Time|Tomorrow": {
+   "en-IN": "When does the train leave tomorrow?",
+   "hi-IN": "ट्रेन कल कब जाती है?",
+   "ta-IN": "ரயில் நாளை எப்போது புறப்படும்?",
+   "te-IN": "రేపు రైలు ఎప్పుడు బయలుదేరుతుంది?",
+   "bn-IN": "কাল ট্রেন কখন ছাড়বে?",
+   "mr-IN": "उद्या ट्रेन कधी निघते?",
+   "glosses": [
+    "Train",
+    "Time",
+    "Tomorrow"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|Car": {
+   "en-IN": "I need a taxi.",
+   "hi-IN": "मुझे एक टैक्सी की जरूरत है.",
+   "ta-IN": "எனக்கு ஒரு டாக்ஸி தேவை.",
+   "te-IN": "నేను ఒక టాక్సీ అవసరం.",
+   "bn-IN": "আমার একটা ট্যাক্সি দরকার।",
+   "mr-IN": "मला टॅक्सीची गरज आहे.",
+   "glosses": [
+    "I",
+    "Car"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "request"
+  },
+  "Plane|Time": {
+   "en-IN": "When does the flight leave?",
+   "hi-IN": "उड़ान कब जाती है?",
+   "ta-IN": "விமானம் எப்போது புறப்படும்?",
+   "te-IN": "విమానం ఎప్పుడు బయలుదేరుతుంది?",
+   "bn-IN": "ফ্লাইট কখন ছাড়বে?",
+   "mr-IN": "उड्डाण कधी निघते?",
+   "glosses": [
+    "Plane",
+    "Time"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Temple|Location": {
+   "en-IN": "Where is the temple?",
+   "hi-IN": "मंदिर कहाँ है?",
+   "ta-IN": "கோயில் எங்கே?",
+   "te-IN": "ఆలయం ఎక్కడ ఉంది?",
+   "bn-IN": "মন্দির কোথায়?",
+   "mr-IN": "मंदिर कुठे आहे?",
+   "glosses": [
+    "Temple",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Park|Location": {
+   "en-IN": "Where is the park?",
+   "hi-IN": "पार्क कहाँ है?",
+   "ta-IN": "பூங்கா எங்கே?",
+   "te-IN": "పార్క్ ఎక్కడ ఉంది?",
+   "bn-IN": "পার্কটা কোথায়?",
+   "mr-IN": "पार्क कुठे आहे?",
+   "glosses": [
+    "Park",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Library|Location": {
+   "en-IN": "Where is the library?",
+   "hi-IN": "पुस्तकालय कहाँ है?",
+   "ta-IN": "நூலகம் எங்கே?",
+   "te-IN": "లైబ్రరీ ఎక్కడ ఉంది?",
+   "bn-IN": "গ্রন্থাগার কোথায়?",
+   "mr-IN": "ग्रंथालय कुठे आहे?",
+   "glosses": [
+    "Library",
+    "Location"
+   ],
+   "domain": "travel",
+   "reordered": true,
+   "register": "question"
+  },
+  "Police|Location": {
+   "en-IN": "Where is the police station?",
+   "hi-IN": "पुलिस स्टेशन कहाँ है?",
+   "ta-IN": "காவல் நிலையம் எங்கே?",
+   "te-IN": "పోలీసు స్టేషన్ ఎక్కడ ఉంది?",
+   "bn-IN": "পুলিশ স্টেশন কোথায়?",
+   "mr-IN": "पोलीस स्टेशन कुठे आहे?",
+   "glosses": [
+    "Police",
+    "Location"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|Police": {
+   "en-IN": "I need the police.",
+   "hi-IN": "मुझे पुलिस की जरूरत है.",
+   "ta-IN": "எனக்கு போலீஸ் தேவை.",
+   "te-IN": "నేను పోలీసు అవసరం.",
+   "bn-IN": "আমার পুলিশ দরকার।",
+   "mr-IN": "मला पोलिसांची गरज आहे.",
+   "glosses": [
+    "I",
+    "Police"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "request"
+  },
+  "School|Location": {
+   "en-IN": "Where is the school?",
+   "hi-IN": "स्कूल कहाँ है?",
+   "ta-IN": "பள்ளி எங்கே?",
+   "te-IN": "పాఠశాల ఎక్కడ ఉంది?",
+   "bn-IN": "স্কুল কোথায়?",
+   "mr-IN": "शाळा कुठे आहे?",
+   "glosses": [
+    "School",
+    "Location"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "question"
+  },
+  "Office|Location": {
+   "en-IN": "Where is the office?",
+   "hi-IN": "कार्यालय कहाँ है?",
+   "ta-IN": "அலுவலகம் எங்கே?",
+   "te-IN": "కార్యాలయం ఎక్కడ ఉంది?",
+   "bn-IN": "অফিস কোথায়?",
+   "mr-IN": "ऑफिस कुठे आहे?",
+   "glosses": [
+    "Office",
+    "Location"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "question"
+  },
+  "I|Student": {
+   "en-IN": "I am a student.",
+   "hi-IN": "मैं एक छात्र हूँ।",
+   "ta-IN": "நான் ஒரு மாணவன்.",
+   "te-IN": "నేను ఒక విద్యార్థిని.",
+   "bn-IN": "আমি একজন ছাত্র।",
+   "mr-IN": "मी विद्यार्थी आहे.",
+   "glosses": [
+    "I",
+    "Student"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Teacher": {
+   "en-IN": "I am a teacher.",
+   "hi-IN": "मैं एक शिक्षक हूँ।",
+   "ta-IN": "நான் ஒரு ஆசிரியர்.",
+   "te-IN": "నేను ఒక ఉపాధ్యాయుడు.",
+   "bn-IN": "আমি একজন শিক্ষক।",
+   "mr-IN": "मी शिक्षक आहे.",
+   "glosses": [
+    "I",
+    "Teacher"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Job": {
+   "en-IN": "I am looking for work.",
+   "hi-IN": "मैं काम की तलाश में हूँ।",
+   "ta-IN": "நான் வேலை தேடுகிறேன்.",
+   "te-IN": "నేను ఉద్యోగం కోసం చూస్తున్నాను.",
+   "bn-IN": "আমি চাকরি খুঁজছি।",
+   "mr-IN": "मी नोकरी शोधत आहे.",
+   "glosses": [
+    "I",
+    "Job"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Bill|Price": {
+   "en-IN": "How much is the bill?",
+   "hi-IN": "बिल कितना है?",
+   "ta-IN": "பில் எவ்வளவு?",
+   "te-IN": "బిల్లు ఎంత?",
+   "bn-IN": "বিল কত?",
+   "mr-IN": "बिल किती आहे?",
+   "glosses": [
+    "Bill",
+    "Price"
+   ],
+   "domain": "civic",
+   "reordered": true,
+   "register": "question"
+  },
+  "Hello": {
+   "en-IN": "Hello",
+   "hi-IN": "नमस्ते",
+   "ta-IN": "வணக்கம்",
+   "te-IN": "నమస్కారం",
+   "bn-IN": "নমস্কার",
+   "mr-IN": "नमस्कार",
+   "glosses": [
+    "Hello"
+   ],
+   "domain": "social",
+   "reordered": false,
+   "register": "statement"
+  },
+  "Thank you": {
+   "en-IN": "Thank you",
+   "hi-IN": "धन्यवाद",
+   "ta-IN": "நன்றி",
+   "te-IN": "ధన్యవాదాలు",
+   "bn-IN": "ধন্যবাদ",
+   "mr-IN": "धन्यवाद",
+   "glosses": [
+    "Thank you"
+   ],
+   "domain": "social",
+   "reordered": false,
+   "register": "statement"
+  },
+  "Good Morning": {
+   "en-IN": "Good morning",
+   "hi-IN": "सुप्रभात",
+   "ta-IN": "காலை வணக்கம்",
+   "te-IN": "శుభోదయం",
+   "bn-IN": "সুপ্রভাত",
+   "mr-IN": "सुप्रभात",
+   "glosses": [
+    "Good Morning"
+   ],
+   "domain": "social",
+   "reordered": false,
+   "register": "statement"
+  },
+  "Good afternoon": {
+   "en-IN": "Good afternoon.",
+   "hi-IN": "शुभ दोपहर.",
+   "ta-IN": "நல்ல பிற்பகல்.",
+   "te-IN": "గుడ్ మధ్యాహ్నం.",
+   "bn-IN": "শুভ সকাল।",
+   "mr-IN": "दुपारी शुभेच्छा.",
+   "glosses": [
+    "Good afternoon"
+   ],
+   "domain": "social",
+   "reordered": false,
+   "register": "statement"
+  },
+  "Good evening": {
+   "en-IN": "Good evening.",
+   "hi-IN": "शुभ संध्या.",
+   "ta-IN": "நல்ல மாலை.",
+   "te-IN": "మంచి సాయంత్రం.",
+   "bn-IN": "শুভ সন্ধ্যা।",
+   "mr-IN": "गुड नाईट.",
+   "glosses": [
+    "Good evening"
+   ],
+   "domain": "social",
+   "reordered": false,
+   "register": "statement"
+  },
+  "Good night": {
+   "en-IN": "Good night.",
+   "hi-IN": "शुभ रात्रि।",
+   "ta-IN": "நல்ல இரவு.",
+   "te-IN": "గుడ్ నైట్.",
+   "bn-IN": "শুভরাত্রি।",
+   "mr-IN": "गुड नाईट.",
+   "glosses": [
+    "Good night"
+   ],
+   "domain": "social",
+   "reordered": false,
+   "register": "statement"
+  },
+  "How are you": {
+   "en-IN": "How are you",
+   "hi-IN": "आप कैसे हैं",
+   "ta-IN": "நீங்கள் எப்படி இருக்கிறீர்கள்",
+   "te-IN": "మీరు ఎలా ఉన్నారు",
+   "bn-IN": "আপনি কেমন আছেন",
+   "mr-IN": "तुम्ही कसे आहात",
+   "glosses": [
+    "How are you"
+   ],
+   "domain": "social",
+   "reordered": false,
+   "register": "statement"
+  },
+  "I|happy": {
+   "en-IN": "I am happy.",
+   "hi-IN": "मैं खुश हूँ।",
+   "ta-IN": "நான் மகிழ்ச்சியாக இருக்கிறேன்.",
+   "te-IN": "నేను సంతోషంగా ఉన్నాను.",
+   "bn-IN": "আমি খুশি।",
+   "mr-IN": "मी आनंदी आहे.",
+   "glosses": [
+    "I",
+    "happy"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|sad": {
+   "en-IN": "I am sad.",
+   "hi-IN": "मैं दुखी हूँ।",
+   "ta-IN": "நான் சோகமாக இருக்கிறேன்.",
+   "te-IN": "నేను విచారంగా ఉన్నాను.",
+   "bn-IN": "আমি দুঃখিত।",
+   "mr-IN": "मी दुःखी आहे.",
+   "glosses": [
+    "I",
+    "sad"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Pleased": {
+   "en-IN": "I am pleased to meet you.",
+   "hi-IN": "आपसे मिलकर प्रसन्नता हो रही है।",
+   "ta-IN": "உங்களை சந்தித்ததில் மகிழ்ச்சி.",
+   "te-IN": "మిమ్మల్ని కలవడం ఆనందంగా ఉంది.",
+   "bn-IN": "আপনার সাথে দেখা করতে পেরে আমি আনন্দিত।",
+   "mr-IN": "तुम्हाला भेटून आनंद झाला.",
+   "glosses": [
+    "Pleased"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Friend": {
+   "en-IN": "This is my friend.",
+   "hi-IN": "यह मेरे दोस्त है.",
+   "ta-IN": "இது என் நண்பர்.",
+   "te-IN": "ఈ నా స్నేహితుడు.",
+   "bn-IN": "এই আমার বন্ধু।",
+   "mr-IN": "हा माझा मित्र आहे.",
+   "glosses": [
+    "I",
+    "Friend"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Family": {
+   "en-IN": "This is my family.",
+   "hi-IN": "यह मेरा परिवार है.",
+   "ta-IN": "இது என் குடும்பம்.",
+   "te-IN": "ఇది నా కుటుంబం.",
+   "bn-IN": "এটা আমার পরিবার।",
+   "mr-IN": "हे माझं कुटुंब आहे.",
+   "glosses": [
+    "I",
+    "Family"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Mother|Father": {
+   "en-IN": "These are my parents.",
+   "hi-IN": "ये मेरे माता-पिता हैं.",
+   "ta-IN": "அவர்கள் என் பெற்றோர்கள்.",
+   "te-IN": "ఇవి నా తల్లిదండ్రులు.",
+   "bn-IN": "এরা আমার বাবা-মা।",
+   "mr-IN": "ते माझे आई-वडील आहेत.",
+   "glosses": [
+    "Mother",
+    "Father"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "you|good": {
+   "en-IN": "You are kind.",
+   "hi-IN": "तुम दयालु हो।",
+   "ta-IN": "நீங்கள் நட்பாக இருக்கிறீர்கள்.",
+   "te-IN": "మీరు దయగలవారు.",
+   "bn-IN": "তুমি দয়ালু।",
+   "mr-IN": "तुम्ही दयाळू आहात.",
+   "glosses": [
+    "you",
+    "good"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "Alright": {
+   "en-IN": "That is alright.",
+   "hi-IN": "यह ठीक है.",
+   "ta-IN": "அது சரி.",
+   "te-IN": "అది సరే.",
+   "bn-IN": "এটা ঠিক আছে।",
+   "mr-IN": "ते ठीक आहे.",
+   "glosses": [
+    "Alright"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Sign": {
+   "en-IN": "I use sign language.",
+   "hi-IN": "मैं सांकेतिक भाषा का प्रयोग करता हूँ।",
+   "ta-IN": "நான் அறிகுறி மொழியைப் பயன்படுத்துகிறேன்.",
+   "te-IN": "నేను సంజ్ఞా భాషను ఉపయోగిస్తాను.",
+   "bn-IN": "আমি সাইন ল্যাঙ্গুয়েজ ব্যবহার করি।",
+   "mr-IN": "मी सांकेतिक भाषा वापरतो.",
+   "glosses": [
+    "I",
+    "Sign"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "statement"
+  },
+  "I|Deaf|you|Sign": {
+   "en-IN": "I am Deaf. Can you sign?",
+   "hi-IN": "मैं बहरा हूँ. क्या आप हस्ताक्षर कर सकते हैं?",
+   "ta-IN": "நான் செவிடன். நீங்கள் கையொப்பமிட முடியுமா?",
+   "te-IN": "నేను చెవిటి. మీరు సంతకం చేయవచ్చు?",
+   "bn-IN": "আমি বধির, তুমি কি আমাকে স্বাক্ষর করতে পারবে?",
+   "mr-IN": "मी बधिर आहे.",
+   "glosses": [
+    "I",
+    "Deaf",
+    "you",
+    "Sign"
+   ],
+   "domain": "social",
+   "reordered": true,
+   "register": "question"
+  }
+ }
+}
