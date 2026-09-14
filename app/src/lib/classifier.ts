@@ -6,7 +6,10 @@
  * with this seam in it.
  */
 import * as tf from "@tensorflow/tfjs";
-import { extractFeatures, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame } from "./features";
+import {
+  extractFeatures, anchorableCount, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame,
+} from "./features";
+import { fetchJson } from "./assets";
 import type { Prediction } from "./gate";
 import { calibrate, TEMPERATURE } from "./calibrate";
 
@@ -16,9 +19,25 @@ import { calibrate, TEMPERATURE } from "./calibrate";
 const OUT_PROBS = "Identity";
 const OUT_EMBED = "Identity_1";
 
+/**
+ * How much of a clip must carry a usable pose before it is worth classifying.
+ *
+ * Everything downstream is anchored on the shoulders. When MediaPipe finds the
+ * hands but loses the pose, both shoulders arrive as (0,0), anchor()'s 1e-6
+ * clamp multiplies every coordinate by a million, and standardise() renormalises
+ * the result into a vector that looks entirely ordinary. Measured on exactly
+ * that input the model answered "alive" at 99.6% confidence, in the "confident"
+ * band, which the app speaks aloud.
+ *
+ * A majority is the bar: below it the sign is being read off frames that mostly
+ * had no body in them, and no answer is the correct answer.
+ */
+const MIN_ANCHORED = 0.5;
+
 export class GlossClassifier {
   private model: tf.GraphModel | null = null;
   private labels: string[] = [];
+  private generation = 0;
   // One model ships, so one temperature. It still lives here rather than being
   // imported at each call site: if a second model ever returns, the compiler
   // points at load() instead of letting a stale constant misreport confidence.
@@ -27,24 +46,45 @@ export class GlossClassifier {
   get ready() { return this.model !== null; }
   get vocabulary() { return [...this.labels]; }
 
-  async load(modelUrl: string, labelsUrl: string, temperature = TEMPERATURE) {
+  async load(modelUrl = "/model/model.json", labelsUrl = "/model/labels.json", temperature = TEMPERATURE) {
+    const generation = ++this.generation;
     this.temperature = temperature;
-    const [model, labels] = await Promise.all([
-      tf.loadGraphModel(modelUrl),
-      fetch(labelsUrl).then(r => r.json() as Promise<string[]>),
+    const [graph, labelResult] = await Promise.allSettled([
+      tf.loadGraphModel(modelUrl, { requestInit: { cache: "no-cache" } }),
+      fetchJson<unknown>(labelsUrl),
     ]);
-    this.model = model;
-    this.labels = labels;
-
-    // Warm up: the first predict() compiles shaders and can take ~100ms.
-    // Doing it now means the first real sign is not the slow one.
-    tf.tidy(() => {
-      const warm = (this.model as tf.GraphModel).execute(
-        tf.zeros([1, SEQ_LEN, N_POINTS * N_DIMS]),
-        [OUT_PROBS, OUT_EMBED]
-      ) as tf.Tensor[];
-      warm.forEach(t => t.dispose());
-    });
+    if (graph.status === "rejected") throw graph.reason;
+    const model = graph.value;
+    try {
+      if (labelResult.status === "rejected") throw labelResult.reason;
+      const labels = labelResult.value;
+      if (!Array.isArray(labels) || !labels.length || labels.some(g => typeof g !== "string" || !g.trim()) || new Set(labels).size !== labels.length) {
+        throw new Error("Invalid classifier labels. Export the model and labels together.");
+      }
+      const embedded = (model.metadata as { labels?: string[] } | undefined)?.labels;
+      if (embedded && JSON.stringify(embedded) !== JSON.stringify(labels)) {
+        throw new Error("Model and label order belong to different exports. Reload after completing the model export.");
+      }
+      const shape = model.inputs[0]?.shape;
+      if (shape?.length !== 3 || shape[1] !== SEQ_LEN || shape[2] !== N_POINTS * N_DIMS) {
+        throw new Error(`Model input ${shape} does not match the camera feature contract.`);
+      }
+      tf.tidy(() => {
+        const warm = model.execute(tf.zeros([1, SEQ_LEN, N_POINTS * N_DIMS]), [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
+        const [probs, embed] = warm;
+        if (probs.size !== labels.length) throw new Error("Model output and label count differ. Re-export both together.");
+        if (!Array.from(probs.dataSync()).every(Number.isFinite)) throw new Error("Model returned invalid probabilities.");
+        if (embed.shape.length !== 2 || embed.shape[0] !== 1 || !embed.shape[1]) throw new Error("Model embedding output is invalid.");
+        warm.forEach(t => t.dispose());
+      });
+      if (generation !== this.generation) { model.dispose(); return; }
+      this.model?.dispose();
+      this.model = model;
+      this.labels = labels;
+    } catch (error) {
+      model.dispose();
+      throw error;
+    }
   }
 
   /**
@@ -56,6 +96,7 @@ export class GlossClassifier {
    */
   predictTop(frames: PointFrame[], aspect: number, k = 3): { gloss: string; conf: number }[] {
     if (!this.model || frames.length === 0) return [];
+    if (!this.usable(frames, aspect)) return [];
     const probs = tf.tidy(() => {
       const feats = extractFeatures(frames, aspect);
       const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
@@ -71,6 +112,7 @@ export class GlossClassifier {
   /** Runs the model over a rolling buffer of frames. `aspect` = width / height. */
   predict(frames: PointFrame[], aspect: number): Prediction {
     if (!this.model || frames.length === 0) return { gloss: null, conf: 0 };
+    if (!this.usable(frames, aspect)) return { gloss: null, conf: 0 };
 
     const probs = tf.tidy(() => {
       const feats = extractFeatures(frames, aspect);
@@ -107,6 +149,7 @@ export class GlossClassifier {
    */
   embed(frames: PointFrame[], aspect: number): Float32Array | null {
     if (!this.model || frames.length === 0) return null;
+    if (!this.usable(frames, aspect)) return null;
     // not tf.tidy: it can only return tensors and containers, and this returns
     // a plain array or null, so the two tensors are disposed by hand
     const feats = extractFeatures(frames, aspect);
@@ -128,5 +171,11 @@ export class GlossClassifier {
     }
   }
 
-  dispose() { this.model?.dispose(); this.model = null; }
+  /** Are enough frames anchorable for the answer to mean anything? */
+  usable(frames: PointFrame[], aspect: number): boolean {
+    if (frames.length === 0) return false;
+    return anchorableCount(frames, aspect) / frames.length >= MIN_ANCHORED;
+  }
+
+  dispose() { ++this.generation; this.model?.dispose(); this.model = null; this.labels = []; }
 }
