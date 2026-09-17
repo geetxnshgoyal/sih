@@ -268,7 +268,7 @@ select{
   text-transform:uppercase;
   font-family:"IBM Plex Mono",ui-monospace,monospace;
 }
-.workspace-lead h2,.record-lead h2{
+.workspace-lead h2,.record-lead h1,.record-lead h2{
   max-width:720px;
   margin:0;
   font-size:clamp(26px,4vw,46px);
@@ -410,8 +410,11 @@ select{
 
 .stage{
   position:relative;
-  aspect-ratio:16/9;
-  min-height:280px;
+  /* The REAL camera aspect, set by SignBridge from video.videoWidth/videoHeight.
+     Hardcoding it was wrong in both directions: a 4:3 webcam in a 16/9 box, or
+     the Stitch design's 4/3 box holding a 16:9 stream. 16/9 is only the
+     fallback for before the stream reports its size. */
+  aspect-ratio:var(--stage-aspect, 16/9);
   overflow:hidden;
   background:#07110F;
 }
@@ -420,7 +423,12 @@ select{
   inset:0;
   width:100%;
   height:100%;
-  object-fit:cover;
+  /* contain, NOT cover. The signer frames themselves against this preview, so
+     it has to show exactly what MediaPipe sees. `cover` crops to fill the box,
+     which means hands can be inside the model's view but off the edge of the
+     picture -- the person then moves them to "fix" a problem that does not
+     exist, and creates one. Letterboxing is the honest failure. */
+  object-fit:contain;
   transform:scaleX(-1);
 }
 .idle{
@@ -684,9 +692,10 @@ code{
   border-bottom:1px solid var(--line);
 }
 .signplayer{
-  width:100%;
+  width:min(100%,480px);
   height:auto;
-  max-height:360px;
+  max-height:none;
+  aspect-ratio:480/420;
   border:1px solid #D8DEEF;
   border-radius:8px;
   background:#FFFFFF;
@@ -803,7 +812,7 @@ code{
   .lang-control{width:100%}
   .lang-control select{min-width:0}
   .bridge.compact .side{grid-template-columns:1fr}
-  .stage{min-height:220px}
+  .stage{min-height:160px}
   .hearing-stage{grid-template-columns:1fr;min-height:0}
   .signplayer{max-height:none}
   .input-row,.row{align-items:stretch}
@@ -875,7 +884,7 @@ code{
     .desktop-nav { display: none; }
     .header-inner { justify-content: space-between; padding: 0 20px; }
     .mobile-nav { display: block; position: fixed; inset: auto 0 0; z-index: 50; padding-bottom: env(safe-area-inset-bottom); background: #fffffff5; backdrop-filter: blur(16px); border-top: 1px solid #dfe7ec; }
-    .mobile-nav > div { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); max-width: 700px; margin: auto; padding: 6px 4px; }
+    .mobile-nav > div { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); max-width: 760px; margin: auto; padding: 6px 4px; }
     .mobile-nav .nav-link { flex-direction: column; gap: 4px; padding: 8px 2px; font-size: 10px; min-height: 52px; }
     .setu-app main { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   }
@@ -900,7 +909,7 @@ code{
 @layer components {
   :root { --bg: #f8f9ff; --ink: #0b1c30; --muted: #545f73; --line: #dfe7ec; --line-2: #bfc8cd; --sign: #004357; --sign-strong: #0d5c75; --sign-dim: #e5eeff; --surface-2: #eff4ff; --shadow: 0 4px 16px #00435708; }
   .bridge.compact .card { border-radius: 12px; box-shadow: none; }
-  .bridge.compact .stage { width: 100%; max-width: 100%; min-height: 180px; }
+  .bridge.compact .stage { width: 100%; max-width: 100%; }
   .bridge.compact .bridge-content { min-width: 0; }
   .bridge.compact .card-h { flex-wrap: wrap; letter-spacing: 0; }
   @media (max-width: 380px) {
@@ -913,3 +922,214 @@ code{
     .content-card { padding: 20px; }
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Carried through the Stitch UI merge. SignBridge still emits these classes,
+   and they are not decorative: the certainty colouring is the visible half of
+   the calibration work (calibrate.ts). Drop them and an uncertain reading looks
+   identical to a confident one, which is the failure the bands exist to fix.
+   --------------------------------------------------------------------------- */
+/* Actionable reason for silence, shown when a window was discarded for having
+   no hands, so "nothing happened" is distinguishable from "app is broken". */
+.hud-notice{margin-top:8px;font-size:11.5px;line-height:1.5;color:#E0A21C;
+  font-family:"IBM Plex Mono",monospace;max-width:280px}
+
+/* Confidence bands. A calibrated confidence is only useful if the interface
+   distinguishes the cases: spoken, shown-for-confirmation, and withheld. */
+.gloss.confident { color: var(--sign); }
+.gloss.uncertain { color: var(--warn); }
+.gloss.unusable  { color: var(--faint); font-style: italic; }
+.hud-confirm {
+  margin-top: 6px; font-size: 12px; color: var(--warn);
+  font-family: "IBM Plex Mono", monospace; letter-spacing: .04em;
+}
+
+/* Candidate shortlist. The model's top-1 is right 40% of the time but the
+   correct sign is in its top-5 65% of the time, so offer the list instead of
+   refusing, and let a person resolve it. Pointer events are re-enabled because
+   the surrounding HUD disables them. */
+.cands{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;pointer-events:auto}
+.cand{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid var(--line-2);
+  background:rgba(0,0,0,.55);color:var(--ink);display:flex;align-items:center;gap:7px}
+.cand:hover{border-color:var(--sign);background:rgba(0,0,0,.8)}
+.cand.top{border-color:var(--warn)}
+.cand-c{font-size:10px;color:var(--faint);font-family:"IBM Plex Mono",monospace}
+
+/* Phrase board: the reliable path. Sized for one-handed tapping on a tablet
+   while the other hand is holding something, or shaking. */
+.phraseboard{margin-top:14px}
+.pb-search{display:flex;gap:8px;padding:12px 14px 4px}
+.pb-search input{flex:1;font:inherit;font-size:14px;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line-2);border-radius:9px;padding:10px 12px}
+.pb-search input::placeholder{color:var(--faint)}
+.pb-clear{font-size:11px;padding:6px 12px}
+.pb-cat{border-top:1px solid var(--line)}
+.pb-cat.always{border-top:none}
+.pb-cat-h{display:flex;width:100%;justify-content:space-between;align-items:center;
+  padding:12px 16px;background:transparent;border:none;border-radius:0;
+  font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  font-family:"IBM Plex Mono",monospace}
+.pb-cat-h:hover{background:var(--surface-2);color:var(--muted)}
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:8px;padding:4px 14px 14px}
+.pb-item{min-height:54px;padding:10px 12px;text-align:left;font-size:13.5px;
+  font-weight:600;line-height:1.3;border-radius:10px;
+  border:1px solid var(--line-2);background:var(--surface-2)}
+.pb-item:hover{border-color:var(--sign);background:#1E2A25}
+/* Urgent phrases must be findable without reading. Colour AND weight, because
+   colour alone fails for a signer who is also colour-blind. */
+.pb-item.urgent{border-color:#5A3320;background:#20160F;color:#F0C68A}
+.pb-item.urgent:hover{border-color:#E0A21C;background:#2A1D12}
+/* ---------------------------------------------------------------------------
+   About Setu. Sits at the foot of the home screen: what the problem is, what
+   the app does, and plainly what it cannot do yet. The limits are stated in the
+   product rather than only in the docs, because the person who most needs to
+   know that recognition is unreliable is the clinician about to rely on it.
+   --------------------------------------------------------------------------- */
+.about-setu{display:flex;flex-direction:column;gap:20px;padding-top:8px}
+.about-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:20px 28px;
+}
+.about-grid h3{
+  margin:0 0 6px;font-size:15px;font-weight:600;letter-spacing:-.01em;
+}
+.about-grid p{margin:0;font-size:14px;line-height:1.65;opacity:.82}
+.about-credit{
+  margin:0;padding-top:14px;border-top:1px solid var(--line-2,rgba(128,128,128,.25));
+  font-size:13.5px;opacity:.75;
+}
+
+/* ---------------------------------------------------------------------------
+   Install prompt. Fixed to the bottom, above the mobile tab bar, and out of the
+   way: it is an offer, not a gate. Never covers the phrase board, because that
+   is the surface someone may urgently need.
+   --------------------------------------------------------------------------- */
+.install-prompt{
+  position:fixed;
+  left:50%;
+  transform:translateX(-50%);
+  bottom:calc(84px + env(safe-area-inset-bottom,0px));
+  z-index:60;
+  width:min(560px,calc(100vw - 24px));
+  display:flex;
+  align-items:center;
+  gap:14px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:#0B1220;
+  color:#F3F6FF;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 18px 44px rgba(4,10,28,.45);
+  animation:install-in .28s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes install-in{from{opacity:0;transform:translateX(-50%) translateY(14px)}
+  to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@media (prefers-reduced-motion:reduce){.install-prompt{animation:none}}
+
+.install-icon img{display:block;border-radius:10px}
+.install-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.install-title{margin:0;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+.install-text{margin:0;font-size:12.5px;line-height:1.5;opacity:.78}
+.install-text strong{opacity:1;font-weight:600}
+.install-text svg{display:inline;vertical-align:-2px;margin:0 1px}
+
+.install-actions{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.install-yes{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 14px;border-radius:10px;border:0;cursor:pointer;
+  background:#2563EB;color:#fff;font-size:13.5px;font-weight:600;
+}
+.install-yes:hover{background:#1D4ED8}
+.install-no{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:10px;cursor:pointer;
+  background:transparent;color:#F3F6FF;border:1px solid rgba(255,255,255,.18);
+}
+.install-no:hover{background:rgba(255,255,255,.08)}
+.install-yes:focus-visible,.install-no:focus-visible{
+  outline:2px solid #93B4FF;outline-offset:2px;
+}
+
+@media (max-width:560px){
+  .install-prompt{gap:11px;padding:11px 12px;border-radius:14px}
+  .install-title{font-size:13.5px}
+  .install-text{font-size:12px}
+}
+
+/* Always-available install control, for when the browser never offers one. */
+.about-install{margin:0}
+.install-inline{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.install-inline .install-yes{background:#2563EB}
+.install-hint,.install-steps{
+  font-size:12.5px;line-height:1.5;opacity:.72;max-width:42ch;
+}
+.install-steps{opacity:.95}
+.install-glyph{opacity:.7}
+
+.about-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.about-credit a:hover{opacity:1}
+
+/* ---------------------------------------------------------------------------
+   The vocabulary, shown on request. A signer needs to know WHICH signs are
+   recognised: without the list, signing anything else looks like a broken
+   detector rather than a stated limit, which is the wrong thing to conclude and
+   the wrong thing to demo.
+   --------------------------------------------------------------------------- */
+.vocab-toggle{
+  margin:3px 0 0;padding:0;border:0;background:none;cursor:pointer;
+  font:inherit;font-size:12px;color:var(--muted,#8a94a6);
+  text-decoration:underline;text-underline-offset:2px;
+}
+.vocab-toggle:hover:not(:disabled){color:var(--ink,#e7e9e6)}
+.vocab-toggle:disabled{cursor:default;text-decoration:none}
+.vocab-list{
+  padding:12px 14px 14px;border-top:1px solid var(--line-2,rgba(128,128,128,.22));
+}
+.vocab-note{margin:0 0 10px;font-size:12.5px;line-height:1.55;opacity:.75;max-width:64ch}
+.vocab-grid{
+  display:flex;flex-wrap:wrap;gap:6px;
+  max-height:210px;overflow-y:auto;
+}
+.vocab-grid span{
+  font-size:12px;padding:4px 9px;border-radius:999px;
+  border:1px solid var(--line-2,rgba(128,128,128,.28));
+  background:rgba(128,128,128,.07);white-space:nowrap;
+}
+
+/* Dictionary shortlist: words reached by nearest-neighbour lookup rather than
+   by the classifier. Visually separated from .cand on purpose. These are a
+   weaker signal (49.6% top-1 overall, 47.1% from an unseen corpus, against the
+   classifier's 73.9%), so they must not read as the model's answer. */
+.dict{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line-2);
+      pointer-events:auto}
+.dict-head{font-size:10.5px;letter-spacing:.02em;color:var(--faint);
+           font-family:"IBM Plex Mono",monospace}
+.dict .cands{margin-top:6px}
+.cand.dict-cand{border-style:dashed;opacity:.92}
+.cand.dict-cand:hover{border-style:solid;border-color:var(--sign);opacity:1}
+
+/* Record mode: the user marks where a sign starts and stops, instead of a
+   motion threshold guessing it. Measured on real clips, the live segmenter
+   emitted nothing at all where recording reads Thank you at 99%. */
+.rec{border-color:var(--sign)}
+.rec.on{background:var(--warn);color:#1a1205;border-color:var(--warn);font-weight:600}
+.rec-hint{margin:9px 0 0;font-size:12px;color:var(--warn)}
+.rec-out{margin-top:11px;padding:11px 12px;border:1px solid var(--line-2);
+         border-radius:9px;background:rgba(0,0,0,.16)}
+.rec-out-head{font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+              letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.rec-row{display:flex;align-items:baseline;gap:9px;margin-top:7px;flex-wrap:wrap}
+.rec-n{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--faint);
+       min-width:13px}
+.rec-g{font-size:15px;font-weight:600;color:var(--ink)}
+.rec-d{font-size:11.5px;color:var(--faint)}
+.rec-hint.ok{color:var(--sign)}
+.rec-hint.bad{color:var(--warn);font-weight:600}
+.rec-row.weak{opacity:.62}
+.rec-warn{font-size:11px;color:var(--warn)}
+/* What the tracker actually sees. Added because the face mesh was being drawn
+   at alpha 0.34 against a bright room and reported as not working at all. */
+.tracked{margin:9px 0 0;font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+         color:var(--faint);line-height:1.5}
