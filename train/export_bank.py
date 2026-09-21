@@ -72,8 +72,45 @@ home house school work money phone car bus train ticket station airport hotel
 police station road left right up down near far
 good bad big small hot cold new old open close
 understand know want need give take come sit stand walk fall
-happy sad afraid angry deaf hearing sign language interpreter
+happy sad afraid deaf hearing sign language interpreter
+
+bleeding swelling burn cough sneeze nose mouth tongue neck shoulder
+arm knee ankle lung liver kidney pressure sugar
+husband wife son daughter grandfather boy girl
+hour minute before after afternoon warm fast slow
+maybe enough cost free push pull lift
+monday tuesday wednesday thursday friday saturday sunday
+bank office temple university city door key window bed chair
+teacher student lawyer job book paper pen light
+bill expensive shirt shoes bag box
+red blue green yellow black white
+one two three four five six seven eight nine ten
 """
+# The second block is the 84 added after measuring how bank size trades against
+# accuracy. Measured on this corpus, single-reference, leave-one-clip-out:
+#
+#       bank    top-1   top-5
+#        116    41.0%   59.6%
+#        200    40.9%   54.8%     <- doubling costs nothing on top-1
+#        400    35.9%   47.0%
+#        800    34.4%   44.3%
+#     13,711    18.5%   23.2%
+#
+# So roughly 200 is where this stops being free. Past 400 it degrades steadily,
+# and searching the whole dictionary is barely better than guessing off a
+# shortlist. Every word costs ONE clip and 13,711 are already on disk, so the
+# work was never acquisition, it was choosing which ones.
+#
+# Chosen for a hospital and a travel counter, preferring words with more than
+# one reference clip because a prototype averaged over several is more robust:
+# symptoms and body parts first, then family (who is with the patient), time
+# and days (appointments, "come back Thursday"), then the places and objects a
+# traveller needs. Colours and digits are cheap and disambiguate a lot.
+#
+# STILL MISSING, with no clip in any corpus: toilet, chest, leg, elbow, wrist,
+# finger, foot, toe, vomit, nausea, rash, itching, fracture, stitches, muscle,
+# tired, now, later. Those need recording, and several of them are exactly what
+# a patient would say first.
 
 
 def main() -> int:
