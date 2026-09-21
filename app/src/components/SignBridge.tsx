@@ -5,7 +5,7 @@ import { GlossClassifier } from "../lib/classifier";
 import { SignBank, type BankMatch } from "../lib/bank";
 import { StabilityGate, FLOOR, NEEDED } from "../lib/gate";
 import { SEQ_LEN, type PointFrame } from "../lib/features";
-import { SignSegmenter, splitRecording, SIGN_GAP_FRAMES, segmentQuality } from "../lib/segment";
+import { SignSegmenter, splitRecording, SIGN_GAP_FRAMES, segmentQuality, noticeForReject } from "../lib/segment";
 import { UtteranceBuilder, assembleWithSource } from "../lib/sentence";
 import { loadGlossTable, sourceLabel, type TranslationSource } from "../lib/glossTranslate";
 import { LANGUAGES, phraseFor, speak, refreshVoices, voiceFor, type LangCode } from "../lib/speech";
@@ -159,6 +159,23 @@ export default function SignBridge({
   const [log, setLog] = useState<Entry[]>([]);
   /** Why nothing is being recognised, when the reason is actionable. */
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * How long the current notice is protected from being cleared.
+   *
+   * The camera loop clears the notice on every frame in which hands are
+   * visible, which is correct for a standing condition like "only one hand
+   * visible" -- it should vanish the moment the second hand appears. It is
+   * useless for a one-shot event like a discarded over-long sign: that reject
+   * is reported on a single frame, and the very next frame wiped the message
+   * before it could be read.
+   */
+  const stickyUntil = useRef(0);
+  const notify = useCallback((message: string | null, holdMs = 0) => {
+    const now = performance.now();
+    if (message === null && now < stickyUntil.current) return;
+    stickyUntil.current = message !== null && holdMs ? now + holdMs : 0;
+    setNotice(message);
+  }, []);
   const [fps, setFps] = useState(0);
   const [camError, setCamError] = useState<string | null>(null);
   const [pending, setPending] = useState<string[]>([]);
@@ -423,7 +440,11 @@ export default function SignBridge({
       setLive({ gloss: "", conf: 0, progress: 0 });
       setCandidates([]);
       setDict([]);
-      setNotice("your shoulders are not in frame. Step back so your head and both shoulders are visible");
+      // Through notify(), not a raw setNotice: this and the per-frame reject
+      // notices above share one channel, and a bare setNotice here could
+      // silently stomp a sticky "too-long" / "no-pose" message a frame or two
+      // into its hold, before the signer had a chance to read it.
+      notify("your shoulders are not in frame. Step back so your head and both shoulders are visible", 4000);
       return;
     }
     const pred = clfRef.current.predict(segment, aspect);
@@ -442,7 +463,7 @@ export default function SignBridge({
       if (finished) emit(finished.glosses, finished.at, langRef.current, finished.conf);
       setPending(uttRef.current.pending);
     }
-  }, [confirmBeforeSend, emit]);
+  }, [confirmBeforeSend, emit, notify]);
 
   const finishLiveSign = useCallback(() => {
     const segment = segRef.current.flush();
@@ -510,16 +531,19 @@ export default function SignBridge({
         const seg = segRef.current;
         const reject = seg.lastReject;
 
-        // A window thrown out for having no hands is worth saying out loud , 
-        // it is the difference between "the app is broken" and "you are framed
-        // wrong", and the user cannot tell those apart from silence.
-        if (reject === "no-hands") {
-          setLive({ gloss: "", conf: 0, progress: 0 });
-          setNotice("no hands detected. Step back so both hands are in frame");
-        } else if (reject === "one-hand") {
-          setNotice("only one hand visible. Confirm the sign below or bring both hands into frame");
-        } else if (hasHands) {
-          setNotice(null);
+        // A window thrown out is worth saying out loud , it is the difference
+        // between "the app is broken" and "you are framed wrong", and the user
+        // cannot tell those apart from silence. See lib/segment.ts:
+        // noticeForReject -- an exhaustive switch, not an if/else chain, so a
+        // sixth rejection reason added later fails to compile here instead of
+        // silently saying nothing, which is exactly how `no-pose` went unheard
+        // the first time this was written.
+        const n = noticeForReject(reject, hasHands);
+        if (n !== "unchanged") {
+          notify(n.message, n.holdMs);
+          if (reject === "no-hands" || reject === "too-long") {
+            setLive({ gloss: "", conf: 0, progress: 0 });
+          }
         }
 
         if (tickRef.current % PREDICT_EVERY === 0) {
@@ -566,7 +590,7 @@ export default function SignBridge({
       if (tickRef.current % 15 === 0) setFps(frameTimes.current.length);
     }
     rafRef.current = requestAnimationFrame(loop);
-  }, [detect, draw, framing, emit, confirmBeforeSend, readSegment]);
+  }, [detect, draw, framing, emit, confirmBeforeSend, readSegment, notify]);
 
   /**
    * Replay real ISL clips from the held-out group through the exact same

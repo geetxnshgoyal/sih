@@ -65,7 +65,7 @@ inflates by ~40 points because the same person appears in train and test.
 
 ---
 
-## 5. Three bugs that made the camera path fail
+## 5. Four bugs that made the camera path fail
 
 Each was hidden behind the previous one. All fixed.
 
@@ -103,6 +103,51 @@ Fixed with `app/src/lib/segment.ts`, motion-energy segmentation that starts on
 a movement burst, ends after 6 still frames, trims trailing stillness, and
 classifies once per sign. `StabilityGate.once()` replaces the N-of-M frame vote,
 which could never fire on a single prediction.
+
+**4. The sign could start but could not end.**
+Segmentation ends a sign after `QUIET_MS` of energy below `STOP = 0.006`, an
+absolute floor. Real Holistic rest -- measured on motionless stretches of
+`data/islgov_landmarks`, both hands tracked, at the app's own 15 fps -- runs
+p50 0.0025, p90 0.0085, p95 0.0128. So 82% of genuinely still frames are under
+the floor, but the 18% that spike above it are scattered, and each one restarts
+the count: 12 of 40 real rest runs never deliver an unbroken 0.9 s at all. The
+sign then ran to `MAX_MS`, was discarded as `too-long`, and the app said
+nothing -- `too-long` and `too-short` were the two rejections the UI never
+surfaced.
+
+Worse, the `settling` cooldown that follows a discard could only be left by the
+same unreachable quiet test. Once entered it never exited while the hands
+stayed in frame: **recognition was dead until the signer dropped their hands
+out of shot.** 18.8% of real clips ended locked in it.
+
+Fixed in `app/src/lib/segment.ts`: quiet is now judged against the sign's own
+median energy (`QUIET_FRACTION`, the constant `splitRecording` already used
+offline) with a ratchet so the closing pause cannot drag the bar below itself,
+`SETTLE_MS` bounds the cooldown, and `SignBridge` now says why a sign was
+dropped instead of going quiet.
+
+| on 250 real clips | before | after |
+|---|---|---|
+| produced no segment at all | 55.2% | 22.0% |
+| ended locked in `settling` | 18.8% | 3.2% |
+| usable segments | 134 | 323 |
+
+The test suite could not catch any of this because it pads rest with
+*duplicated* frames, whose energy is exactly 0. A camera never sends the same
+frame twice -- `useLandmarkers` explicitly drops the repeats that would. Rest in
+a test must jitter, or it is not rest.
+
+While fixing this, one more silent case turned up in the same neighbourhood:
+`SegmentRejection` has always listed `no-pose` (shoulders lost mid-sign,
+reachable by leaning in close: hands stay visible while shoulders leave the
+frame), but `SignBridge`'s `if/else` chain over reject reasons had no branch
+for it. `hasHands` was still true, so the chain fell into its final
+`else if (hasHands) setNotice(null)` and actively erased whatever was showing.
+The reject-to-message mapping is now `noticeForReject()` in
+`app/src/lib/segment.ts`, an exhaustive `switch` rather than an `if/else`
+chain: a sixth rejection reason added later fails to compile there instead of
+silently saying nothing. Verified by deleting the `no-pose` case and
+confirming `tsc` refuses to build.
 
 ---
 

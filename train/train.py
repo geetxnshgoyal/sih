@@ -37,25 +37,61 @@ EPOCHS = 60
 BATCH = 64
 
 
-def build_model(seq_len: int, n_feat: int, n_classes: int) -> keras.Model:
-    inp = keras.Input(shape=(seq_len, n_feat))
+def _trunk(x, tag: str):
+    """The convolutional trunk, named so weights can transfer BY NAME.
 
-    x = layers.Conv1D(128, 5, padding="same", use_bias=False)(inp)
-    x = layers.BatchNormalization()(x)
+    Position-based transfer breaks silently the moment a layer is inserted:
+    zip(src.layers, model.layers) pairs the wrong things, the shapes happen to
+    match, and the ASL pretraining worth +18.4 is lost with no error anywhere.
+    """
+    x = layers.Conv1D(128, 5, padding="same", use_bias=False, name=f"{tag}1")(x)
+    x = layers.BatchNormalization(name=f"{tag}1_bn")(x)
     x = layers.Activation("relu")(x)
 
-    x = layers.Conv1D(256, 5, padding="same", use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
+    x = layers.Conv1D(256, 5, padding="same", use_bias=False, name=f"{tag}2")(x)
+    x = layers.BatchNormalization(name=f"{tag}2_bn")(x)
     x = layers.Activation("relu")(x)
     x = layers.MaxPooling1D(2)(x)
     x = layers.Dropout(0.2)(x)
 
-    x = layers.Conv1D(256, 3, padding="same", use_bias=False)(x)
-    x = layers.BatchNormalization()(x)
+    x = layers.Conv1D(256, 3, padding="same", use_bias=False, name=f"{tag}3")(x)
+    x = layers.BatchNormalization(name=f"{tag}3_bn")(x)
     x = layers.Activation("relu")(x)
+    return layers.GlobalAveragePooling1D()(x)
 
-    x = layers.GlobalAveragePooling1D()(x)
-    x = layers.Dropout(0.4)(x)
+
+def build_model(seq_len: int, n_feat: int, n_classes: int,
+                motion: bool = False) -> keras.Model:
+    """The gloss classifier.
+
+    `motion` adds a SECOND, parallel trunk fed by the frame-to-frame difference
+    of the same input, merged just before the head. The difference is computed
+    inside the graph, so the features contract (train/features.py and
+    app/src/lib/features.ts, asserted bit-identical by test_parity.py) is
+    untouched: neither the data pipeline nor the browser changes.
+
+    A parallel trunk rather than a wider first convolution, so the position
+    trunk keeps the exact shapes the ASL-pretrained encoder was trained with
+    and those weights still load. The motion trunk is named apart and starts
+    fresh.
+
+    Worth trying because the input is 32 POSES. A sign is a movement, and the
+    network was being asked to infer motion from a stack of stills.
+    """
+    inp = keras.Input(shape=(seq_len, n_feat))
+    pooled = _trunk(inp, "enc")
+
+    if motion:
+        vel = layers.Lambda(
+            lambda t: tf.concat([tf.zeros_like(t[:, :1]), t[:, 1:] - t[:, :-1]],
+                                axis=1),
+            output_shape=(seq_len, n_feat), name="motion")(inp)
+        # a per-frame delta of a standardised signal is far smaller than the
+        # signal itself; without this the motion trunk trains on near-zero input
+        vel = layers.Rescaling(4.0, name="motion_scale")(vel)
+        pooled = layers.Concatenate(name="two_stream")([pooled, _trunk(vel, "mot")])
+
+    x = layers.Dropout(0.4)(pooled)
     out = layers.Dense(n_classes, activation="softmax")(x)
 
     m = keras.Model(inp, out)

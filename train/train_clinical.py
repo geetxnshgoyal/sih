@@ -138,8 +138,17 @@ def warm_start(model, n_classes) -> int:
     except Exception as exc:  # noqa: BLE001
         print(f"  ! could not load {src_path.name}: {exc}")
         return 0
+    # BY NAME, not by position. zip(src.layers, model.layers) pairs the wrong
+    # layers the moment anything is inserted, every shape still happens to
+    # match, and the ASL pretraining worth +18.4 vanishes with no error at all.
+    # The motion trunk is named "mot*" precisely so it is skipped and starts
+    # fresh, while the position trunk keeps its pretrained weights.
+    by_name = {l.name: l for l in src.layers}
     moved = 0
-    for a, b in zip(src.layers, model.layers):
+    for b in model.layers:
+        a = by_name.get(b.name)
+        if a is None:
+            continue
         wa, wb = a.get_weights(), b.get_weights()
         if len(wa) != len(wb) or any(x.shape != z.shape for x, z in zip(wa, wb)):
             continue
@@ -152,6 +161,8 @@ def warm_start(model, n_classes) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--vocab", choices=["clinical", "universal"], default="clinical")
+    ap.add_argument("--motion", action="store_true",
+                    help="two-stream: positions plus an in-graph motion trunk")
     ap.add_argument("--extra", action="store_true",
                     help="fold in data/dict_extra.npz: dictionary clips of "
                          "classes already in the set, as their own signer group")
@@ -223,7 +234,8 @@ def main() -> int:
         cut = max(int((1 - VAL_FRACTION) * len(idx)), 1)
         core, va = idx[:cut], idx[cut:]
         Xa, ya = aug.augment_batch(Xs[core], ys[core], rng, factor=FACTOR)
-        model = build_model(Xa.shape[1], Xa.shape[2] * Xa.shape[3], len(keep))
+        model = build_model(Xa.shape[1], Xa.shape[2] * Xa.shape[3], len(keep),
+                            motion=args.motion)
         warm_start(model, len(keep))
         model.fit(standardise(Xa), ya,
                   validation_data=(standardise(Xs[va]), ys[va]),
@@ -272,7 +284,8 @@ def main() -> int:
     cut = max(int((1 - VAL_FRACTION) * len(idx)), 1)
     core, va = idx[:cut], idx[cut:]
     Xa, ya = aug.augment_batch(Xs[core], ys[core], rng, factor=FACTOR)
-    final = build_model(Xa.shape[1], Xa.shape[2] * Xa.shape[3], len(keep))
+    final = build_model(Xa.shape[1], Xa.shape[2] * Xa.shape[3], len(keep),
+                        motion=args.motion)
     warm_start(final, len(keep))
     final.fit(standardise(Xa), ya,
               validation_data=(standardise(Xs[va]), ys[va]),

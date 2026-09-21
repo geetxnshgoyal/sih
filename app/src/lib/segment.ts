@@ -44,13 +44,67 @@ export class SignSegmenter {
   static QUIET_MS = 900;
   static MAX_MS = 10000;
   static HAND_GAP_MS = 450;
+  /**
+   * How long the cooldown after a discarded over-long sign may last.
+   *
+   * `settling` used to end only when the energy fell below the quiet level for
+   * QUIET_MS. When that level is unreachable, so is the exit: the segmenter sat
+   * in `settling` forever and every later sign was ignored, with the hands
+   * still in frame and the tracker still running. Recognition was dead until
+   * the signer happened to drop their hands out of shot for HAND_GAP_MS.
+   *
+   * A cooldown is meant to stop one long movement producing a prediction every
+   * few frames. A fixed ceiling does that and cannot deadlock.
+   */
+  static SETTLE_MS = 2500;
+  /**
+   * Quiet, relative to how hard this signer is moving right now.
+   *
+   * STOP alone is an absolute floor. It is roughly the right order of
+   * magnitude -- measured over real motionless rest taken from
+   * data/islgov_landmarks (both hands tracked, hand centroid wandering under
+   * 5% of shoulder width, so a person genuinely holding still), at the 15 fps
+   * this captures at and through the scaling push() applies:
+   *
+   *     rest energy   p50 0.0025   p75 0.0048   p90 0.0085   p95 0.0128
+   *
+   * so 82% of truly still frames fall under STOP = 0.006. But QUIET_MS wants
+   * 0.9 s of them UNBROKEN, and the ~18% that spike above it are scattered:
+   * 12 of 40 real rest runs never deliver a clean 0.9 s at all. Every spike
+   * restarts the count, so a sign that has plainly ended can keep looking
+   * unfinished until it hits MAX_MS and is discarded.
+   *
+   * Judging quiet against the sign's own median instead of a fixed number
+   * absorbs most of that: a signer whose rest jitters at 0.008 is still
+   * obviously at rest next to their own 0.05 while signing. splitRecording
+   * solved the offline half of this problem the same way and with the same
+   * constant -- quiet MEANS quiet for this signer, in this recording.
+   *
+   * Measured end to end, with SETTLE_MS in place. On 250 real clips, clips that
+   * produced no segment at all fell 33.2% -> 22.0% and usable segments rose
+   * 212 -> 323. On 400 trials of a real trimmed sign followed by real
+   * motionless rest, read-nothing fell 37.5% -> 17.5% and exactly-one-segment
+   * rose 35.0% -> 51.5%.
+   *
+   * It is not free: over-splitting rose 27.5% -> 31.0% on that second set. A
+   * split sign still produces a reading and a shortlist, where the old
+   * behaviour produced silence, so the trade is worth taking -- but raising the
+   * fraction further buys recall mostly by cutting more signs in half, which is
+   * why it stays at splitRecording's measured 0.35.
+   */
+  static QUIET_FRACTION = 0.35;
   private state: SegState = 'idle';
   private samples: Sample[] = [];
   private preroll: Sample[] = [];
   private prev: Sample | null = null;
   private quietAt: number | null = null;
   private gapAt: number | null = null;
+  private settleAt: number | null = null;
   private energy = 0;
+  /** Every energy seen in the current sign, for the adaptive quiet level. */
+  private energies: number[] = [];
+  /** The adaptive quiet level, which only rises within a sign. */
+  private quietBar = 0;
   private rejected: SegmentRejection | null = null;
   get current() { return this.state; }
   get length() { return this.samples.length; }
@@ -65,13 +119,38 @@ export class SignSegmenter {
   }
   reset() {
     this.state = 'idle'; this.samples = []; this.preroll = []; this.prev = null;
-    this.quietAt = null; this.gapAt = null; this.energy = 0; this.rejected = null;
+    this.quietAt = null; this.gapAt = null; this.settleAt = null;
+    this.energy = 0; this.energies = []; this.quietBar = 0; this.rejected = null;
+  }
+
+  /**
+   * The energy below which this sign counts as over.
+   *
+   * STOP is a floor, not the answer: see QUIET_FRACTION. Until enough of the
+   * sign has been seen to have an opinion about it, the floor is all there is.
+   *
+   * The bar only ever rises within a sign. Taking the median live, without the
+   * ratchet, is self-defeating: the still frames at the end of the sign are
+   * themselves added to the sample, so a long enough pause drags the median --
+   * and with it the bar -- below the very energy that pause is running at, and
+   * the sign is never allowed to end. The ratchet keeps the bar where the
+   * MOVEMENT put it. A signer who has demonstrated 0.04 of motion in this sign
+   * does not get to redefine 0.011 as busy by holding still for long enough.
+   */
+  private quietLevel(): number {
+    if (this.energies.length >= 5) {
+      const sorted = [...this.energies].sort((a, b) => a - b);
+      const median = sorted[sorted.length >> 1];
+      this.quietBar = Math.max(this.quietBar, median * SignSegmenter.QUIET_FRACTION);
+    }
+    return Math.max(SignSegmenter.STOP, this.quietBar);
   }
   private finish(samples: Sample[]): PointFrame[] | null {
     const frames = samples.map(s => s.frame);
     this.rejected = segmentQuality(frames);
     if (!this.rejected && samples.at(-1)!.at - samples[0].at < SignSegmenter.MIN_MS) this.rejected = 'too-short';
     this.samples = []; this.quietAt = null; this.gapAt = null;
+    this.energies = []; this.quietBar = 0;
     return this.rejected && this.rejected !== 'one-hand' ? null : frames;
   }
   static MIN_HAND_FRACTION = 0.6;
@@ -148,9 +227,12 @@ export class SignSegmenter {
     this.gapAt = null;
     if (this.state === 'settling') {
       // A long unbroken movement must not create a new prediction every N frames.
-      if (this.energy <= SignSegmenter.STOP) this.quietAt ??= at;
+      if (this.energy <= this.quietLevel()) this.quietAt ??= at;
       else this.quietAt = null;
       if (this.quietAt !== null && at - this.quietAt >= SignSegmenter.QUIET_MS) this.reset();
+      // ...but the cooldown has to end either way. Waiting only on quiet meant
+      // waiting forever whenever quiet was unreachable. See SETTLE_MS.
+      else if (this.settleAt !== null && at - this.settleAt >= SignSegmenter.SETTLE_MS) this.reset();
       return null;
     }
     if (this.state === 'idle') {
@@ -158,14 +240,17 @@ export class SignSegmenter {
       this.preroll = this.preroll.filter(s => at - s.at <= 350);
       if (this.energy >= SignSegmenter.START) {
         this.state = 'signing'; this.samples = this.preroll.slice(); this.preroll = [];
+        this.energies = [this.energy]; this.quietBar = 0;
       }
       return null;
     }
     this.samples.push({ frame, at });
-    if (this.energy <= SignSegmenter.STOP) this.quietAt ??= at;
+    this.energies.push(this.energy);
+    if (this.energy <= this.quietLevel()) this.quietAt ??= at;
     else this.quietAt = null;
     if (at - this.samples[0].at >= SignSegmenter.MAX_MS) {
-      this.state = 'settling'; this.samples = []; this.rejected = 'too-long'; return null;
+      this.state = 'settling'; this.samples = []; this.settleAt = at;
+      this.rejected = 'too-long'; return null;
     }
     if (this.quietAt !== null && at - this.quietAt >= SignSegmenter.QUIET_MS) {
       // Keep the final held shape, but trim the rest of the pause.
@@ -264,4 +349,42 @@ export function splitRecording(frames: PointFrame[], minGap = SIGN_GAP_FRAMES, q
         SignSegmenter.hasEnoughHands(piece)) out.push(piece);
   }
   return out;
+}
+
+/**
+ * What to tell the signer when a live window was rejected, or cleared.
+ *
+ * Pulled out of SignBridge and made an exhaustive switch on purpose: a reject
+ * reason handled in the type but missing a case here fails to compile instead
+ * of silently falling through. `no-pose` was exactly that silent case --
+ * SegmentRejection has always listed it, but SignBridge's `if/else` chain had
+ * no branch for it, so a segment discarded for missing shoulders (reachable by
+ * leaning in close: hands stay visible while shoulders leave the frame) said
+ * nothing, and the `hasHands` fallback then actively cleared whatever notice
+ * was already showing.
+ *
+ * `hasHands` is passed separately, not read off `reject`, because "no reject
+ * and hands are visible" is a real, distinct state (clear the notice) from
+ * "no reject and hands are not visible" (say nothing new; the frame simply
+ * has not moved enough to matter yet).
+ */
+export type Notice = { message: string | null; holdMs: number } | 'unchanged';
+export function noticeForReject(reject: SegmentRejection | null, hasHands: boolean): Notice {
+  switch (reject) {
+    case 'no-hands':
+      return { message: 'no hands detected. Step back so both hands are in frame', holdMs: 0 };
+    case 'one-hand':
+      return { message: 'only one hand visible. Confirm the sign below or bring both hands into frame', holdMs: 0 };
+    case 'no-pose':
+      return { message: 'your shoulders are not fully in frame. Move back a little', holdMs: 4000 };
+    case 'too-long':
+      return { message: 'that kept moving for 10 seconds, so it was not read. Sign one sign, then pause for a moment.', holdMs: 5000 };
+    case 'too-short':
+      return { message: 'that was too quick to read. Sign a little slower, then pause.', holdMs: 4000 };
+    case null:
+      // No rejection this frame. Hands visible: whatever was showing no longer
+      // applies, clear it. No hands: this frame simply has not moved enough to
+      // become anything yet, which is not news, leave the last notice alone.
+      return hasHands ? { message: null, holdMs: 0 } : 'unchanged';
+  }
 }
