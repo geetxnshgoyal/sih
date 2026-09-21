@@ -1,0 +1,47 @@
+A Deaf customer cannot ask a question at a hotel front desk, a bank counter, a cinema box office or a shop till. There are very few certified sign language interpreters in India and none of them are standing behind a counter. So the customer writes a note in a language the staff member may not read well, or points, or takes whatever they are given. At a bank that means signing a form nobody explained. At a hotel it means not knowing what the room costs until checkout. At a box office it means not knowing whether the film has subtitles, so they do not come at all.
+
+Setu is a bridge that runs in a browser tab on the terminal already sitting on that counter.
+
+It works in both directions. The customer signs and the staff member hears it spoken in their own language. The staff member picks or types a sentence and the customer sees it as text and as signs played back by an animated signer. Both sides also have a board of written phrases for the things that must be exact, and those never involve a model at all.
+
+We built a separate board for each counter, because the sentences are not the same. A hotel guest asks what the room costs and when checkout is. A bank customer asks what the charges are and says, before signing anything, that they do not understand the form. A cinema guest asks which shows are subtitled. A shopper asks for a different size and whether it can be returned. There are 350 phrases across six settings in six Indian languages, 266 for the customer and 84 for the staff member.
+
+Some of them exist because a hearing person would not think of them. A Deaf guest will not hear the hotel fire alarm, will not hear you knock, and will not hear a platform or screening announcement. Each of those is one tap, and the staff side has the matching reply.
+
+WHY IT RUNS ON THE DEVICE
+
+This is the part we care most about, because it decides whether this reaches a counter at all.
+
+A bank branch is not going to approve a monthly cloud bill so one customer a week can ask a question. A retail chain will not put a recurring per-terminal licence on four thousand stores for a use case with no revenue attached. Things that need one get piloted at a flagship branch in a metro, photographed, and never reach the four thousandth store. Something that costs nothing to run can be copied to every terminal at once, because the marginal cost of the next terminal is zero and nobody has to approve anything.
+
+Privacy then stops being a policy document and becomes a property of the build. In financial services that matters more than anywhere else: the customer's face and their question about their own account are never transmitted, so there is no third-party processor for a compliance team to vet, nothing retained and nothing to leak. The recogniser is 2 MB and sits on a 13 MB hand and face tracker. Both are served from the site and cached on the first visit.
+
+It also works when the internet does not, which at a rural branch or a small retailer is often.
+
+HOW IT WORKS, AND WHAT EACH PART IS WORTH
+
+We split the system into layers because different parts of an exchange need different guarantees.
+
+The phrase boards are exact. Written text, translated once, shipped inside the app. No model runs. This is the main surface, and it is what staff should use whenever getting it wrong means a customer agrees to something they did not understand.
+
+Recognition is the shortcut on top. A small neural network reads 38 trained signs from the camera and shows a short list of what it thinks was signed. Tested on a signer it has never seen, and averaged over five separate training runs rather than quoted from the best one, it gets the sign right first about 74% of the time and has the right answer in its top five about 95% of the time. We built the interface around the second number. A shortlist of five that is nearly always right is more useful at a counter than one answer that is occasionally confidently wrong, and it lets the person choose instead of the model deciding.
+
+Past those 38, another 203 words are matched against a single example of each sign taken from published Indian Sign Language dictionaries. The words a customer reaches for, money, bill, ticket, hotel, expensive, bank, the days of the week and the digits, exist in those sources as exactly one recording each. Far too little to train a classifier on, and enough to compare against. That path is right about half the time, so it is labelled as a shortlist of closest guesses and never as an answer.
+
+We also spent real effort on making it shut up. A classifier handed something it has never seen does not fail cleanly, it picks whichever class is nearest and reports high confidence. So Setu checks both hands were actually visible before it speaks, its confidence numbers are calibrated so that 80% means roughly 80%, and when it is unsure it falls back to the phrase board instead of guessing. At a bank counter a confident wrong answer is worse than no answer.
+
+WHO IT IS FOR
+
+Deaf and hard of hearing customers, who can transact without bringing a relative to interpret their own private business. Frontline staff, who are put in an impossible position several times a month and given no tool for it. And operators, because there is no per-seat licence and nothing stopping them putting it on every terminal in a chain tomorrow.
+
+The same build serves hospitals and travel counters with no changes. That is where we started, and the vocabulary, phrase boards and sign playback carried across without a fork.
+
+WHAT IT IS NOT
+
+Setu assists an exchange. It does not replace a qualified interpreter, and it should not be relied on for anything contractual or for financial consent, where the phrase board's exact wording is the correct instrument and the camera is not.
+
+The trained vocabulary is small and practical, not general. It recognises citation-form signs, not fluent connected signing. Accuracy on a live camera in a busy branch will be lower than on the recordings we tested against.
+
+The phrase translations are machine generated by an open model and have not yet been reviewed by native speakers. We know of specific errors in them. Automated checks catch empty output, untranslated passthrough and script leakage, and no automated check catches grammar. Until a Deaf signer and a native speaker of each language have read every line, we describe this table as a draft that happens to be wired up. Marathi had no speech voice on the devices we tested, so it is read in the nearest voice that shares its script, and the app says so on screen rather than letting someone find out at a counter.
+
+This is built and deployed, not proposed. It is open source, uses no paid service anywhere, costs nothing to run, and is trained only on freely available and openly licensed Indian Sign Language data. It will stay free.
