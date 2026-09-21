@@ -1,0 +1,185 @@
+{
+  "classes": 83,
+  "labels": [
+    "I",
+    "you",
+    "he",
+    "she",
+    "we",
+    "they",
+    "Man",
+    "Woman",
+    "Child",
+    "Family",
+    "Friend",
+    "Hello",
+    "Thank you",
+    "How are you",
+    "Alright",
+    "Pleased",
+    "good",
+    "bad",
+    "Good Morning",
+    "Good afternoon",
+    "Good evening",
+    "Good night",
+    "sick",
+    "healthy",
+    "weak",
+    "strong",
+    "alive",
+    "Death",
+    "Doctor",
+    "Hospital",
+    "Medicine",
+    "Patient",
+    "Deaf",
+    "Blind",
+    "hot",
+    "cold",
+    "warm",
+    "cool",
+    "Train",
+    "Bus",
+    "Car",
+    "Plane",
+    "Boat",
+    "Bicycle",
+    "Train Station",
+    "train ticket",
+    "Restaurant",
+    "Market",
+    "Store or Shop",
+    "Street or Road",
+    "City",
+    "Bank",
+    "Money",
+    "Police",
+    "Park",
+    "Bill",
+    "Key",
+    "Door",
+    "Transportation",
+    "Location",
+    "Today",
+    "Tomorrow",
+    "Yesterday",
+    "Time",
+    "Morning",
+    "Evening",
+    "Night",
+    "Afternoon",
+    "Hour",
+    "Minute",
+    "Week",
+    "Month",
+    "Year",
+    "Bathroom",
+    "Bedroom",
+    "House",
+    "School",
+    "Office",
+    "Library",
+    "Temple",
+    "University",
+    "Kitchen",
+    "Ground"
+  ],
+  "clips": 1668,
+  "encoder": "encoder_stacked.weights.h5",
+  "held_out_group": [
+    {
+      "group": 0,
+      "corpus": "INCLUDE",
+      "clips": 487,
+      "top1": 0.6283367556468172,
+      "top5": 0.8726899383983573
+    },
+    {
+      "group": 1,
+      "corpus": "INCLUDE",
+      "clips": 394,
+      "top1": 0.7360406091370558,
+      "top5": 0.9517766497461929
+    },
+    {
+      "group": 2,
+      "corpus": "INCLUDE",
+      "clips": 597,
+      "top1": 0.678391959798995,
+      "top5": 0.8877721943048577
+    },
+    {
+      "group": 3,
+      "corpus": "CISLR",
+      "clips": 29,
+      "top1": 0.2413793103448276,
+      "top5": 0.4827586206896552
+    },
+    {
+      "group": 4,
+      "corpus": "CISLR",
+      "clips": 54,
+      "top1": 0.24074074074074073,
+      "top5": 0.4074074074074074
+    },
+    {
+      "group": 5,
+      "corpus": "CISLR",
+      "clips": 61,
+      "top1": 0.21311475409836064,
+      "top5": 0.36065573770491804
+    },
+    {
+      "group": 6,
+      "corpus": "CISLR",
+      "clips": 46,
+      "top1": 0.34782608695652173,
+      "top5": 0.5
+    }
+  ],
+  "held_out_mean": {
+    "top1": 0.6809231081942894,
+    "top5": 0.9040795941498025
+  },
+  "temperature": 1.710000000000001,
+  "ece_before": 0.14513708776135525,
+  "ece_after": 0.055739643851773046,
+  "bands": [
+    {
+      "floor": 0.3,
+      "speaks": 0.8015587529976019,
+      "accuracy": 0.7075542258788332
+    },
+    {
+      "floor": 0.4,
+      "speaks": 0.6900479616306955,
+      "accuracy": 0.7567332754126846
+    },
+    {
+      "floor": 0.5,
+      "speaks": 0.5755395683453237,
+      "accuracy": 0.8104166666666667
+    },
+    {
+      "floor": 0.7,
+      "speaks": 0.36930455635491605,
+      "accuracy": 0.8944805194805194
+    },
+    {
+      "floor": 0.9,
+      "speaks": 0.16247002398081534,
+      "accuracy": 0.9446494464944649
+    }
+  ],
+  "cannot_say": [
+    "pain",
+    "water",
+    "help",
+    "yes",
+    "no",
+    "please",
+    "fever",
+    "breathe"
+  ]
+}
