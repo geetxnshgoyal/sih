@@ -283,24 +283,28 @@ version overwrote a single file and destroyed the best model across three runs.
 
 ## 5. Results: and which number to report
 
-Two models ship. The app picks by setting: health loads the clinical one, travel
-keeps the general one.
+ONE model ships: the 38-sign clinical vocabulary.
 
 | model | classes | clips | held-out signer, close range |
 |---|---|---|---|
-| **clinical** (health) | **38** | 740 | **73.9% top-1 / 96.3% top-5** |
-| general (travel) | 264 | 4,894 | 64.8% top-1 / 86.6% top-5 |
+| **clinical** (ships) | **38** | 740 | **73.9% +/- 1.5 top-1 / 95.1% top-5** |
+| universal | 83 | 1,668 | 68.1% top-1 / 90.4% top-5 |
+| general | 264 | 4,894 | 55.0% top-1 / 83.0% top-5 |
 
-Chance is 2.6% and 0.38% respectively. Per-group top-1 for the clinical model:
-**72.9 / 80.5 / 68.2**.
+Chance is 2.6% and 0.38% respectively.
+
+The clinical row is the **mean of five seeds**: 72.7, 72.2, 75.5, 75.4, 73.8.
+The other two rows are single runs, so treat those gaps as approximate. See
+"Seed variance" below for why nothing under about 4.2 points should be claimed
+from one run.
 
 > **Report the held-out-signer number, never a random split.** A random split
 > puts the same person on both sides and inflates by roughly 38 points. Being
 > able to explain that gap is the most credible thing this project can say;
 > most competing work quotes the inflated figure.
 
-**Quote 73.9% for the clinical model, and say what it cannot do in the same
-breath.** It has no sign for *pain*, *water*, *help*, *yes* or *no*: those are
+**Quote 73.9% plus or minus 1.5 for the clinical model, say it is a mean over
+five seeds, and say what it cannot do in the same breath.** It has no sign for *pain*, *water*, *help*, *yes* or *no*: those are
 absent from every ISL corpus available to us, and they live on the phrase board
 instead. A headline accuracy without that sentence is misleading.
 

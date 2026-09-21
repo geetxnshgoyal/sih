@@ -16,24 +16,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-# One model ships. The universal 83-sign vocabulary covers both settings a
-# hospital and a railway counter need, which is what the project is submitted
-# under. Measured on a held-out signer, same protocol for all three:
-#
-#     clinical    38 classes   73.9% top-1   96.3% top-5
-#     universal   83 classes   68.3% top-1   89.7% top-5   <- ships
-#     general    264 classes   64.8% top-1   86.6% top-5
-#
-# The clinical model is more accurate and cannot say Train, Ticket, Money or
-# Police. Carrying two models meant two temperatures, two label sets and two
-# caches to invalidate, and the first release already shipped a stale one that
-# way. One model, one number to quote, one thing to keep honest.
 import os
-# Which vocabulary ships. Measured on held-out INCLUDE signers, same protocol:
+# Which vocabulary ships. Held-out INCLUDE signers, same protocol throughout.
+# The clinical row is the MEAN OF FIVE SEEDS, because one run is a draw: five
+# identical runs gave 72.7, 72.2, 75.5, 75.4 and 73.8, a spread of 3.3 points.
 #
-#     clinical    38 classes   75.1% top-1   95.5% top-5   <- ships
-#     universal   83 classes   68.1% top-1   90.4% top-5
-#     general    264 classes   55.0% top-1   83.0% top-5
+#     clinical    38 classes   73.9% +/- 1.5 top-1   95.1% top-5   <- ships
+#     universal   83 classes   68.1% top-1           90.4% top-5
+#     general    264 classes   55.0% top-1           83.0% top-5
+#
+# Single-seed figures for the other two, so treat the gaps as approximate. Only
+# a difference beyond about 4.2 points is meaningful at this noise level, which
+# the 5.8 to 38 gap clears and smaller claims do not.
 #
 # 38 clinical classes beat 83 by 7.0 points top-1 and 5.1 top-5 while covering
 # the words a hospital needs. The words the classifier drops are not lost: the
