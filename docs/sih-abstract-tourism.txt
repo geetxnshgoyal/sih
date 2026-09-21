@@ -1,0 +1,31 @@
+A Deaf traveller in India cannot ask a question at a hotel desk, a ticket counter, or a tourism help centre. There are very few sign language interpreters and none of them are standing at a railway window. So the traveller writes a note in a language the clerk may not read well, or points, or gives up and goes without the answer. For a visitor this decides whether they can travel independently at all.
+
+Setu works in both directions. The traveller signs and the desk hears it spoken in their own language. The clerk speaks or types and the traveller sees it signed back by an animated signer. Underneath both is a board of common phrases in six Indian languages for the things that have to be exact, like platform numbers, times, room types and prices.
+
+All of it runs in a browser tab on the laptop, tablet or phone the counter already has. No server, no API key, no bill per use, and the camera feed never leaves the device. The model is 2 MB and caches on the first visit.
+
+That is the part we care most about, because it decides whether this can actually be deployed.
+
+A railway station or a district tourism office is not going to sign up for a monthly cloud bill so a visitor can ask about a train. Anything that needs one gets piloted at one airport and never reaches the other nine hundred stations. Something that costs nothing to run can just be copied everywhere at once.
+
+Privacy comes from the design, not a policy document. The traveller's face is never transmitted, so there is nothing to retain and nothing to leak.
+
+It also works when the internet does not, which at a rural station or a heritage site is often.
+
+We split the system into layers because different parts of an exchange need different guarantees.
+
+The phrase board is exact. It is written text, translated once and shipped with the app, and it says the same right thing every time. No model is involved. This is the main surface, and it is what staff should use when getting it wrong means someone misses a train.
+
+Recognition is the shortcut. A small neural network reads a vocabulary of common signs from the camera and shows staff a short list of what it thinks was signed. Tested on a signer it has never seen, averaged over five separate training runs, it gets the sign right first about 74% of the time and has it in the top five about 95% of the time. We built the interface around the second number, because a list of five that is nearly always right beats one answer that is occasionally confidently wrong.
+
+Past that vocabulary, another 200 words are matched against a single example of each sign taken from published Indian Sign Language dictionaries. This matters because words a traveller needs, like ticket, station, hotel, money and the days of the week, exist in those dictionaries as exactly one recording. Far too little to train on, but enough to compare against.
+
+We also spent real effort on making it shut up. A classifier handed something it has never seen does not fail cleanly, it picks whichever class is closest and reports high confidence. So Setu checks both hands were actually visible before it speaks, and its confidence numbers are calibrated so 80% roughly means 80%.
+
+Who it is for: Deaf and hard of hearing travellers, who can ask a question without needing a companion to interpret. Counter and desk staff, who can serve a customer they otherwise could not. And operators, because there is no per-seat cost and nothing stopping them putting it on every terminal in a division tomorrow.
+
+The same build serves hospitals without changes, and that is where we started: the vocabulary, phrases and sign playback carry across.
+
+What it is not: Setu assists an exchange, it does not replace a qualified interpreter, and it should not be used for anything contractual. The trained vocabulary is small and practical, not general. Phrase translations are machine generated and are being checked by Deaf signers. Accuracy on a live camera in a noisy concourse will be lower than on the recordings we tested with, and when the model is unsure the interface falls back to the phrase board instead of guessing.
+
+This is built and deployed, not proposed. It is open source, uses no paid service anywhere, and is trained only on freely available and openly licensed Indian Sign Language data. It will stay free.
