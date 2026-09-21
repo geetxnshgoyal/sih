@@ -161,6 +161,11 @@ def warm_start(model, n_classes) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--vocab", choices=["clinical", "universal"], default="clinical")
+    ap.add_argument("--seed", type=int, default=SEED,
+                    help="three identical runs gave 75.1, 73.8 and 73.3 top-1, "
+                         "so a single run is a draw and not a measurement")
+    ap.add_argument("--tag", default="",
+                    help="suffix for the eval json, so runs do not overwrite")
     ap.add_argument("--motion", action="store_true",
                     help="two-stream: positions plus an in-graph motion trunk")
     ap.add_argument("--extra", action="store_true",
@@ -169,7 +174,7 @@ def main() -> int:
     args = ap.parse_args()
     vocab = CLINICAL if args.vocab == "clinical" else UNIVERSAL
     out_dir = OUT_BASE / args.vocab
-    run_path = RUN_BASE / f"{args.vocab}_eval.json"
+    run_path = RUN_BASE / f"{args.vocab}_eval{args.tag}.json"
     print(f"vocabulary: {args.vocab} ({len(vocab)} requested)")
 
     d = np.load(DATA, allow_pickle=True)
@@ -197,8 +202,8 @@ def main() -> int:
         print(f"folded in {len(e['X'])} dictionary clips as signer group "
               f"{int(e['signer'][0])}")
     index = {l: i for i, l in enumerate(labels)}
-    rng = np.random.default_rng(SEED)
-    tf.random.set_seed(SEED)
+    rng = np.random.default_rng(args.seed)
+    tf.random.set_seed(args.seed)
     which = ENCODER if ENCODER.exists() else ENCODER_FALLBACK
     print(f"encoder: {which.name}")
 

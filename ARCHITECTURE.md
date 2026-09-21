@@ -1137,6 +1137,51 @@ is not INCLUDE.
 
 Reproduce: `train/train_clinical.py --vocab universal --extra`.
 
+### Seed variance: the noise floor, measured at last
+
+Five identical runs of the shipping recipe, differing only in seed:
+
+| seed | top-1 | top-5 |
+|---|---|---|
+| 1 | 72.7% | 94.9% |
+| 2 | 72.2% | 93.5% |
+| 3 | 75.5% | 95.6% |
+| 4 | 75.4% | 95.3% |
+| 5 | 73.8% | 96.5% |
+
+**mean 73.9%, standard deviation 1.51, spread 3.3 points.** 95% interval of the
+mean [72.6, 75.2]. Reproduce with `train/train_clinical.py --seed N --tag _sN`.
+
+The 75.1% quoted everywhere before this was a single draw, and it sits at the
+top of that range. The honest figure for the recipe is **73.9% plus or minus
+1.5**; the model that happens to be deployed measured 75.1% on its one run.
+
+**A single-seed comparison must beat about 4.2 points to mean anything**
+(1.96 x sigma x sqrt(2), two independent draws). Applying that to everything on
+record:
+
+| claim | delta | verdict |
+|---|---|---|
+| ArcFace, cross-domain | -18.5 | survives |
+| Borrowed ASL pretraining | +18.4 | survives |
+| Cutting vocabulary, 264 to 83 | +8.4 | survives |
+| Test-time augmentation | -8.1 | survives |
+| Two-stream motion | -7.1 | survives |
+| 83 to 38 clinical | +7.0 | survives |
+| CISLR, 610 new clips | +3.4 | **inside the noise** |
+| Dictionary clips as extra signers | -3.1 | **inside the noise** |
+| SSL on 13,662 ISL clips | +1.3 | **inside the noise** |
+| Hand-dropout augmentation | -0.8 | **inside the noise** |
+| FULL_FACE face mesh | ~0 | inside the noise |
+| SL-GCN | ~0 | inside the noise |
+
+The large results hold. Four smaller ones do not, and **CISLR's +3.4 was used
+as the argument for two later experiments**, both of which then failed. That
+reasoning rested on noise.
+
+Nothing below 4.2 points should be reported from one run again. Either average
+over seeds or do not claim it.
+
 ### Settled by measurement, do not repeat
 
 | tried | result |
