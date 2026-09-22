@@ -1,0 +1,93 @@
+THE PROBLEM AS IT ACTUALLY PRESENTS
+
+There is no shortage of skilling schemes. There is a shortage of skilling that ends in income.
+
+A man in an SC-majority village has laid brick for nine years. On paper he is unskilled, because nothing he knows was ever assessed. When a skilling camp arrives, he is offered a course that assumes he knows nothing, in a town he cannot reach and return from in a day, for a role no employer in his block is hiring. He does not enrol. The camp records low uptake and concludes the community lacks interest.
+
+Four things went wrong there and none of them was the absence of a scheme.
+
+His existing skill was invisible, because it was never certified. The recommendation was generic, because nobody asked him anything. The training was not reachable, because distance was not part of the calculation. And the destination did not exist locally, because local demand was never checked.
+
+The people this is worst for are the ones the Grants-in-Aid component of PM-AJAY exists to reach: SC households in blocks where the nearest training centre is far, literacy in formal Hindi or English cannot be assumed, and the work available is in trades that have never been treated as qualifications.
+
+THE IDEA
+
+Hunar is a voice assistant with a narrow and unglamorous job. It finds out what a person can already do, gets that certified if it can be, and names work that is actually within reach. It speaks the person's language and never asks them to read.
+
+Three decisions define it, and each one is a decision not to do the obvious thing.
+
+ONE: START FROM RECOGNITION OF PRIOR LEARNING, NOT FROM A COURSE CATALOGUE
+
+Recognition of Prior Learning already exists. It is a government instrument that gives NSQF-aligned certification to people who learned a trade by practising it rather than by studying it. It is designed precisely for the uncertified workforce in unregulated sectors. It takes days.
+
+It is also, in practice, unknown to most of the people it was built for, and it is rarely the thing a skilling camp leads with.
+
+So Hunar's first question is not "what would you like to learn". It is "what do you do, and for how long have you done it". And its first recommendation, for a large number of people, is not a course at all. It is: this is the NSQF level your existing work already corresponds to, this is the assessment that certifies it, this is the nearest centre, this is what it costs, and this is the support you qualify for.
+
+That reframes the whole interaction. The default outcome stops being six months of training and becomes a certificate in a few weeks for work the person is already doing. A course is then recommended only where it genuinely adds a capability the person does not have, or moves them up a level that local employers actually pay more for.
+
+TWO: RECOMMEND ONLY WHAT IS REACHABLE
+
+A recommendation that ignores geography is a recommendation that will not be taken.
+
+Hunar ranks candidate qualifications against what exists near the person. The trades and enterprises actually present in that district. PM Vishwakarma craft categories, which map onto exactly the traditional occupations that are common in these communities and have historically been treated as informal rather than as skilled work. Producer organisations and local market access. And plain distance: whether a person can get to the training and to the eventual work, and return, in a day.
+
+When nothing suitable is within reach, it says so. That is a real answer and it is useful, because it becomes part of the evidence for what the district should fund.
+
+THREE: RETRIEVE, DO NOT GENERATE
+
+This is the engineering decision we care most about, and it is one we have already had to make correctly in a system that is live.
+
+Ask a language model to suggest a qualification and it will return something that reads correctly: a plausible course name, a plausible code, a plausible NSQF level, a plausible duration. A proportion of them will not exist. A person sent to a training centre that is not there, for a qualification that nobody awards, has lost a day of wages and a great deal of trust, and will not come back.
+
+So the model is used for one thing only: understanding what the person said, in their own words, in their own language, including when they describe a trade in a local term rather than a formal one. Every recommendation that comes out is retrieved from the National Qualification Register, the government's own register of NSQF-aligned qualifications, and carries the real code, level, sector, duration and awarding body from it. Nothing is invented. When no entry matches well enough, the assistant says it does not know and hands off to a person at the block office.
+
+The same principle governs confidence. Speech recognition on rural dialects will mishear. So a transcription the system is unsure of is repeated back for confirmation before anything is recommended on the strength of it, and a recommendation the system is unsure of is offered as a shortlist rather than an answer. Refusing to guess is a feature that has to be built deliberately, because the default behaviour of every model is to produce its best guess with high confidence.
+
+WHAT IT PRODUCES, FOR TWO DIFFERENT PEOPLE
+
+For the individual, a spoken plan in their language, and a printed copy for the block office: what can be certified now and how, what training is worth the time and where, what it costs, what support applies, and what it is realistically worth in income.
+
+For the district or state officer, something that currently costs a separate survey to obtain. The conversations aggregate into a livelihood map of the block. How many people in which villages are already working in which trades. How many are uncertified. Where the nearest assessment centre is and how far that is. Which qualifications are being recommended and cannot be acted on because no centre is in range.
+
+That last line is the one that matters for GIA. The Grants-in-Aid component funds comprehensive livelihood projects, which can include skill development, infrastructure and financial assistance for acquiring assets. The difficulty for a district officer is not the money, it is justifying what to spend it on. A statement like "142 people across nine villages already work in leather, none are certified, and the nearest assessment centre is sixty kilometres away" is a fundable proposal. It arrives as a by-product of helping individuals rather than as a separate exercise.
+
+WHY VOICE, SPECIFICALLY
+
+Voice is not a modern interface choice here, it is the access condition.
+
+A text interface in English or in formal Hindi excludes a large share of the population the GIA component exists for, and does it silently: people do not report being excluded by a form, they just do not use it. Spoken interaction in the person's own language removes that filter. It also allows a person to describe their work the way they actually describe it, in local vocabulary, rather than selecting from a dropdown written in the vocabulary of the framework.
+
+WHERE IT RUNS, STATED HONESTLY
+
+Speech recognition for Indian languages is not yet small enough to run well offline on a low-end phone, and we are not going to claim it is.
+
+Hunar runs on the device that is already at the point of contact: a Common Service Centre operator's machine, a block office terminal, or a district server. The person needs no smartphone and installs nothing. They speak, and the operator is present, which also matters because a first conversation about livelihood is better with a human in the room than alone with a phone.
+
+The models are open and self-hosted, from AI4Bharat and comparable sources, so there is no per-query cost to anyone. The qualification catalogue and any plan already generated are cached locally, so the parts that must survive a bad connection do. Nothing depends on a paid API. That is not frugality for its own sake: a system that costs money per use gets piloted in one district and stops there, and this one has to work in the districts that are hardest to reach.
+
+THE RISK WE TAKE MOST SERIOUSLY, NAMED
+
+A system that maps SC individuals to livelihoods can reproduce the caste occupational order it is supposed to help people move within.
+
+If a model learns from data that people like this user do this kind of work, it will recommend hereditary trades back to them, with the added authority of having come from a computer. That would be an actively harmful outcome and it would be easy to arrive at without intending it.
+
+So caste is used for exactly one purpose, scheme eligibility, and it is never an input to a recommendation. Recommendations are derived from what the person says they currently do and what they say they want to do, which are asked separately and explicitly, including when the answer is that they want to leave the trade they are in. The system is evaluated on whether it offers a genuine range of directions rather than only the obvious ones, and that check is part of the work rather than an afterthought.
+
+WHAT WE HAVE BUILT, AND WHAT WE HAVE NOT
+
+Hunar is not built. We are not going to imply otherwise in a submission.
+
+What we have built and deployed is Setu, a two-way Indian Sign Language bridge for counters and clinics. It runs entirely on the device, speaks six Indian languages, uses no paid service anywhere, and when its classifier is not confident it falls back to an exact phrase board instead of guessing. It is open source and live.
+
+The reason that is relevant is not that the domains are similar, because they are not. It is that the difficult parts overlap almost exactly. Indian language speech output across six languages. Operating where connectivity is not guaranteed. Calibrated confidence, so that a stated number means what it says. Retrieval from a fixed, verified catalogue instead of generation, which is the single decision that keeps a helpful system from becoming a confidently wrong one. We have already had to get those right once, under measurement, and we have the habit of publishing the results that did not work as well as the ones that did.
+
+THE LIMITS
+
+Speech recognition is markedly worse for rural dialects, for women's voices and for code-mixed speech than published benchmarks suggest, and that is exactly the population here. This will need evaluation on recordings from the actual districts, not on a benchmark, and we expect the first numbers to be disappointing.
+
+Local demand data is patchy and uneven between districts, and the quality of a livelihood map depends on it. Where it is poor, the honest output is a narrower recommendation and an explicit statement of what is unknown.
+
+A recommendation is only ever as good as the catalogue behind it, and the catalogue is a register of qualifications rather than of jobs. It tells us what can be certified, not who is hiring.
+
+And no assistant fixes a block where the work genuinely is not there. What it can do is make that visible, in aggregate, to the officer who controls the budget that could change it.
