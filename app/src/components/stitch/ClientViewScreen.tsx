@@ -4,6 +4,8 @@ import { useSession } from '../../context/SessionContext';
 import { useDomain } from '../../lib/useDomain';
 import { speak } from '../../lib/speech';
 import PhraseBoard from '../PhraseBoard';
+import QuickPhrases from '../QuickPhrases';
+import { translateGlosses } from '../../lib/glossTranslate';
 const SignBridge = lazy(() => import('../SignBridge'));
 export function ClientViewScreen() {
   const { selectedLang, setSelectedLang, activeProjection, addTranscriptItem } = useSession();
@@ -17,15 +19,32 @@ export function ClientViewScreen() {
     <section className="content-card"><span className="eyebrow-label">Latest message from the {domain.roles.staff.lower}</span><p className="text-headline-lg mt-4 leading-relaxed">{activeProjection?.text || `The next message from the ${domain.roles.staff.lower} will appear here.`}</p>{activeProjection?.textEn && activeProjection.textEn !== activeProjection.text && <p className="text-body-lg text-secondary mt-3">{activeProjection.textEn}</p>}{activeProjection && <button className="secondary-action mt-4" onClick={() => speak(activeProjection.text, selectedLang)}><Volume2 size={18}/>Read aloud</button>}</section>
     <div className="grid lg:grid-cols-2 gap-6 items-start"><section className="content-card"><h2 className="text-headline-md font-semibold mb-3">Sign with your camera</h2><p className="text-secondary mb-5">Keep your face and both hands in the frame. Video is processed on this device and never uploaded. Choose the correct result before it is sent.</p>{showCamera ? <><button className="secondary-action mb-4" onClick={() => setShowCamera(false)}>Close camera panel</button><Suspense fallback={<p role="status">Loading sign recognition…</p>}><SignBridge compact confirmBeforeSend lang={selectedLang} onLang={setSelectedLang} onRecognized={text => send(text)} /></Suspense></> : <button className="primary-action" onClick={() => setShowCamera(true)}><Camera size={18}/>Open sign recognition</button>}</section>
     <section className="content-card flex flex-col gap-4"><h2 className="text-headline-md font-semibold">Write a response</h2><form className="flex flex-col gap-3" onSubmit={e => {e.preventDefault(); send(input);}}><label htmlFor="client-message" className="sr-only">Your response</label><textarea id="client-message" rows={3} className="w-full resize-y border border-outline-variant rounded-xl p-4 bg-surface-container-low" placeholder="Type your response…" value={input} onChange={e => setInput(e.target.value)}/><button className="primary-action" disabled={!input.trim()}><Send size={18}/>Send response</button></form><p role="status" className="text-primary text-label-md">{status}</p></section></div>
+    {/* Tap-to-say, above the full board.
+        These are gloss SEQUENCES, so they go through translateGlosses and the
+        same _utterances.json the recognition path uses: what the staff member
+        hears from a tap is exactly what they would hear from a sign. The board
+        below is the exhaustive, searchable version; this is the six things a
+        person reaches for without reading.
+
+        It rendered nowhere until now. QuickPhrases had no importers, so every
+        domain's `quick` array was data nothing displayed, which is also why
+        ["I","Deaf","Sign"] could sit broken for months. */}
+    <QuickPhrases domain={domain} onSay={q => {
+      const t = translateGlosses(q.glosses, selectedLang);
+      const text = t.text || q.caption;
+      speak(text, selectedLang);
+      send(text);
+    }} />
+
     {/* The phrase board, not a handful of hardcoded strings.
         This is the path that always works. Recognition is about 74% correct on
         a signer it has never seen; a tapped phrase is right every time, offline,
         in all six languages, because the translations are generated once with
         NLLB-200 and committed (lib/phrasebookTable.ts). Ordering follows a
-        triage conversation rather than the alphabet, so "I am Deaf" and "I
-        cannot breathe" are never more than one tap away.
-        It speaks aloud AND lands in the transcript: the hearing clinician needs
-        to hear it, and the record needs to show it was said. */}
+        triage conversation rather than the alphabet, so "I am Deaf" and the
+        thing that has gone wrong are never more than one tap away.
+        It speaks aloud AND lands in the transcript: the person on the other
+        side needs to hear it, and the record needs to show it was said. */}
     <PhraseBoard domain={domain.id} lang={selectedLang} onSay={text => { speak(text, selectedLang); send(text); }} />
   </div></main>;
 }

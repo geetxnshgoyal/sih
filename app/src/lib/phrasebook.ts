@@ -43,6 +43,8 @@
  * has read every line, treat this table as a draft that happens to be wired up.
  */
 
+import type { DomainId } from "./domains";
+
 export type PhraseCategory =
   | "identity"
   | "emergency"
@@ -281,3 +283,225 @@ export const TRAVEL_ORDER: PhraseCategory[] = [
   "emergency", "identity", "directions", "transport",
   "money", "understanding", "courtesy",
 ];
+
+/* ---------------------------------------------------------------- service */
+
+/**
+ * Hospitality, financial services, entertainment and retail.
+ *
+ * Written for SIH26199. The four counters share more than they differ: every
+ * one of them needs the customer to establish that they are Deaf, to ask a
+ * price, to say they do not understand, and to refuse politely. Those live in
+ * SERVICE_COMMON and are spread into each board rather than written four
+ * times, so a fix to the wording of "I do not understand" fixes it everywhere.
+ *
+ * Register: these are spoken aloud BY the customer TO a staff member who is
+ * usually busy and has a queue behind. Short complete sentences. No hedging,
+ * because a hedged sentence read aloud by a synthesiser at a till does not
+ * land. "I am Deaf" is capitalised as cultural identity, not a deficit.
+ *
+ * THE FINANCIAL ONES ARE THE DANGEROUS ONES. "I do not understand this form"
+ * and "Do not process this yet" exist because the failure mode at a bank is
+ * not confusion, it is a customer signing something. Those are marked urgent
+ * so they sort to the top and are reachable without scrolling or searching.
+ *
+ * Same caveat as the clinical board and it is not smaller here: the English is
+ * a hearing engineer's guess, and the translations are unreviewed NLLB-200
+ * output. A wrong sentence spoken confidently at a bank counter is worse than
+ * silence. Until a Deaf ISL user and a native speaker of each language have
+ * read every line, this is a draft that happens to be wired up.
+ */
+const SERVICE_COMMON: Phrase[] = [
+  { id: "s-deaf", en: "I am Deaf.", short: "I am Deaf", category: "identity", urgent: true, glosses: ["I", "Deaf"] },
+  { id: "s-deaf-isl", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf: I use ISL", category: "identity" },
+  { id: "s-write", en: "I cannot hear you. Please write it down.", short: "Please write it down", category: "identity" },
+  { id: "s-slower", en: "Please speak more slowly.", short: "Slower please", category: "identity" },
+  { id: "s-face", en: "Please look at me when you speak.", short: "Please face me", category: "identity" },
+  { id: "s-phone-no", en: "I cannot use the telephone. Please contact me another way.", short: "I cannot use the phone", category: "identity" },
+
+  { id: "s-understand-no", en: "I do not understand. Please explain again.", short: "I do not understand", category: "understanding", urgent: true },
+  { id: "s-repeat", en: "Please say that again.", short: "Say again", category: "understanding" },
+  { id: "s-show", en: "Please show me.", short: "Show me", category: "understanding" },
+  { id: "s-number", en: "Please write the number down.", short: "Write the number", category: "understanding" },
+  { id: "s-understand-yes", en: "Yes, I understand.", short: "I understand", category: "understanding" },
+  { id: "s-wait", en: "Please wait a moment.", short: "Please wait", category: "understanding" },
+  { id: "s-time-more", en: "Please give me more time.", short: "More time please", category: "understanding" },
+
+  { id: "s-price", en: "How much does this cost?", short: "How much", category: "money" },
+  { id: "s-expensive", en: "That is too expensive.", short: "Too expensive", category: "money" },
+  { id: "s-card", en: "I will pay by card.", short: "Pay by card", category: "money" },
+  { id: "s-cash", en: "I will pay in cash.", short: "Pay cash", category: "money" },
+  { id: "s-upi", en: "Can I pay by UPI?", short: "UPI?", category: "money" },
+  { id: "s-bill", en: "May I have the bill, please?", short: "The bill please", category: "money" },
+  { id: "s-receipt", en: "May I have a receipt?", short: "Receipt please", category: "money" },
+  { id: "s-change", en: "I think the change is wrong.", short: "Change is wrong", category: "money" },
+
+  { id: "s-help", en: "I need help.", short: "I need help", category: "emergency", urgent: true },
+  { id: "s-manager", en: "May I speak to the manager?", short: "The manager please", category: "emergency" },
+  { id: "s-toilet", en: "Where is the toilet?", short: "Toilet", category: "logistics" },
+  { id: "s-thanks", en: "Thank you for your help.", short: "Thank you", category: "courtesy" },
+  { id: "s-sorry", en: "Sorry, one moment.", short: "One moment", category: "courtesy" },
+  { id: "s-patience", en: "Thank you for being patient with me.", short: "Thank you for waiting", category: "courtesy" },
+];
+
+export const HOTEL_PHRASES: Phrase[] = [
+  ...SERVICE_COMMON,
+
+  { id: "h-checkin", en: "I have a booking. I would like to check in.", short: "Check in", category: "needs" },
+  { id: "h-nobooking", en: "I do not have a booking. Do you have a room?", short: "Do you have a room", category: "needs" },
+  { id: "h-room-cost", en: "How much is the room per night?", short: "Room rate", category: "money" },
+  { id: "h-included", en: "What is included in the price?", short: "What is included", category: "money" },
+  { id: "h-breakfast", en: "Is breakfast included?", short: "Breakfast included?", category: "money" },
+  { id: "h-deposit", en: "Is there a deposit? How much?", short: "Deposit?", category: "money" },
+  { id: "h-cancel", en: "What is the cancellation policy?", short: "Cancellation policy", category: "money" },
+
+  { id: "h-nights", en: "I am staying for two nights.", short: "Two nights", category: "logistics" },
+  { id: "h-checkout-time", en: "What time is checkout?", short: "Checkout time", category: "logistics" },
+  { id: "h-late", en: "Can I check out later?", short: "Late checkout?", category: "logistics" },
+  { id: "h-room-where", en: "Where is my room?", short: "Where is my room", category: "logistics" },
+  { id: "h-lift", en: "Where is the lift?", short: "Where is the lift", category: "logistics" },
+  { id: "h-luggage", en: "Can you keep my luggage?", short: "Keep my luggage", category: "logistics" },
+  { id: "h-wifi", en: "What is the wifi password?", short: "Wifi password", category: "logistics" },
+  { id: "h-food-time", en: "What time is food served?", short: "Meal times", category: "logistics" },
+
+  { id: "h-key", en: "My key does not work.", short: "Key does not work", category: "needs" },
+  { id: "h-ac", en: "The air conditioning is not working.", short: "AC not working", category: "needs" },
+  { id: "h-hot-water", en: "There is no hot water.", short: "No hot water", category: "needs" },
+  { id: "h-towels", en: "Could I have more towels?", short: "More towels", category: "needs" },
+  { id: "h-clean", en: "Please clean the room.", short: "Clean the room", category: "needs" },
+  { id: "h-quiet", en: "The room is too noisy. Could I change rooms?", short: "Change rooms", category: "needs" },
+
+  /* The reason a Deaf guest may not survive a fire alarm. Worth a button. */
+  { id: "h-alarm", en: "I am Deaf. I will not hear the fire alarm. Please tell me how I will be warned.", short: "I cannot hear the alarm", category: "emergency", urgent: true },
+  { id: "h-knock", en: "I will not hear you knock. Please message me instead.", short: "I will not hear knocking", category: "emergency", urgent: true },
+  { id: "h-doctor", en: "I need a doctor.", short: "I need a doctor", category: "emergency", urgent: true },
+];
+
+export const BANK_PHRASES: Phrase[] = [
+  ...SERVICE_COMMON,
+
+  /* Consent first. At a bank the failure is not confusion, it is signing. */
+  { id: "b-form-no", en: "I do not understand this form. Please explain it before I sign.", short: "Explain before I sign", category: "understanding", urgent: true },
+  { id: "b-stop", en: "Please do not process this yet. I have a question.", short: "Please wait, I have a question", category: "understanding", urgent: true },
+  { id: "b-read", en: "I need time to read this properly.", short: "I need to read it", category: "understanding", urgent: true },
+  { id: "b-charges", en: "What are the charges on this?", short: "What are the charges", category: "money", urgent: true },
+  { id: "b-sign-where", en: "Where do I sign?", short: "Where do I sign", category: "understanding" },
+
+  { id: "b-open", en: "I want to open an account.", short: "Open an account", category: "needs" },
+  { id: "b-deposit", en: "I want to deposit money.", short: "Deposit", category: "needs" },
+  { id: "b-withdraw", en: "I want to withdraw money.", short: "Withdraw", category: "needs" },
+  { id: "b-balance", en: "What is my account balance?", short: "My balance", category: "needs" },
+  { id: "b-statement", en: "I need a statement.", short: "Statement", category: "needs" },
+  { id: "b-transfer", en: "I want to transfer money.", short: "Transfer money", category: "needs" },
+
+  { id: "b-card-new", en: "I need a new debit card.", short: "New card", category: "needs" },
+  { id: "b-card-lost", en: "My card is lost. Please block it.", short: "Block my card", category: "emergency", urgent: true },
+  { id: "b-card-stuck", en: "The machine has kept my card.", short: "Machine took my card", category: "emergency", urgent: true },
+  { id: "b-fraud", en: "There is a transaction I did not make.", short: "I did not make this transaction", category: "emergency", urgent: true },
+  { id: "b-pin", en: "I have forgotten my PIN.", short: "Forgot my PIN", category: "needs" },
+
+  { id: "b-docs", en: "Here are my documents.", short: "My documents", category: "logistics" },
+  { id: "b-docs-what", en: "Which documents do you need?", short: "Which documents", category: "logistics" },
+  { id: "b-kyc", en: "I am here to complete my KYC.", short: "KYC", category: "logistics" },
+  { id: "b-how-long", en: "How long will this take?", short: "How long", category: "logistics" },
+  { id: "b-when-ready", en: "When should I come back?", short: "When do I return", category: "logistics" },
+  { id: "b-token", en: "Do I need a token?", short: "Token?", category: "logistics" },
+  { id: "b-counter", en: "Which counter should I go to?", short: "Which counter", category: "logistics" },
+
+  { id: "b-loan", en: "I want to ask about a loan.", short: "About a loan", category: "money" },
+  { id: "b-interest", en: "What is the interest rate?", short: "Interest rate", category: "money" },
+  { id: "b-emi", en: "How much is the monthly instalment?", short: "Monthly instalment", category: "money" },
+];
+
+export const CINEMA_PHRASES: Phrase[] = [
+  ...SERVICE_COMMON,
+
+  /* The question that decides whether a Deaf customer buys a ticket at all. */
+  { id: "c-subtitles", en: "I am Deaf. Does this film have subtitles?", short: "Does it have subtitles", category: "needs", urgent: true },
+  { id: "c-subtitles-which", en: "Which shows have subtitles?", short: "Which shows are subtitled", category: "needs", urgent: true },
+  { id: "c-captions", en: "Do you have captioning devices?", short: "Captioning devices?", category: "needs", urgent: true },
+  { id: "c-access-seat", en: "I need accessible seating.", short: "Accessible seating", category: "needs", urgent: true },
+
+  { id: "c-ticket", en: "I would like a ticket.", short: "One ticket", category: "needs" },
+  { id: "c-tickets-two", en: "I would like two tickets.", short: "Two tickets", category: "needs" },
+  { id: "c-ticket-child", en: "One ticket for a child.", short: "Child ticket", category: "needs" },
+  { id: "c-ticket-price", en: "How much is a ticket?", short: "Ticket price", category: "money" },
+  { id: "c-concession", en: "Is there a concession for disabled customers?", short: "Disability concession?", category: "money" },
+
+  { id: "c-time", en: "What time does it start?", short: "Start time", category: "logistics" },
+  { id: "c-length", en: "How long is it?", short: "How long", category: "logistics" },
+  { id: "c-tomorrow", en: "A ticket for tomorrow, please.", short: "Ticket for tomorrow", category: "logistics" },
+  { id: "c-seat-where", en: "Where is my seat?", short: "Where is my seat", category: "logistics" },
+  { id: "c-screen", en: "Which screen?", short: "Which screen", category: "logistics" },
+  { id: "c-entrance", en: "Which entrance do I use?", short: "Which entrance", category: "logistics" },
+  { id: "c-interval", en: "Is there an interval?", short: "Interval?", category: "logistics" },
+  { id: "c-food", en: "Where can I buy food?", short: "Where is food", category: "logistics" },
+
+  { id: "c-refund", en: "Can I get a refund?", short: "Refund?", category: "money" },
+  { id: "c-exchange", en: "Can I change this to another show?", short: "Change the show", category: "money" },
+  { id: "c-announce", en: "I will not hear announcements. Please tell me if anything changes.", short: "I cannot hear announcements", category: "emergency", urgent: true },
+];
+
+export const RETAIL_PHRASES: Phrase[] = [
+  ...SERVICE_COMMON,
+
+  { id: "r-looking", en: "I am just looking, thank you.", short: "Just looking", category: "courtesy" },
+  { id: "r-find", en: "I am looking for something. Can you help?", short: "I am looking for", category: "needs" },
+  { id: "r-where", en: "Where can I find this?", short: "Where is this", category: "needs" },
+  { id: "r-stock", en: "Do you have this in stock?", short: "In stock?", category: "needs" },
+  { id: "r-other-size", en: "Do you have a different size?", short: "Different size", category: "needs" },
+  { id: "r-bigger", en: "Do you have a bigger one?", short: "Bigger", category: "needs" },
+  { id: "r-smaller", en: "Do you have a smaller one?", short: "Smaller", category: "needs" },
+  { id: "r-other-colour", en: "Do you have another colour?", short: "Another colour", category: "needs" },
+  { id: "r-new-one", en: "Could I have a new one, not the display piece?", short: "A new one please", category: "needs" },
+  { id: "r-try", en: "May I try this on?", short: "May I try it", category: "needs" },
+
+  { id: "r-cheaper", en: "Do you have something cheaper?", short: "Something cheaper", category: "money" },
+  { id: "r-discount", en: "Is there a discount on this?", short: "Any discount", category: "money" },
+  { id: "r-price-check", en: "Please check the price for me.", short: "Check the price", category: "money" },
+  { id: "r-price-wrong", en: "The price on the label is different.", short: "Label price is different", category: "money" },
+  { id: "r-take", en: "I will take it.", short: "I will take it", category: "money" },
+  { id: "r-not-take", en: "I will not take it, thank you.", short: "Not this one", category: "money" },
+
+  { id: "r-return", en: "I would like to return this.", short: "Return this", category: "logistics" },
+  { id: "r-exchange", en: "I would like to exchange this.", short: "Exchange this", category: "logistics" },
+  { id: "r-return-policy", en: "What is the return policy?", short: "Return policy", category: "logistics" },
+  { id: "r-warranty", en: "Is there a warranty?", short: "Warranty?", category: "logistics" },
+  { id: "r-faulty", en: "This is faulty.", short: "This is faulty", category: "logistics", urgent: true },
+  { id: "r-bag", en: "May I have a bag?", short: "A bag please", category: "logistics" },
+  { id: "r-deliver", en: "Do you deliver?", short: "Do you deliver", category: "logistics" },
+  { id: "r-close", en: "What time do you close?", short: "Closing time", category: "logistics" },
+];
+
+/** Category order per setting. Urgent-first, then the shape of the exchange. */
+export const HOTEL_ORDER: PhraseCategory[] = [
+  "emergency", "identity", "needs", "logistics", "money", "understanding", "courtesy",
+];
+export const BANK_ORDER: PhraseCategory[] = [
+  "emergency", "understanding", "identity", "needs", "money", "logistics", "courtesy",
+];
+export const CINEMA_ORDER: PhraseCategory[] = [
+  "emergency", "needs", "identity", "logistics", "money", "understanding", "courtesy",
+];
+export const RETAIL_ORDER: PhraseCategory[] = [
+  "emergency", "identity", "needs", "money", "logistics", "understanding", "courtesy",
+];
+
+/** The board for a setting. One lookup, so PhraseBoard stops branching. */
+export const PHRASES_FOR: Record<DomainId, Phrase[]> = {
+  health: HEALTH_PHRASES,
+  travel: TRAVEL_PHRASES,
+  hotel: HOTEL_PHRASES,
+  bank: BANK_PHRASES,
+  cinema: CINEMA_PHRASES,
+  retail: RETAIL_PHRASES,
+};
+
+export const ORDER_FOR: Record<DomainId, PhraseCategory[]> = {
+  health: HEALTH_ORDER,
+  travel: TRAVEL_ORDER,
+  hotel: HOTEL_ORDER,
+  bank: BANK_ORDER,
+  cinema: CINEMA_ORDER,
+  retail: RETAIL_ORDER,
+};

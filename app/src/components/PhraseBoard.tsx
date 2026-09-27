@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  CATEGORY_LABEL, HEALTH_ORDER, HEALTH_PHRASES, TRAVEL_ORDER, TRAVEL_PHRASES,
+  CATEGORY_LABEL, ORDER_FOR, PHRASES_FOR,
   type Phrase, type PhraseCategory,
 } from "../lib/phrasebook";
 import { loadPhrasebook, phraseText } from "../lib/phrasebookTable";
@@ -34,8 +34,8 @@ export default function PhraseBoard({
 
   useEffect(() => { void loadPhrasebook().then(setReady); }, []);
 
-  const phrases = domain === "health" ? HEALTH_PHRASES : TRAVEL_PHRASES;
-  const order = domain === "health" ? HEALTH_ORDER : TRAVEL_ORDER;
+  const phrases = PHRASES_FOR[domain];
+  const order = ORDER_FOR[domain];
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
