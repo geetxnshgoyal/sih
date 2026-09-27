@@ -5,9 +5,11 @@ import SignPlayer from '../SignPlayer';
 import { speak } from '../../lib/speech';
 import { createRecogniser, textToGlosses } from '../../lib/reverse';
 import { useSignLibrary } from '../../hooks/useSignLibrary';
+import { useDomain } from '../../lib/useDomain';
 
-export function DoctorViewScreen() {
-  const { selectedLang, activeProjection, projectToPatient, isSlowMode, setIsSlowMode } = useSession();
+export function StaffViewScreen() {
+  const { selectedLang, activeProjection, projectToClient, isSlowMode, setIsSlowMode } = useSession();
+  const domain = useDomain();
   const [input, setInput] = useState('');
   const { library, getClip, error: libraryError } = useSignLibrary();
   const [listening, setListening] = useState(false);
@@ -29,7 +31,7 @@ export function DoctorViewScreen() {
 
   function sendText(message: string) {
     const value = message.trim(); if (!value) return;
-    projectToPatient({text: value, textEn: value}); setInput(''); setError('');
+    projectToClient({text: value, textEn: value}); setInput(''); setError('');
   }
   function toggleListening() {
     if (listening) { recognition.current?.stop(); setListening(false); return; }
@@ -45,7 +47,7 @@ export function DoctorViewScreen() {
     try { rec.start(); setListening(true); setError(''); } catch { setError('Microphone is busy. Please try again.'); setListening(false); }
   }
   return <main><div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
-    <div className="flex items-center justify-between"><div><span className="eyebrow-label">Live consultation · Doctor view</span><h1 className="text-display-md font-bold mt-2">Speak. Type. Connect.</h1><p className="text-secondary mt-2">Your latest message appears in the patient view.</p></div><a href="#transcript" className="secondary-action"><MessageSquare size={18}/>View transcript</a></div>
+    <div className="flex items-center justify-between"><div><span className="eyebrow-label">{domain.station} · {domain.roles.staff.label} view</span><h1 className="text-display-md font-bold mt-2">Speak. Type. Connect.</h1><p className="text-secondary mt-2">Your latest message appears in the {domain.roles.client.lower} view.</p></div><a href="#transcript" className="secondary-action"><MessageSquare size={18}/>View transcript</a></div>
     <div className="grid lg:grid-cols-12 gap-6 items-start">
       <section className="content-card lg:col-span-7"><div className="flex items-center justify-between mb-4"><h2 className="text-headline-md font-semibold">Sign playback</h2><span className="text-label-sm text-secondary">{matched.length ? `${index + 1} of ${matched.length} signs` : 'Waiting for a message'}</span></div>
         <div className="rounded-xl bg-surface-container-low min-h-[300px] flex flex-col items-center justify-center p-5">{frames?.length ? <><SignPlayer key={`${playbackKey}-${index}`} frames={frames} faceFrames={clip?.face} fps={isSlowMode ? Math.min(8, clip?.fps ?? 14) : clip?.fps ?? 14} onComplete={() => setProgress({key: playbackKey, index: Math.min(index + 1, matched.length - 1)})}/><span className="text-headline-md text-primary mt-3 font-semibold">{current}</span></> : current ? <p role="status">Loading {current}…</p> : <div className="empty-state"><Hand size={40} className="mx-auto mb-4 text-primary"/><p>{text ? 'No matching sign recording for this message.' : 'Send a message to play available signs.'}</p></div>}</div>
@@ -54,7 +56,7 @@ export function DoctorViewScreen() {
         <div className="flex flex-wrap gap-3 mt-5"><button className="secondary-action" disabled={!frames} onClick={() => setReplay(r => r + 1)}><RotateCcw size={18}/>Replay signs</button><button className="secondary-action" aria-pressed={isSlowMode} onClick={() => setIsSlowMode(!isSlowMode)}>{isSlowMode ? 'Speed: slow' : 'Speed: normal'}</button></div>
       </section>
       <section className="content-card lg:col-span-5 flex flex-col gap-4"><h2 className="text-headline-md font-semibold">Your message</h2><p className="text-label-md text-secondary">Speech input: {selectedLang}</p><button className="secondary-action" onClick={toggleListening}>{listening ? <Square size={18}/> : <Mic size={18}/>} {listening ? 'Stop listening' : 'Start speaking'}</button>
-        <form className="flex flex-col gap-3" onSubmit={e => {e.preventDefault(); sendText(input);}}><label htmlFor="doctor-message" className="text-label-md font-semibold">Or type a message</label><textarea id="doctor-message" value={input} onChange={e => setInput(e.target.value)} placeholder="Type a question or instruction…" rows={4} className="w-full resize-y border border-outline-variant rounded-xl p-4 bg-surface-container-low text-body-md"/><button className="primary-action" disabled={!input.trim()} type="submit"><Send size={18}/>Send to patient</button></form>
+        <form className="flex flex-col gap-3" onSubmit={e => {e.preventDefault(); sendText(input);}}><label htmlFor="staff-message" className="text-label-md font-semibold">Or type a message</label><textarea id="staff-message" value={input} onChange={e => setInput(e.target.value)} placeholder="Type a question or instruction…" rows={4} className="w-full resize-y border border-outline-variant rounded-xl p-4 bg-surface-container-low text-body-md"/><button className="primary-action" disabled={!input.trim()} type="submit"><Send size={18}/>Send to {domain.roles.client.lower}</button></form>
         {error && <p role="alert" className="text-error text-label-md">{error}</p>}
         <div className="border-t border-outline-variant/30 pt-4 flex flex-wrap gap-3"><button className="secondary-action" disabled={!activeProjection?.text} onClick={() => speak(activeProjection!.text, selectedLang)}><Volume2 size={18}/>Read aloud</button><a href="#phrases" className="secondary-action">Quick phrases</a></div>
       </section>

@@ -4,11 +4,11 @@ import { StitchHeader } from "./components/stitch/StitchHeader";
 import { StitchNav } from "./components/stitch/StitchNav";
 import { HomeScreen } from "./components/stitch/HomeScreen";
 import { SpokenLanguageScreen } from "./components/stitch/SpokenLanguageScreen";
-import { DoctorViewScreen } from "./components/stitch/DoctorViewScreen";
-import { PatientViewScreen } from "./components/stitch/PatientViewScreen";
+import { StaffViewScreen } from "./components/stitch/StaffViewScreen";
+import { ClientViewScreen } from "./components/stitch/ClientViewScreen";
 import { TranscriptFeedScreen } from "./components/stitch/TranscriptFeedScreen";
-import { ClinicalPhraseLibraryScreen } from "./components/stitch/ClinicalPhraseLibraryScreen";
-import { ConsultationSummaryScreen } from "./components/stitch/ConsultationSummaryScreen";
+import { PhraseLibraryScreen } from "./components/stitch/PhraseLibraryScreen";
+import { SessionSummaryScreen } from "./components/stitch/SessionSummaryScreen";
 import { DiagnosticsScreen } from "./components/stitch/DiagnosticsScreen";
 import { loadGlossTable } from "./lib/glossTranslate";
 import { DeviceReadinessScreen } from "./components/stitch/DeviceReadinessScreen";
@@ -16,9 +16,11 @@ import InstallPrompt from "./components/InstallPrompt";
 import Recorder from "./components/Recorder";
 import "./App.css";
 import { ScreenErrorBoundary } from "./components/ScreenErrorBoundary";
+import { useDomain } from "./lib/useDomain";
 
 function ScreenRouter() {
   const { activeView, selectedRole } = useSession();
+  const domain = useDomain();
 
   useEffect(() => {
     void loadGlossTable();
@@ -37,15 +39,15 @@ function ScreenRouter() {
     // static <title> was written to carry.
     document.title = activeView === "home"
       ? "Setu: Indian Sign Language Bridge | Team Awaaz"
-      : `Setu · ${activeView === "bridge" ? "Consultation" : activeView.charAt(0).toUpperCase() + activeView.slice(1)}`;
-  }, [activeView, selectedRole]);
+      : `Setu · ${activeView === "bridge" ? domain.label : activeView.charAt(0).toUpperCase() + activeView.slice(1)}`;
+  }, [activeView, selectedRole, domain]);
 
   const renderActiveView = () => {
     switch (activeView) {
       case "home":
         return <HomeScreen />;
       case "bridge":
-        return selectedRole === "doctor" ? <DoctorViewScreen /> : <PatientViewScreen />;
+        return selectedRole === "staff" ? <StaffViewScreen /> : <ClientViewScreen />;
       case "capture":
         return <Recorder />;
       case "language":
@@ -53,9 +55,9 @@ function ScreenRouter() {
       case "transcript":
         return <TranscriptFeedScreen />;
       case "phrases":
-        return <ClinicalPhraseLibraryScreen />;
+        return <PhraseLibraryScreen />;
       case "summary":
-        return <ConsultationSummaryScreen />;
+        return <SessionSummaryScreen />;
       case "devices":
         return <DeviceReadinessScreen />;
       case "diagnostics":

@@ -1,18 +1,31 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { LANGUAGES, type LangCode } from "../lib/speech";
+import { DOMAINS, getDomain, type RoleId } from "../lib/domains";
 
 export type ScreenId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export type ActiveView = "home" | "bridge" | "capture" | "language" | "transcript" | "phrases" | "summary" | "diagnostics" | "devices";
 
+/**
+ * Who said a line.
+ *
+ * "staff" serves and "client" is served; what each is CALLED is a property
+ * of the active domain (lib/domains.ts), not of the transcript. A stored
+ * transcript that still says doctor/patient is from before that change and
+ * is rejected by readSession, which degrades to an empty session rather
+ * than rendering a label that no longer exists.
+ */
+export type Speaker = "staff" | "client" | "note";
+const SPEAKERS: readonly string[] = ["staff", "client", "note"];
+
 export interface TranscriptItem {
   id: string;
-  speaker: "doctor" | "patient" | "prescription";
+  speaker: Speaker;
   speakerName: string;
   timestamp: string;
   text: string;
   textEn?: string;
   glosses?: string[];
-  category?: "doctor" | "patient" | "prescription";
+  category?: Speaker;
   medication?: {
     name: string;
     dose: string;
@@ -38,14 +51,14 @@ interface SessionContextType {
   navigateToStep: (s: ScreenId) => void;
   isTransitioning: boolean;
   transitionMessage: string;
-  selectedRole: "doctor" | "patient";
-  setSelectedRole: (role: "doctor" | "patient") => void;
+  selectedRole: RoleId;
+  setSelectedRole: (role: RoleId) => void;
   selectedLang: LangCode;
   setSelectedLang: (lang: LangCode) => void;
   transcript: TranscriptItem[];
   addTranscriptItem: (item: Omit<TranscriptItem, "id" | "timestamp">) => void;
   activeProjection: ProjectionState | null;
-  projectToPatient: (p: { text: string; textEn?: string; glosses?: string[] }) => void;
+  projectToClient: (p: { text: string; textEn?: string; glosses?: string[] }) => void;
   isSlowMode: boolean;
   setIsSlowMode: (slow: boolean) => void;
   deviceReady: { camera: boolean; mic: boolean };
@@ -62,12 +75,12 @@ function readView(): ActiveView {
 }
 
 const SESSION_KEY = "setu-session-v1";
-function readSession(): { selectedRole?: "doctor" | "patient"; selectedLang?: LangCode; transcript?: TranscriptItem[]; activeProjection?: ProjectionState | null } {
+function readSession(): { selectedRole?: RoleId; selectedLang?: LangCode; transcript?: TranscriptItem[]; activeProjection?: ProjectionState | null } {
   try {
     const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
-    if (!saved || !Array.isArray(saved.transcript) || !saved.transcript.every((item: TranscriptItem) => item && typeof item.id === "string" && typeof item.text === "string" && typeof item.timestamp === "string" && ["doctor", "patient", "prescription"].includes(item.speaker))) return {};
+    if (!saved || !Array.isArray(saved.transcript) || !saved.transcript.every((item: TranscriptItem) => item && typeof item.id === "string" && typeof item.text === "string" && typeof item.timestamp === "string" && SPEAKERS.includes(item.speaker))) return {};
     return {
-      selectedRole: saved.selectedRole === "patient" ? "patient" : "doctor",
+      selectedRole: saved.selectedRole === "client" ? "client" : "staff",
       selectedLang: LANGUAGES.some(l => l.code === saved.selectedLang) ? saved.selectedLang : "hi-IN",
       transcript: saved.transcript,
       activeProjection: saved.activeProjection && typeof saved.activeProjection.text === "string" ? saved.activeProjection : null,
@@ -108,7 +121,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const isTransitioning = false;
   const transitionMessage = "";
 
-  const [selectedRole, setSelectedRole] = useState<"doctor" | "patient">(initialSession.selectedRole ?? "doctor");
+  const [selectedRole, setSelectedRole] = useState<RoleId>(initialSession.selectedRole ?? "staff");
   const [selectedLang, setSelectedLang] = useState<LangCode>(initialSession.selectedLang ?? "hi-IN");
   const [transcript, setTranscript] = useState<TranscriptItem[]>(initialSession.transcript ?? []);
   const [activeProjection, setActiveProjection] = useState<ProjectionState | null>(initialSession.activeProjection ?? null);
@@ -147,7 +160,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const navigateToStep = useCallback(
     (targetStep: ScreenId) => {
-      if (targetStep === 4 || targetStep === 5) setSelectedRole(targetStep === 4 ? "doctor" : "patient");
+      if (targetStep === 4 || targetStep === 5) setSelectedRole(targetStep === 4 ? "staff" : "client");
       const view = STEP_TO_VIEW[targetStep] || "home";
       navigateToView(view);
     },
@@ -175,19 +188,22 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     []
   );
 
-  const projectToPatient = useCallback(
+  const projectToClient = useCallback(
     (p: { text: string; textEn?: string; glosses?: string[] }) => {
       setActiveProjection({
         ...p,
         timestamp: Date.now(),
       });
+      // The label is read at send time, not stored as a constant: the same
+      // line is "Doctor" in a hospital and "Teller" at a bank, and the
+      // transcript should say which counter it was actually said at.
       addTranscriptItem({
-        speaker: "doctor",
-        speakerName: "Doctor",
+        speaker: "staff",
+        speakerName: DOMAINS[getDomain()].roles.staff.label,
         text: p.text,
         textEn: p.textEn,
         glosses: p.glosses,
-        category: "doctor",
+        category: "staff",
       });
     },
     [addTranscriptItem]
@@ -231,7 +247,7 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         transcript,
         addTranscriptItem,
         activeProjection,
-        projectToPatient,
+        projectToClient,
         isSlowMode,
         setIsSlowMode,
         deviceReady,

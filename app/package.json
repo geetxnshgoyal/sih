@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/check-glosses.mjs && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "check": "tsc -b --noEmit && vite build",
-    "test": "node --import ./tests/register.mjs --test tests/*.test.ts"
+    "test": "node --import ./tests/register.mjs --test tests/*.test.ts",
+    "check:glosses": "node scripts/check-glosses.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1",
