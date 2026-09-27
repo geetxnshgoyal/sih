@@ -30,11 +30,55 @@ for (const block of src.matchAll(/synonyms:\s*\{([\s\S]*?)\n {4}\},/g)) {
   }
 }
 
+// Two quick phrases in one domain must not share a gloss sequence.
+//
+// QuickPhrases keys its buttons on glosses.join("|"), so a repeat is a
+// duplicate React key. It is also a real defect on screen: two buttons that
+// play the identical sign, which tells a Deaf user they are saying two
+// different things when they are saying one. Spreading SHARED_QUICK and
+// COUNTER_QUICK into a domain that already has the same phrase is the easy
+// way to cause it, and that is exactly how bank and cinema acquired three.
+const block = (name) => {
+  const i = src.indexOf(`const ${name}`);
+  return i === -1 ? [] : glossesIn(src.slice(i, src.indexOf("];", i)));
+};
+const glossesIn = (text) =>
+  [...text.matchAll(/glosses:\s*\[([^\]]*)\]/g)]
+    .map((m) => (m[1].match(/"[^"]+"/g) || []).join("|"));
+
+const SHARED = block("SHARED_QUICK");
+const COUNTER = block("COUNTER_QUICK");
+
+for (const m of src.matchAll(/^  (\w+): \{\n    id: "(\w+)"/gm)) {
+  const seg = src.slice(m.index, src.indexOf("\n  },", m.index));
+  let list = glossesIn(seg);
+  if (/\.\.\.SHARED_QUICK/.test(seg)) list = [...SHARED, ...list];
+  if (/\.\.\.COUNTER_QUICK/.test(seg)) list = [...list, ...COUNTER];
+  const seen = new Map();
+  for (const g of list) seen.set(g, (seen.get(g) || 0) + 1);
+  for (const [g, n] of seen) {
+    if (n > 1) bad.push(`domain ${m[2]}: ${n} quick phrases share the glosses [${g.replace(/"/g, "")}]`);
+  }
+}
+
 if (bad.length) {
   const uniq = [...new Set(bad)].sort();
-  console.error(`check-glosses: ${uniq.length} reference(s) with no recording in _signs.json\n`);
-  for (const b of uniq) console.error(`  ${b}`);
-  console.error(`\nUse a key of public/model/_signs.json, or record the sign.`);
+  const missing = uniq.filter((b) => !b.startsWith("domain "));
+  const dupes = uniq.filter((b) => b.startsWith("domain "));
+
+  if (missing.length) {
+    console.error(`check-glosses: ${missing.length} reference(s) with no recording in _signs.json\n`);
+    for (const b of missing) console.error(`  ${b}`);
+    console.error(`\n  Fix: use a key of public/model/_signs.json, or record the sign.\n`);
+  }
+  if (dupes.length) {
+    console.error(`check-glosses: ${dupes.length} duplicate quick-phrase gloss sequence(s)\n`);
+    for (const b of dupes) console.error(`  ${b}`);
+    console.error(`\n  Two buttons that play the identical sign tell a Deaf user they are`);
+    console.error(`  saying different things when they are saying one, and collide on the`);
+    console.error(`  React key. Fix: give one of them distinct glosses, or drop it if a`);
+    console.error(`  spread of SHARED_QUICK or COUNTER_QUICK already supplies it.\n`);
+  }
   process.exit(1);
 }
 
