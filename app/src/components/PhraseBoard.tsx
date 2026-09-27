@@ -10,14 +10,14 @@ import type { DomainId } from "../lib/domains";
 /**
  * The phrase board.
  *
- * This is the path that always works. Recognition is 68% correct on a signer
- * it has not seen; a tapped phrase is 100%, every time, offline. So this is the
+ * This is the path that always works. Recognition is about 74% correct on a
+ * signer it has not seen; a tapped phrase is 100%, every time, offline. So this is the
  * primary surface and recognition is the shortcut, not the reverse.
  *
  * Layout follows a triage conversation rather than the alphabet, Emergency and
  * About me first, because "I am Deaf" and "I cannot breathe" are the two things
- * that must never be more than one tap away. Search exists because 97 phrases
- * is more than anyone will scroll in pain.
+ * that must never be more than one tap away. Search exists because 97 clinical
+ * phrases is more than anyone will scroll in pain.
  */
 export default function PhraseBoard({
   domain,

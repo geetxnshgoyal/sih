@@ -123,8 +123,8 @@ export default function SignBridge({
   const [vocabSize, setVocabSize] = useState(0);
   // The list, not just the count. A fluent signer sitting down in front of this
   // will sign naturally and get nothing, because they will sign words outside
-  // an 83-sign vocabulary and in connected sentences rather than one citation
-  // form at a time. Showing "83 signs available" without showing WHICH 83 makes
+  // a 38-sign vocabulary and in connected sentences rather than one citation
+  // form at a time. Showing "38 signs available" without showing WHICH 38 makes
   // that look like a broken detector instead of a stated limit.
   const [vocab, setVocab] = useState<string[]>([]);
   const [showVocab, setShowVocab] = useState(false);
@@ -135,14 +135,13 @@ export default function SignBridge({
   /**
    * Candidates for the sign just segmented, when the top one is not certain.
    *
-   * Measured on a held-out signer group: top-1 is right 68.3% of the time, but
-   * the correct answer is in the TOP FIVE 89.7% of the time. That gap IS the
-   * product. Refusing to show anything below a threshold
-   * throws away the 22 points between them, and reads as "the app cannot
-   * detect" when in fact it knows and is merely unsure which.
+   * Measured over held-out signer groups: top-1 is right 73.9% of the time
+   * (plus or minus 1.5 over five seeds), but the correct answer is in the TOP
+   * FIVE 95.1% of the time. That gap IS the product. Refusing to show anything
+   * below a threshold throws away the 21 points between them, and reads as
+   * "the app cannot detect" when in fact it knows and is merely unsure which.
    *
-   * So: never refuse. Offer the shortlist and let a person choose. That turns a
-   * 40%-accurate model into a 65%-useful one without ever claiming certainty.
+   * So: never refuse. Offer the shortlist and let a person choose.
    */
   const [candidates, setCandidates] = useState<{ gloss: string; conf: number }[]>([]);
   const [dict, setDict] = useState<BankMatch[]>([]);
@@ -190,18 +189,19 @@ export default function SignBridge({
 
   // Load the classifier.
   //
-  // One model, 83 signs, covering both the clinical and the travel setting.
+  // One model, 38 signs, covering both the clinical and the travel setting.
   // Two models shipped briefly and it was a mistake: two temperatures, two
   // label sets and two caches to invalidate, and the first release pinned
   // returning users to a stale one through exactly that complexity.
   //
-  // The 83 classes still cannot say pain, water or help: those words have one
+  // The 38 classes still cannot say pain, water or help: those words have one
   // clip each in every source that has them, and one example cannot both teach
   // and examine a class. They are reached a different way. lib/bank.ts holds
-  // one reference vector per word and matches the same embedding by cosine
-  // distance, which needs one clip instead of fifteen. It is offered as a
-  // dictionary shortlist, never as a confident answer, because measured from a
-  // corpus its references do not include it is 46% top-1 and 72% top-5.
+  // one reference vector per word for 203 words and matches the same embedding
+  // by cosine distance, which needs one clip instead of fifteen. It is offered
+  // as a dictionary shortlist, never as a confident answer, because it reads
+  // 49.6% top-1 and 67.3% top-5, and 47.1% from a corpus its references do not
+  // include.
   //
   // The phrase board remains the exact path and needs no model at all.
   useEffect(() => {
@@ -358,7 +358,7 @@ export default function SignBridge({
    * pauses of 1.2 s or longer, which is the only threshold measured that keeps
    * a compound sign whole while still separating two signs (see
    * SIGN_GAP_FRAMES). Each piece is then exactly the shape of a training clip,
-   * which is the condition the model's 68.3% top-1 was measured under.
+   * which is the condition the model's 73.9% top-1 was measured under.
    */
   const finishRecording = useCallback(() => {
     recordingRef.current = false;

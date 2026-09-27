@@ -3,7 +3,7 @@
  *
  * Setu is going to SIH under two themes: MedTech and Travel & Tourism. That is
  * not two products. The recognition stack is identical and entirely
- * domain-neutral: one 264-sign classifier, one feature contract, one segmenter.
+ * domain-neutral: one 38-sign classifier, one feature contract, one segmenter.
  * INCLUDE is a general lexicon, "Doctor" and "Train Station" are the same kind
  * of sign to the model, and nothing below the UI knows which setting it is in.
  *

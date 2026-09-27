@@ -3,18 +3,20 @@
  *
  * Why this is not the gloss corpus
  * -------------------------------
- * Tap-to-say never runs the classifier. That frees it completely from the 264
- * INCLUDE labels, and the freedom matters more than it sounds: the eight things
- * a patient most needs to say, Water, Help, Yes, No, Pain, Name, Please,
- * Hotel: have no gloss in INCLUDE, so the recognition path can NEVER produce
- * them. Here they are just phrases, and they work.
+ * Tap-to-say never runs the classifier. That frees it completely from the 38
+ * trained labels, and the freedom matters more than it sounds: the things a
+ * patient most needs to say, Water, Help, Yes, No, Pain, Name, Please,
+ * Hotel, have one clip each at best, so they can never be a trained class.
+ * The dictionary bank reaches them as a shortlist of guesses. Here they are
+ * just phrases, and they work.
  *
  * The design position
  * -------------------
- * Recognition is 40.4% correct on a signer it has not seen. A board is 100%.
- * So the board is the product and recognition is a shortcut on top of it, not
- * the other way round. A Deaf patient tonight is better served by sixty phrases
- * that always work than by 264 signs that are right two times in five.
+ * Recognition is about 74% correct on a signer it has not seen. A board is
+ * 100%. So the board is the product and recognition is a shortcut on top of
+ * it, not the other way round. A Deaf patient tonight is better served by 97
+ * phrases that always work than by 38 signs that are right three times in
+ * four and 203 more that are right about half the time.
  *
  * Ordering follows a real triage conversation, not the alphabet: identity first
  * (nothing else can happen until "I am Deaf" is established), then the presenting

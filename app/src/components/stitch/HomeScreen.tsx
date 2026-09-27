@@ -27,8 +27,9 @@ export function HomeScreen() {
     </section>
 
     {/* What this is, who built it, and what it cannot do.
-        The last part is not modesty. Sign recognition is right about 14% of the
-        time for someone the model has never seen, so anyone using this in a
+        The last part is not modesty. Sign recognition is right about 74% of the
+        time for someone the model has never seen, and the dictionary
+        shortlist behind it about half the time, so anyone using this in a
         clinic needs to know the phrase board is the reliable path and the
         camera is the shortcut. Saying so here is cheaper than a doctor
         discovering it mid-consultation. */}
@@ -41,17 +42,20 @@ export function HomeScreen() {
         <div>
           <h3>The problem</h3>
           <p>
-            India has roughly 63 million Deaf and hard of hearing people and only
-            a few hundred certified Indian Sign Language interpreters. In a
-            hospital that gap is dangerous: symptoms get described by a relative,
-            consent is given without being understood, and a patient who signs
-            fluently is treated as though they cannot communicate at all.
+            India's National Programme for Prevention and Control of Deafness
+            puts significant hearing loss at 63 million people, and severe to
+            profound loss at 291 per lakh, about four million. The government's
+            own directory of certified Indian Sign Language interpreters lists a
+            few hundred. In a hospital that gap is dangerous: symptoms get
+            described by a relative, consent is given without being understood,
+            and a patient who signs fluently is treated as though they cannot
+            communicate at all.
           </p>
         </div>
         <div>
           <h3>What Setu does</h3>
           <p>
-            Signs are recognised by the camera and spoken aloud in eleven Indian
+            Signs are recognised by the camera and spoken aloud in six Indian
             languages. Speech comes back as text and sign playback. A tap-to-speak
             phrase board covers the things that matter most when nothing else is
             working.
@@ -60,26 +64,28 @@ export function HomeScreen() {
         <div>
           <h3>It runs on the device</h3>
           <p>
-            The recognition model is 2.1&nbsp;MB and runs in the browser. No video
-            leaves the machine, nothing is sent to a server, and once the page has
-            loaded it keeps working with the network down. There is no account,
-            no API key and no running cost.
+            The classifier is under 2&nbsp;MB and the hand and face tracker it
+            sits on is another 14&nbsp;MB. Both are served from this site and run
+            in the browser. No video leaves the machine, nothing is sent to a
+            server, and once the page has loaded it keeps working with the
+            network down. There is no account, no API key and no running cost.
           </p>
         </div>
         <div>
           <h3>What it cannot do yet</h3>
           <p>
-            Setu recognises 83 signs, covering a consultation and a journey
-            alike, and gets the right one first about 68% of the time for a
-            signer it has never seen, with the right answer among its top five
-            90% of the time. It cannot sign
-            <em> pain</em>, <em>water</em>, <em>help</em>, <em>yes</em> or
-            <em>no</em> at all: those are not in any Indian Sign Language dataset
-            we can use, so they live on the phrase board instead, where they are
-            exact every time. Accuracy also drops sharply for signers recorded in
-            very different conditions. The camera is a shortcut, not a substitute
-            for an interpreter. Translations are machine generated and await
-            review by Deaf signers.
+            Setu recognises 38 signs on its own, and gets the right one
+            first about 74% of the time for a signer it has never seen, with
+            the right answer among its top five about 95% of the time. Another
+            203 words, <em>pain</em>, <em>water</em> and <em>help</em> among
+            them, have a single reference clip each and are offered only as a
+            shortlist of closest guesses; that path is right about half the
+            time, so read it as a suggestion. Some words are in no corpus at
+            all, including <em>toilet</em>, <em>chest</em>, <em>leg</em> and
+            <em>vomit</em>. Accuracy also drops sharply for signers recorded in
+            very different conditions. The camera is a shortcut, not a
+            substitute for an interpreter. Translations are machine generated
+            and await review by Deaf signers.
           </p>
         </div>
       </div>

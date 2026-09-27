@@ -1225,9 +1225,19 @@ exhausted. Options, cheapest first:
 - Confirm with the SPOC: the 2026 per-college nomination quota, **whether one team
   may submit more than one idea** (this gates reusing the idea for Travel & Tourism),
   and the real deadline: the portal says 20 Sept, secondary sources say 30 Sept.
-- Verify the "63 million Deaf Indians" and "~300 certified interpreters" figures
-  used in the deck and the app's About section. Both are widely cited and
-  neither has been checked against a source worth defending to a judge.
+- ~~Verify the "63 million Deaf Indians" and "~300 certified interpreters"
+  figures.~~ Done, 27 Sept 2026, and both were being quoted wrong. The 63
+  million is the Government of India's own figure for **significant auditory
+  impairment**, 6.3% prevalence, published by MoHFW/DGHS under the National
+  Programme for Prevention and Control of Deafness. It is not a count of Deaf
+  people or of ISL users. The same source gives the NSSO figure of **291 per
+  lakh with severe to profound hearing loss**, about four million, which is the
+  number closer to the population this app is for. The interpreter count could
+  not be pinned down: ISLRTC publishes a directory
+  (https://islrtc.nic.in/directory-of-isl-interpreters/, last updated 23 Aug
+  2024) but no total, and secondary sources say 300 or 339 without citing it.
+  The About section now says "a few hundred" and attributes the directory. Do
+  not put a precise interpreter number in the deck.
 
 ## 14. Invariants: breaking these silently destroys accuracy
 
