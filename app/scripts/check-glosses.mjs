@@ -20,13 +20,13 @@ const bad = [];
 
 for (const m of src.matchAll(/glosses:\s*\[([^\]]*)\]/g)) {
   for (const g of [...m[1].matchAll(/"([^"]+)"/g)].map((x) => x[1])) {
-    if (!signs.has(g)) bad.push(`gloss ${JSON.stringify(g)}`);
+    if (!signs.has(g)) bad.push(["missing", `gloss ${JSON.stringify(g)}`]);
   }
 }
 
 for (const block of src.matchAll(/synonyms:\s*\{([\s\S]*?)\n {4}\},/g)) {
   for (const m of block[1].matchAll(/:\s*"([^"]+)"/g)) {
-    if (!signs.has(m[1])) bad.push(`synonym target ${JSON.stringify(m[1])}`);
+    if (!signs.has(m[1])) bad.push(["missing", `synonym target ${JSON.stringify(m[1])}`]);
   }
 }
 
@@ -57,14 +57,38 @@ for (const m of src.matchAll(/^  (\w+): \{\n    id: "(\w+)"/gm)) {
   const seen = new Map();
   for (const g of list) seen.set(g, (seen.get(g) || 0) + 1);
   for (const [g, n] of seen) {
-    if (n > 1) bad.push(`domain ${m[2]}: ${n} quick phrases share the glosses [${g.replace(/"/g, "")}]`);
+    if (n > 1) bad.push(["dupe", `domain ${m[2]}: ${n} quick phrases share the glosses [${g.replace(/"/g, "")}]`]);
+  }
+}
+
+const sliceOf = (name) => {
+  const i = src.indexOf(`const ${name}`);
+  return i === -1 ? "" : src.slice(i, src.indexOf("];", i));
+};
+const sharedSrc = sliceOf("SHARED_QUICK");
+const counterSrc = sliceOf("COUNTER_QUICK");
+
+// Every setting needs at least one priority quick phrase.
+//
+// QuickPhrases only renders the "Priority needs" group when something is
+// urgent, so a domain with none silently loses the whole strip. Retail
+// shipped that way: its Deaf user got one flat alphabetical-ish list with
+// nothing surfaced, while every other counter had a priority group.
+for (const m of src.matchAll(/^  (\w+): \{\n    id: "(\w+)"/gm)) {
+  const seg = src.slice(m.index, src.indexOf("\n  },", m.index));
+  const urgentIn = (t) => /urgent:\s*true/.test(t);
+  const shared = /\.\.\.SHARED_QUICK/.test(seg) && urgentIn(sharedSrc);
+  const counter = /\.\.\.COUNTER_QUICK/.test(seg) && urgentIn(counterSrc);
+  if (!urgentIn(seg) && !shared && !counter) {
+    bad.push(["priority", `domain ${m[2]}: no quick phrase marked urgent, so it renders no priority group`]);
   }
 }
 
 if (bad.length) {
-  const uniq = [...new Set(bad)].sort();
-  const missing = uniq.filter((b) => !b.startsWith("domain "));
-  const dupes = uniq.filter((b) => b.startsWith("domain "));
+  const of = (kind) => [...new Set(bad.filter(([k]) => k === kind).map(([, m]) => m))].sort();
+  const missing = of("missing");
+  const dupes = of("dupe");
+  const priority = of("priority");
 
   if (missing.length) {
     console.error(`check-glosses: ${missing.length} reference(s) with no recording in _signs.json\n`);
@@ -79,7 +103,12 @@ if (bad.length) {
     console.error(`  React key. Fix: give one of them distinct glosses, or drop it if a`);
     console.error(`  spread of SHARED_QUICK or COUNTER_QUICK already supplies it.\n`);
   }
+  if (priority.length) {
+    console.error(`check-glosses: ${priority.length} setting(s) with no priority quick phrase\n`);
+    for (const b of priority) console.error(`  ${b}`);
+    console.error(`\n  QuickPhrases only renders "Priority needs" when something is urgent,`);
+    console.error(`  so the whole strip disappears and nothing is surfaced. Fix: mark the`);
+    console.error(`  phrase that matters most at that counter urgent: true.\n`);
+  }
   process.exit(1);
 }
-
-console.log("check-glosses: every domain gloss and synonym target has a recording");

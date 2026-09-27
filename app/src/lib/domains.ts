@@ -83,7 +83,7 @@ export interface Domain {
  * glosses that actually play.
  */
 const SHARED_QUICK: QuickPhrase[] = [
-  { glosses: ["I", "Deaf"], caption: "I am Deaf" },
+  { glosses: ["I", "Deaf"], caption: "I am Deaf", urgent: true },
   { glosses: ["I", "Deaf", "please", "understand"], caption: "I am Deaf: please understand" },
   { glosses: ["Hello"], caption: "Hello" },
   { glosses: ["Thank you"], caption: "Thank you" },
@@ -345,7 +345,7 @@ export const DOMAINS: Record<DomainId, Domain> = {
       { glosses: ["I", "Money"], caption: "I will pay cash" },
       { glosses: ["back", "give"], caption: "Can I return this" },
       { glosses: ["Store or Shop", "Time"], caption: "When do you close" },
-      { glosses: ["I", "help"], caption: "I need help" },
+      { glosses: ["I", "help"], caption: "I need help", urgent: true },
       { glosses: ["Bathroom", "Location"], caption: "Where is the toilet" },
     ],
     synonyms: {
