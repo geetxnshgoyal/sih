@@ -75,3 +75,7 @@ models/translate/
 # ISH Shiksha landmarks: derived from their videos, rebuilt by
 # train/fetch_shiksha.py. Not ours to redistribute.
 data/shiksha_landmarks/
+
+# Local browser verification
+app/test-results/
+app/playwright-report/

@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "check": "tsc -b --noEmit && vite build",
-    "test": "node --import ./tests/register.mjs --test tests/*.test.ts"
+    "test": "node --import ./tests/register.mjs --test tests/*.test.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1",
@@ -20,6 +21,8 @@
   },
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.122.0",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",

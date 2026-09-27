@@ -50,14 +50,19 @@ export function voiceFor(lang: LangCode): SpeechSynthesisVoice | null {
   );
 }
 
-export function speak(text: string, lang: LangCode) {
+/** Read aloud with honest device and playback status. */
+export function speak(text: string, lang: LangCode, report: (message: string) => void = () => {}) {
   const synth = window.speechSynthesis;
-  if (!synth) return;
+  if (!synth) { report('Read-aloud is unavailable in this browser. The message is still visible.'); return; }
+  refreshVoices();
+  const voice = voiceFor(lang);
+  if (!voice) { report('No matching voice is available yet. The message is still visible.'); return; }
   synth.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
-  u.rate = 0.92;
-  const v = voiceFor(lang);
-  if (v) u.voice = v;
-  synth.speak(u);
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = lang; utterance.rate = 0.92; utterance.voice = voice;
+  utterance.onstart = () => report('Reading the message aloud.');
+  utterance.onend = () => report('Read-aloud finished.');
+  utterance.onerror = () => report('Read-aloud did not finish. The message is still visible.');
+  report('Requesting read-aloud…');
+  try { synth.speak(utterance); } catch { report('Read-aloud could not start. Use the displayed text.'); }
 }

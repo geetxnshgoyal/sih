@@ -24,21 +24,11 @@ export type SignClip = {
 };
 export type SignLibrary = Record<string, SignClip>;
 
-/**
- * Spoken words that should map onto a gloss we can actually play.
- *
- * This map is the setting-neutral core. Words specific to a deployment, "ward"
- * and "prescription", or "platform" and "fare": live on the domain in
- * `domains.ts` and are layered on top at call time, so the same recogniser
- * serves a hospital desk and a station enquiry counter without either one
- * carrying the other's vocabulary.
- */
+/** General word aliases for recorded-sign previews. */
 const SYNONYMS: Record<string, string> = {
   hi: "Hello", hey: "Hello", namaste: "Hello", नमस्ते: "Hello",
   thanks: "Thank you", shukriya: "Thank you", धन्यवाद: "Thank you",
   ok: "Alright", okay: "Alright", fine: "Alright", ठीक: "Alright",
-  physician: "Doctor", डॉक्टर: "Doctor", clinic: "Hospital", अस्पताल: "Hospital",
-  medicine: "Medicine", dawai: "Medicine", दवा: "Medicine",
   cost: "Price", rate: "Price", कीमत: "Price", पैसा: "Money", paisa: "Money",
   rupees: "Money", cash: "Money", ticket: "train ticket", टिकट: "train ticket",
   station: "Train Station", स्टेशन: "Train Station",
@@ -50,7 +40,6 @@ const SYNONYMS: Record<string, string> = {
   police: "Police", पुलिस: "Police",
   cheap: "cheap", costly: "expensive", big: "big large", small: "small little",
   hot: "hot", cold: "cold", quick: "fast", slow: "slow",
-  ill: "sick", unwell: "sick", bimar: "sick",
    today: "Today", tomorrow: "Tomorrow",
   yesterday: "Yesterday", morning: "Morning", night: "Night",
   me: "I", my: "I", mine: "I", your: "you", us: "we", them: "they",

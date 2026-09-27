@@ -1,8 +1,8 @@
 /**
  * Service worker: what makes Setu an app rather than a page.
  *
- * The point is not the home-screen icon. It is that a clinic's wifi drops and
- * the consultation has to carry on. Everything Setu needs to recognise a sign
+ * The point is not the home-screen icon. It is that a counter’s wifi drops and
+ * the conversation has to carry on. Everything Setu needs to recognise a sign
  * and speak a phrase is static: a 2.1 MB model, a label list, and phrase tables
  * generated once with NLLB-200 and committed. None of it needs a network, so
  * after the first visit none of it should ask for one.
@@ -15,7 +15,7 @@
 // release cached the 264-class model cache-first and never bumped, so every
 // returning visitor kept being served a superseded model while the site
 // advertised a better one.
-const VERSION = "setu-v12";
+const VERSION = "setu-services-v13";
 const SHELL = `${VERSION}-shell`;
 const MODEL = `${VERSION}-model`;
 
@@ -47,7 +47,7 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => !k.startsWith(VERSION)).map((k) => caches.delete(k)));
+    await Promise.all(keys.filter((k) => k.startsWith("setu-") && !k.startsWith(VERSION)).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -77,7 +77,7 @@ self.addEventListener("fetch", (e) => {
 
   // The model and its tables: serve the cached copy immediately, then refresh
   // it in the background. Re-downloading 2 MB on every load is the difference
-  // between usable and not on a clinic connection, so the cache has to answer
+  // between usable and not on a service-counter connection, so the cache has to answer
   // first -- but PURE cache-first never updates, which is exactly how a
   // retrained model failed to reach anyone who had already visited. Stale
   // content is served once and heals itself by the next load, without needing

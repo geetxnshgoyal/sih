@@ -9,8 +9,8 @@ import {
  *
  * Installing is not about the home-screen icon. It is what makes the service
  * worker's cache reliable: a browser can evict a tab's storage under pressure,
- * an installed app's is far stickier. In a clinic where the wifi drops mid
- * consultation, that is the difference between the phrase board being there and
+ * an installed app's is far stickier. At a counter where the wifi drops mid
+ * conversation, that is the difference between the phrase board being there and
  * not.
  *
  * Two surfaces, because relying on the browser's own event is not enough:

@@ -6,7 +6,7 @@
  * The exported model is a softmax classifier, and softmax confidence on a model
  * this size is not a probability, it is systematically inflated. Left alone it
  * says 0.90 while being right far less often, and the gate then speaks a
- * confident wrong reading aloud to a patient.
+ * confident wrong reading aloud to a customer.
  *
  * The fix
  * -------

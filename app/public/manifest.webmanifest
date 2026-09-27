@@ -1,34 +1,50 @@
 {
-  "name": "Setu: Indian Sign Language Bridge",
+  "name": "Setu | Accessible tertiary services",
   "short_name": "Setu",
-  "description": "Two-way communication between Deaf and hard-of-hearing people and the doctors, staff and strangers they need to talk to. Indian Sign Language in, eleven Indian languages out, entirely on the device. Built by Team Awaaz for Smart India Hackathon 2026.",
+  "description": "Two-way customer and service-staff communication across tertiary services. Written phrases, shared text and experimental ISL tools.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#093EDD",
-  "theme_color": "#093EDD",
+  "background_color": "#f5f6fa",
+  "theme_color": "#4139ac",
   "lang": "en-IN",
   "dir": "ltr",
-  "categories": ["health", "medical", "education", "utilities"],
+  "categories": [
+    "utilities",
+    "communication"
+  ],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
     {
-      "name": "Start a consultation",
-      "short_name": "Consult",
-      "description": "Open the live doctor and patient view",
-      "url": "./#bridge"
+      "name": "Service counter",
+      "url": "./#counter",
+      "description": "Start a service-user and staff conversation"
     },
     {
-      "name": "Phrases",
-      "short_name": "Phrases",
-      "description": "Tap a phrase to say it aloud",
-      "url": "./#phrases"
+      "name": "Phrase library",
+      "url": "./#phrases",
+      "description": "Choose a phrase for your service setting"
     }
   ]
 }

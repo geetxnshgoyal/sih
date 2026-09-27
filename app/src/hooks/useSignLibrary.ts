@@ -1,3 +1,4 @@
+import {isServiceGloss} from '../lib/serviceVocabulary';
 import { useCallback, useEffect, useState } from 'react';
 import { loadSignCatalog, loadSignClip } from '../lib/signLibrary';
 import type { SignClip, SignLibrary } from '../lib/reverse';
@@ -10,7 +11,7 @@ export function useSignLibrary() {
     let cancelled = false;
     setError('');
     loadSignCatalog().then(names => {
-      if (!cancelled) setLibrary(Object.fromEntries(names.map(name => [name, {version: 2, fps: 14, body: []}])));
+      if (!cancelled) setLibrary(Object.fromEntries(names.filter(isServiceGloss).map(name => [name, {version: 2, fps: 14, body: []}])));
     }).catch(reason => {
       if (!cancelled) setError(reason instanceof Error ? reason.message : String(reason));
     });

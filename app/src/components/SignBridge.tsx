@@ -1,3 +1,4 @@
+import {isServiceGloss} from '../lib/serviceVocabulary';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Info, Play, RotateCcw, Square, Volume2 } from "lucide-react";
 import { useLandmarkers } from "../hooks/useLandmarkers";
@@ -190,7 +191,7 @@ export default function SignBridge({
 
   // Load the classifier.
   //
-  // One model, 83 signs, covering both the clinical and the travel setting.
+  // One model, 83 signs, with general vocabulary; the counter filters its visible results.
   // Two models shipped briefly and it was a mistake: two temperatures, two
   // label sets and two caches to invalidate, and the first release pinned
   // returning users to a stale one through exactly that complexity.
@@ -210,8 +211,8 @@ export default function SignBridge({
       .load(asset("/model/model.json"), asset("/model/labels.json"))
       .then(() => {
         if (!cancelled) {
-          setVocabSize(clfRef.current.vocabulary.length);
-          setVocab([...clfRef.current.vocabulary].sort((a, b) =>
+          setVocabSize(clfRef.current.vocabulary.filter(isServiceGloss).length);
+          setVocab(clfRef.current.vocabulary.filter(isServiceGloss).sort((a, b) =>
             a.localeCompare(b, undefined, { sensitivity: "base" })));
           setModelState("ready");
         }
@@ -223,7 +224,7 @@ export default function SignBridge({
       });
     bankRef.current
       .load(asset("/model/_bank.json"))
-      .then(() => { if (!cancelled) setBankSize(bankRef.current.size); })
+      .then(() => { if (!cancelled) setBankSize(bankRef.current.vocabulary.filter(isServiceGloss).length); })
       .catch(() => { /* the classifier still works without the dictionary */ });
     fetch(asset("/model/_framing.json")).then((r) => r.json())
       .then((f) => { framingRef.current = f; })
@@ -339,10 +340,10 @@ export default function SignBridge({
   /** Speak and log a completed utterance. */
   const emit = useCallback(
     (glosses: string[], at: string, l: LangCode, conf: number) => {
-      if (!glosses.length) return;
+      if (!glosses.length || glosses.some(gloss => !isServiceGloss(gloss))) return;
       const { text, source } = assembleWithSource(glosses, l);
-      speak(text, l);
-      recognizedRef.current?.(text);
+      if (recognizedRef.current) recognizedRef.current(text);
+      else speak(text, l);
       setLog((prev) => [
         { gloss: glosses.join(" · "), text, conf, at, source },
         ...prev,
@@ -400,15 +401,15 @@ export default function SignBridge({
         gloss: pred.gloss ?? "",
         conf: pred.conf,
         bothHands,
-        dict: e && bankRef.current.ready ? bankRef.current.lookup(e, 3) : [],
+        dict: e && bankRef.current.ready ? bankRef.current.lookup(e, 3).filter(match => isServiceGloss(match.word)) : [],
       };
-    }).filter((r) => r.gloss);
+    }).filter((r) => isServiceGloss(r.gloss));
 
     setRecResult(reads);
     const speakable = reads.filter((r) => r.bothHands);
     if (!speakable.length) {
       setNotice(
-        "both hands were not in frame for that sign, so it was not read aloud. " +
+        "No supported result with both hands visible was found. " +
         "Step back and keep both hands visible."
       );
       return;
@@ -448,14 +449,18 @@ export default function SignBridge({
       return;
     }
     const pred = clfRef.current.predict(segment, aspect);
+    if (!isServiceGloss(pred.gloss)) {
+      setLive({gloss:null, conf:0, progress:0}); setCandidates([]); setDict([]);
+      notify("No supported service-counter sign found. Choose a phrase or type instead.", 4000); return;
+    }
     const confirmOnly = confirmBeforeSend || reject === "one-hand";
     const gated = confirmOnly ? { fire: null, conf: pred.conf, progress: 1 } : gateRef.current.once(pred);
-    setLive({ gloss: pred.gloss, conf: pred.conf, progress: 1 });
+    setLive({ gloss: isServiceGloss(pred.gloss) ? pred.gloss : null, conf: pred.conf, progress: 1 });
     const unsure = certainty(pred.conf) !== "confident" || confirmOnly;
-    setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5) : []);
+    setCandidates(unsure ? clfRef.current.predictTop(segment, aspect, 5).filter(candidate => isServiceGloss(candidate.gloss)) : []);
     if (bankRef.current.ready) {
       const embedding = clfRef.current.embed(segment, aspect);
-      setDict(embedding ? bankRef.current.lookup(embedding, 4) : []);
+      setDict(embedding ? bankRef.current.lookup(embedding, 4).filter(match => isServiceGloss(match.word)) : []);
     } else setDict([]);
     if (gated.fire) {
       const now = Date.now();
@@ -551,7 +556,7 @@ export default function SignBridge({
           setDiag({
             pose: !!res.pose, left: !!res.left, right: !!res.right,
             shoulder, verdict,
-            top: segment ? clfRef.current.predictTop(segment, aspect, 3) : [],
+            top: segment ? clfRef.current.predictTop(segment, aspect, 3).filter(candidate => isServiceGloss(candidate.gloss)) : [],
           });
         }
 
@@ -627,12 +632,12 @@ export default function SignBridge({
         if (bufferRef.current.length >= SEQ_LEN) {
           const pred = clfRef.current.predict(bufferRef.current, aspect);
           const g = gateRef.current.push(pred);
-          setLive({ gloss: pred.gloss, conf: pred.conf, progress: g.progress });
+          setLive({ gloss: isServiceGloss(pred.gloss) ? pred.gloss : null, conf: pred.conf, progress: g.progress });
           if (g.fire) {
             const l = langRef.current;
             const text = phraseFor(g.fire, l);
-            speak(text, l);
-      recognizedRef.current?.(text);
+            if (recognizedRef.current) recognizedRef.current(text);
+      else speak(text, l);
             setLog((prev) => [{
               gloss: g.fire!, text, conf: g.conf,
               at: new Date().toLocaleTimeString(), source: "phrasebook" as const,
@@ -649,12 +654,12 @@ export default function SignBridge({
       for (let i = 0; i < NEEDED + 4 && bufferRef.current.length >= SEQ_LEN; i++) {
         const pred = clfRef.current.predict(bufferRef.current, aspect);
         const g = gateRef.current.push(pred);
-        setLive({ gloss: pred.gloss, conf: pred.conf, progress: g.progress });
+        setLive({ gloss: isServiceGloss(pred.gloss) ? pred.gloss : null, conf: pred.conf, progress: g.progress });
         if (g.fire) {
           const l = langRef.current;
           const text = phraseFor(g.fire, l);
-          speak(text, l);
-      recognizedRef.current?.(text);
+          if (recognizedRef.current) recognizedRef.current(text);
+      else speak(text, l);
           setLog((prev) => [{
             gloss: g.fire!, text, conf: g.conf,
             at: new Date().toLocaleTimeString(), source: "phrasebook" as const,
@@ -790,7 +795,7 @@ export default function SignBridge({
             These are the only signs recognition can produce. Anything else,
             and any sentence signed continuously rather than one sign at a
             time, will not be recognised. For everything else, use the phrase
-            board below, which is exact.
+            board below, which sends your chosen written message.
           </p>
           <div className="vocab-grid">
             {vocab.map((v) => <span key={v}>{v}</span>)}
@@ -821,7 +826,7 @@ export default function SignBridge({
                   <div className="hud-k">{confirmBeforeSend ? "Possible sign" : "Current sign"}</div>
                   {/* Three bands, not one floor. The classifier no longer drops
                       low-confidence reads silently, so an uncertain one is shown
-                      AND marked: the clinician can confirm it instead of the
+                      AND marked: the user can confirm it instead of the
                       app either announcing a guess or going mysteriously quiet.
                       Hiding it below a threshold meant showing nothing for 65%
                       of signs, which reads as a broken detector rather than an

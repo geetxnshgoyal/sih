@@ -20,7 +20,7 @@ import { phraseFor, type LangCode } from "./speech";
 import { asset } from "./assetUrl";
 
 export type TranslationSource =
-  /** Precomputed reordering. Real translation, safe to present as one. */
+  /** Precomputed reordering. Generated ahead of time; not verified full-sentence ISL translation. */
   | "reordered"
   /** Single known sign from the bundled phrase table. */
   | "phrasebook"
@@ -143,7 +143,7 @@ export function translateGlosses(glosses: string[], lang: LangCode): Translation
 export function sourceLabel(source: TranslationSource): string {
   switch (source) {
     case "reordered":
-      return "translated";
+      return "prewritten lookup";
     case "phrasebook":
       return "phrase";
     case "gloss-order":

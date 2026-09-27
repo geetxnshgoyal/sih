@@ -19,7 +19,7 @@ if (import.meta.env.DEV) {
 //
 // Not in dev: it would cache modules between edits and serve stale code, which
 // is a miserable way to lose an hour. See public/sw.js for what it caches and
-// why -- a clinic's wifi drops, and the model and phrase tables are static, so
+// why -- a counter’s wifi drops, and the model and phrase tables are static, so
 // after the first visit neither should need a network.
 //
 // BASE_URL, not "/": the app is served from /sih/ on GitHub Pages and from the

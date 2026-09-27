@@ -32,7 +32,7 @@ export type Utterance = {
    * Confidence of the LEAST certain sign in the utterance.
    *
    * Minimum, not mean: an utterance is only as trustworthy as its weakest
-   * component. "I need PARACETAMOL" where the drug name was a 35% guess is a
+   * component. "I need HELP" where the key word was a 35% guess is a
    * 35% utterance, however sure the model was about "I" and "need". Averaging
    * would hide exactly the sign that matters most.
    */
@@ -44,16 +44,6 @@ export type Utterance = {
  * this is a phrasebook, not a grammar, and it should not pretend otherwise.
  */
 const PHRASE_PAIRS: Record<string, Record<LangCode, string>> = {
-  "I|sick": {
-    "hi-IN": "मैं बीमार हूँ", "ta-IN": "நான் நோய்வாய்ப்பட்டிருக்கிறேன்",
-    "te-IN": "నేను అనారోగ్యంగా ఉన్నాను", "bn-IN": "আমি অসুস্থ",
-    "mr-IN": "मी आजारी आहे", "en-IN": "I am sick",
-  },
-  "I|Doctor": {
-    "hi-IN": "मुझे डॉक्टर चाहिए", "ta-IN": "எனக்கு மருத்துவர் வேண்டும்",
-    "te-IN": "నాకు డాక్టర్ కావాలి", "bn-IN": "আমার ডাক্তার দরকার",
-    "mr-IN": "मला डॉक्टर हवा आहे", "en-IN": "I need a doctor",
-  },
   "Price|What": {
     "hi-IN": "कीमत क्या है", "ta-IN": "விலை என்ன", "te-IN": "ధర ఎంత",
     "bn-IN": "দাম কত", "mr-IN": "किंमत काय आहे", "en-IN": "What is the price",
