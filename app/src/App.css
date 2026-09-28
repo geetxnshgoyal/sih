@@ -268,7 +268,7 @@ select{
   text-transform:uppercase;
   font-family:"IBM Plex Mono",ui-monospace,monospace;
 }
-.workspace-lead h2,.record-lead h2{
+.workspace-lead h2,.record-lead h1,.record-lead h2{
   max-width:720px;
   margin:0;
   font-size:clamp(26px,4vw,46px);

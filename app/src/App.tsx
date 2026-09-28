@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { SessionProvider, useSession } from "./context/SessionContext";
+import { SessionProvider, useSession, type ActiveView } from "./context/SessionContext";
 import { StitchHeader } from "./components/stitch/StitchHeader";
 import { StitchNav } from "./components/stitch/StitchNav";
 import { HomeScreen } from "./components/stitch/HomeScreen";
@@ -17,6 +17,24 @@ import Recorder from "./components/Recorder";
 import "./App.css";
 import { ScreenErrorBoundary } from "./components/ScreenErrorBoundary";
 import { useDomain } from "./lib/useDomain";
+
+/**
+ * Tab titles, written rather than derived from the URL slug.
+ *
+ * Capitalising the hash gave "Setu · Language" under a nav item labelled
+ * "Languages", and would silently produce a new wrong title for every route
+ * added later. The bridge is the exception and uses the active setting, so
+ * someone with several counters open can tell the tabs apart.
+ */
+const VIEW_TITLE: Record<Exclude<ActiveView, "home" | "bridge">, string> = {
+  capture: "Capture signs",
+  language: "Languages",
+  transcript: "Transcript",
+  phrases: "Phrases",
+  summary: "Summary",
+  devices: "Device check",
+  diagnostics: "System checks",
+};
 
 function ScreenRouter() {
   const { activeView, selectedRole } = useSession();
@@ -39,7 +57,7 @@ function ScreenRouter() {
     // static <title> was written to carry.
     document.title = activeView === "home"
       ? "Setu: Indian Sign Language Bridge | Team Awaaz"
-      : `Setu · ${activeView === "bridge" ? domain.label : activeView.charAt(0).toUpperCase() + activeView.slice(1)}`;
+      : `Setu · ${activeView === "bridge" ? domain.label : VIEW_TITLE[activeView]}`;
   }, [activeView, selectedRole, domain]);
 
   const renderActiveView = () => {

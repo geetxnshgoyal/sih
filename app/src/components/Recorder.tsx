@@ -203,10 +203,15 @@ export default function Recorder() {
   }, {});
 
   return (
-    <section className="recorder">
+    // <main>, not <section>: App.tsx finds the page landmark with
+    // querySelector("main") to move focus on navigation, and the skip link
+    // targets #main-content on it. This route had neither, so keyboard and
+    // screen-reader users landed nowhere when they opened Capture, and the
+    // skip link pointed at an id that did not exist on the page.
+    <main className="recorder">
       <div className="record-lead">
         <p className="eyebrow">Community data collection</p>
-        <h2>Collect clean examples from the same camera used in the demo.</h2>
+        <h1>Collect clean examples from the same camera used in the demo.</h1>
         <p className="muted">For moving signs such as Please, keep the full path in frame: start at the lips, move down, and finish the finger shake before the capture ends.</p>
       </div>
       <div className="card">
@@ -274,6 +279,6 @@ export default function Recorder() {
           )}
         </div>
       </div>
-    </section>
+    </main>
   );
 }

@@ -98,7 +98,7 @@ export const HEALTH_PHRASES: Phrase[] = [
   // Identity leads. Until this is established nothing else in the conversation
   // can proceed, and it is the phrase most likely to be needed by every user.
   { id: "deaf", en: "I am Deaf.", short: "I am Deaf", category: "identity", urgent: true, glosses: ["I", "Deaf"] },
-  { id: "deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf: I sign ISL", category: "identity", glosses: ["I", "Deaf", "Sign"] },
+  { id: "deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf: I sign ISL", category: "identity" },
   { id: "need-interpreter", en: "I need a sign language interpreter.", short: "I need an interpreter", category: "identity", urgent: true },
   { id: "cannot-hear", en: "I cannot hear you. Please write it down.", short: "Please write it down", category: "identity" },
   { id: "face-me", en: "Please look at me when you speak so I can read your lips.", short: "Please face me", category: "identity" },
@@ -153,7 +153,7 @@ export const HEALTH_PHRASES: Phrase[] = [
   { id: "fell", en: "I fell down.", short: "I fell", category: "symptoms" },
   { id: "pregnant", en: "I am pregnant.", short: "I am pregnant", category: "symptoms", urgent: true },
   { id: "child-sick", en: "My child is sick.", short: "My child is sick", category: "symptoms", urgent: true, glosses: ["Child", "sick"] },
-  { id: "baby-sick", en: "My baby is sick.", short: "My baby is sick", category: "symptoms", urgent: true, glosses: ["Baby", "sick"] },
+  { id: "baby-sick", en: "My baby is sick.", short: "My baby is sick", category: "symptoms", urgent: true, glosses: ["baby", "sick"] },
 
   // History. Allergy and current medication are the two answers that change
   // treatment immediately, so they lead.
@@ -218,7 +218,7 @@ export const HEALTH_PHRASES: Phrase[] = [
 
 export const TRAVEL_PHRASES: Phrase[] = [
   { id: "t-deaf", en: "I am Deaf.", short: "I am Deaf", category: "identity", urgent: true, glosses: ["I", "Deaf"] },
-  { id: "t-deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf: I sign ISL", category: "identity", glosses: ["I", "Deaf", "Sign"] },
+  { id: "t-deaf-sign", en: "I am Deaf and I use Indian Sign Language.", short: "I am Deaf: I sign ISL", category: "identity" },
   { id: "t-write", en: "I cannot hear you. Please write it down.", short: "Please write it down", category: "identity" },
   { id: "t-point", en: "Please point or show me on the map.", short: "Please point / show me", category: "identity" },
   { id: "t-slower", en: "Please speak more slowly.", short: "Slower please", category: "identity" },
@@ -504,4 +504,146 @@ export const ORDER_FOR: Record<DomainId, PhraseCategory[]> = {
   bank: BANK_ORDER,
   cinema: CINEMA_ORDER,
   retail: RETAIL_ORDER,
+};
+
+/* ------------------------------------------------------------ staff side */
+
+/**
+ * What the person BEHIND the counter says.
+ *
+ * The client boards above are the Deaf person speaking outward. This is the
+ * other direction: a doctor, teller, clerk or shop assistant picking a
+ * sentence, which is then shown to the Deaf person as text and played back as
+ * signs where a recording exists.
+ *
+ * It replaces a hardcoded seven-entry clinical list that shipped on the
+ * Phrases nav item at every counter, so a shop assistant was offered "Take 1
+ * tablet after meals". That list also carried invented gloss sequences: "Apply
+ * ointment twice daily" was mapped to HELP THANK YOU, and none of its uppercase
+ * glosses existed in _signs.json at all. It was demo scaffolding that never got
+ * finished and never got removed.
+ *
+ * Glosses are OMITTED unless a real recording sequence genuinely says the
+ * sentence. A sentence with no glosses shows as text and speaks; that is an
+ * honest degrade. Inventing a gloss so the animation has something to play is
+ * how the old list ended up signing "help thank you" at an ointment.
+ */
+const SHARED_STAFF: Phrase[] = [
+  { id: "sf-wait", en: "Please wait one moment.", short: "Please wait", category: "courtesy", glosses: ["please", "wait"] },
+  { id: "sf-understand-q", en: "Do you understand?", short: "Do you understand?", category: "understanding", glosses: ["you", "understand"] },
+  { id: "sf-again", en: "I will explain again.", short: "I will explain again", category: "understanding" },
+  { id: "sf-write", en: "I will write it down for you.", short: "I will write it down", category: "understanding" },
+  { id: "sf-show", en: "Let me show you.", short: "Let me show you", category: "understanding" },
+  { id: "sf-slow", en: "Take your time. There is no hurry.", short: "Take your time", category: "courtesy" },
+  { id: "sf-id", en: "May I see your identity document?", short: "Your ID please", category: "logistics", glosses: ["Card", "please"] },
+  { id: "sf-sorry-wait", en: "Sorry for the wait.", short: "Sorry for the wait", category: "courtesy", glosses: ["sorry"] },
+  { id: "sf-help-q", en: "How can I help you?", short: "How can I help?", category: "courtesy", glosses: ["I", "help", "you"] },
+  { id: "sf-interpreter", en: "Would you like us to arrange an interpreter?", short: "Arrange an interpreter?", category: "understanding" },
+  { id: "sf-anything-else", en: "Is there anything else?", short: "Anything else?", category: "courtesy", glosses: ["more"] },
+  { id: "sf-thanks", en: "Thank you. Have a good day.", short: "Thank you", category: "courtesy", glosses: ["Thank you"] },
+];
+
+export const HEALTH_STAFF: Phrase[] = [
+  ...SHARED_STAFF,
+  { id: "sf-h-where-hurt", en: "Where does it hurt? Please point to the place.", short: "Where does it hurt?", category: "pain", urgent: true, glosses: ["pain", "Location"] },
+  { id: "sf-h-how-long", en: "How long have you had this?", short: "How long?", category: "symptoms", glosses: ["Time", "more"] },
+  { id: "sf-h-allergy", en: "Are you allergic to any medicine?", short: "Any allergies?", category: "history", urgent: true, glosses: ["Medicine", "bad"] },
+  { id: "sf-h-current-med", en: "Are you taking any medicine at the moment?", short: "Taking any medicine?", category: "history", glosses: ["you", "Medicine"] },
+  { id: "sf-h-tablet", en: "Take one tablet after food, twice a day.", short: "One tablet after food", category: "needs", glosses: ["tablet", "eat"] },
+  { id: "sf-h-ointment", en: "Apply the ointment twice a day.", short: "Apply twice a day", category: "needs" },
+  { id: "sf-h-blood", en: "You need a blood test tomorrow morning, before eating.", short: "Blood test tomorrow", category: "needs", glosses: ["blood", "Tomorrow", "Morning"] },
+  { id: "sf-h-breathe", en: "Take a deep breath and hold it.", short: "Deep breath", category: "symptoms", glosses: ["breathe"] },
+  { id: "sf-h-lie", en: "Please lie down.", short: "Please lie down", category: "symptoms", glosses: ["please", "sleep"] },
+  { id: "sf-h-wait-doctor", en: "The doctor will see you soon.", short: "Doctor coming soon", category: "logistics", glosses: ["Doctor", "come"] },
+  { id: "sf-h-serious", en: "This is serious. You need to stay in hospital.", short: "You must stay", category: "emergency", urgent: true, glosses: ["Hospital", "you"] },
+  { id: "sf-h-return", en: "Come back in one week.", short: "Return in a week", category: "logistics", glosses: ["come", "Week"] },
+];
+
+export const HOTEL_STAFF: Phrase[] = [
+  ...SHARED_STAFF,
+  { id: "sf-ho-booking", en: "Do you have a booking?", short: "Do you have a booking?", category: "logistics" },
+  { id: "sf-ho-room-rate", en: "The room rate is shown here.", short: "The rate is here", category: "money", glosses: ["Bedroom", "Price"] },
+  { id: "sf-ho-included", en: "Breakfast is included.", short: "Breakfast included", category: "money", glosses: ["food", "Morning"] },
+  { id: "sf-ho-key", en: "Here is your key.", short: "Your key", category: "logistics", glosses: ["Key", "give"] },
+  { id: "sf-ho-floor", en: "Your room is on this floor.", short: "Your room", category: "logistics", glosses: ["Bedroom", "Location"] },
+  { id: "sf-ho-checkout", en: "Checkout is at 11 in the morning.", short: "Checkout time", category: "logistics", glosses: ["Morning", "Time"] },
+  { id: "sf-ho-deposit", en: "We need a deposit, which is refunded at checkout.", short: "Deposit needed", category: "money", glosses: ["Money"] },
+  { id: "sf-ho-luggage", en: "We can keep your luggage.", short: "We can keep luggage", category: "logistics", glosses: ["Bag"] },
+  { id: "sf-ho-alarm", en: "You said you cannot hear the alarm. We will come to your door.", short: "We will come to your door", category: "emergency", urgent: true, glosses: ["Door", "come"] },
+  { id: "sf-ho-message", en: "We will message you instead of calling.", short: "We will message you", category: "understanding", glosses: ["phone"] },
+  { id: "sf-ho-restaurant", en: "The restaurant is this way.", short: "Restaurant this way", category: "directions", glosses: ["Restaurant", "Location"] },
+  { id: "sf-ho-full", en: "I am sorry, we have no rooms free.", short: "No rooms free", category: "logistics", glosses: ["sorry", "Bedroom", "no"] },
+];
+
+export const BANK_STAFF: Phrase[] = [
+  ...SHARED_STAFF,
+  { id: "sf-b-explain-first", en: "I will explain this fully before you sign anything.", short: "I will explain before you sign", category: "understanding", urgent: true },
+  { id: "sf-b-no-rush", en: "Do not sign until you are sure.", short: "Do not sign until sure", category: "understanding", urgent: true },
+  { id: "sf-b-charges", en: "These are the charges for this service.", short: "The charges", category: "money", urgent: true, glosses: ["Price"] },
+  { id: "sf-b-docs-need", en: "I need your identity and address proof.", short: "ID and address proof", category: "logistics", glosses: ["Card", "please"] },
+  { id: "sf-b-balance", en: "Your balance is shown on this screen.", short: "Your balance", category: "money", glosses: ["Money"] },
+  { id: "sf-b-sign-here", en: "Please sign here.", short: "Sign here", category: "logistics", glosses: ["please", "name"] },
+  { id: "sf-b-processing", en: "This will take about ten minutes.", short: "About ten minutes", category: "logistics", glosses: ["Minute"] },
+  { id: "sf-b-card-days", en: "Your new card will arrive in about a week.", short: "Card in about a week", category: "logistics", glosses: ["Card", "Week"] },
+  { id: "sf-b-blocked", en: "Your card is now blocked. You are not liable for further use.", short: "Card is blocked", category: "emergency", urgent: true, glosses: ["Card", "stop"] },
+  { id: "sf-b-counter", en: "Please go to that counter.", short: "That counter", category: "directions", glosses: ["Location"] },
+  { id: "sf-b-token", en: "Please take a token and wait for your number.", short: "Take a token", category: "logistics", glosses: ["Card", "wait"] },
+  { id: "sf-b-declined", en: "I am sorry, this cannot be approved today.", short: "Cannot approve today", category: "logistics", glosses: ["sorry", "no"] },
+];
+
+export const CINEMA_STAFF: Phrase[] = [
+  ...SHARED_STAFF,
+  { id: "sf-c-subs-yes", en: "Yes, this show has subtitles.", short: "This show has subtitles", category: "needs", urgent: true, glosses: ["yes"] },
+  { id: "sf-c-subs-no", en: "This show has no subtitles. These other shows do.", short: "No subtitles on this show", category: "needs", urgent: true, glosses: ["no"] },
+  { id: "sf-c-access-seat", en: "We have accessible seating here.", short: "Accessible seating", category: "needs", glosses: ["sit", "Location"] },
+  { id: "sf-c-ticket-price", en: "The ticket price is shown here.", short: "Ticket price", category: "money", glosses: ["ticket", "Price"] },
+  { id: "sf-c-starts", en: "The show starts at this time.", short: "Start time", category: "logistics", glosses: ["Time"] },
+  { id: "sf-c-length", en: "It runs for about two hours.", short: "About two hours", category: "logistics", glosses: ["Hour"] },
+  { id: "sf-c-screen", en: "Your screen is this way.", short: "Your screen this way", category: "directions", glosses: ["Location"] },
+  { id: "sf-c-seat", en: "Your seat number is on the ticket.", short: "Seat is on the ticket", category: "logistics", glosses: ["ticket", "sit"] },
+  { id: "sf-c-announce", en: "You said you cannot hear announcements. We will come and tell you.", short: "We will come and tell you", category: "emergency", urgent: true, glosses: ["come"] },
+  { id: "sf-c-sold-out", en: "I am sorry, this show is sold out.", short: "Sold out", category: "logistics", glosses: ["sorry", "no"] },
+  { id: "sf-c-refund", en: "We can refund this.", short: "We can refund", category: "money", glosses: ["Money", "give"] },
+  { id: "sf-c-food", en: "Food and drink are sold over there.", short: "Food over there", category: "directions", glosses: ["food", "Location"] },
+];
+
+export const RETAIL_STAFF: Phrase[] = [
+  ...SHARED_STAFF,
+  { id: "sf-r-price", en: "The price is shown here.", short: "The price", category: "money", glosses: ["Price"] },
+  { id: "sf-r-discount", en: "There is a discount on this.", short: "There is a discount", category: "money", glosses: ["cheap"] },
+  { id: "sf-r-stock-yes", en: "Yes, we have it. I will bring it.", short: "We have it", category: "needs", glosses: ["yes", "give"] },
+  { id: "sf-r-stock-no", en: "I am sorry, we do not have that.", short: "We do not have it", category: "needs", glosses: ["sorry", "no"] },
+  { id: "sf-r-size", en: "Which size do you need?", short: "Which size?", category: "needs", glosses: ["big", "small"] },
+  { id: "sf-r-try", en: "You can try it on over there.", short: "Try it on there", category: "directions", glosses: ["Bedroom", "Location"] },
+  { id: "sf-r-total", en: "The total is shown on the screen.", short: "The total", category: "money", glosses: ["Bill"] },
+  { id: "sf-r-pay-how", en: "Card or cash?", short: "Card or cash?", category: "money", glosses: ["Card", "Money"] },
+  { id: "sf-r-return-ok", en: "You can return this within seven days with the bill.", short: "Return within seven days", category: "logistics", glosses: ["back", "give", "Bill"] },
+  { id: "sf-r-warranty", en: "This has a one year warranty.", short: "One year warranty", category: "logistics", glosses: ["year"] },
+  { id: "sf-r-bag", en: "Would you like a bag?", short: "A bag?", category: "logistics", glosses: ["Bag"] },
+  { id: "sf-r-closing", en: "We are closing soon.", short: "Closing soon", category: "logistics", glosses: ["Store or Shop", "close"] },
+];
+
+export const TRAVEL_STAFF: Phrase[] = [
+  ...SHARED_STAFF,
+  { id: "sf-t-where-go", en: "Where do you want to go?", short: "Where to?", category: "transport", glosses: ["you", "Location"] },
+  { id: "sf-t-platform", en: "Your platform is this way.", short: "Platform this way", category: "directions", glosses: ["Train Station", "Location"] },
+  { id: "sf-t-time", en: "It leaves at this time.", short: "Departure time", category: "transport", glosses: ["Time"] },
+  { id: "sf-t-late", en: "It is running late.", short: "Running late", category: "transport", urgent: true, glosses: ["slow"] },
+  { id: "sf-t-cancelled", en: "It has been cancelled. I will find you another.", short: "Cancelled", category: "emergency", urgent: true, glosses: ["no", "stop"] },
+  { id: "sf-t-fare", en: "The fare is shown here.", short: "The fare", category: "money", glosses: ["Price"] },
+  { id: "sf-t-ticket", en: "Here is your ticket.", short: "Your ticket", category: "transport", glosses: ["ticket", "give"] },
+  { id: "sf-t-announce", en: "You said you cannot hear announcements. We will come and tell you.", short: "We will come and tell you", category: "understanding", urgent: true, glosses: ["come"] },
+  { id: "sf-t-bus", en: "Take the bus from outside.", short: "Bus outside", category: "transport", glosses: ["Bus", "Location"] },
+  { id: "sf-t-hotel", en: "There is a hotel nearby.", short: "Hotel nearby", category: "directions", glosses: ["hotel", "Location"] },
+  { id: "sf-t-toilet", en: "The toilet is that way.", short: "Toilet that way", category: "directions", glosses: ["Bathroom", "Location"] },
+  { id: "sf-t-police", en: "I will call the police for you.", short: "I will call the police", category: "emergency", urgent: true, glosses: ["Police"] },
+];
+
+export const STAFF_PHRASES_FOR: Record<DomainId, Phrase[]> = {
+  health: HEALTH_STAFF,
+  travel: TRAVEL_STAFF,
+  hotel: HOTEL_STAFF,
+  bank: BANK_STAFF,
+  cinema: CINEMA_STAFF,
+  retail: RETAIL_STAFF,
 };

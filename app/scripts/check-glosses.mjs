@@ -61,6 +61,21 @@ for (const m of src.matchAll(/^  (\w+): \{\n    id: "(\w+)"/gm)) {
   }
 }
 
+// The phrase boards carry optional gloss sequences too, and nothing was
+// checking them. That is how the old staff library shipped "Apply ointment
+// twice daily" mapped to ["HELP","THANK YOU"], with uppercase glosses that
+// exist in no vocabulary at all: invented so the animation had something to
+// play. A phrase with NO glosses is fine and shows as text; a phrase with
+// wrong ones lies to a Deaf reader in sign.
+const phrasebook = readFileSync("src/lib/phrasebook.ts", "utf8");
+for (const m of phrasebook.matchAll(/id:\s*"([^"]+)"[^}]*?glosses:\s*\[([^\]]*)\]/g)) {
+  for (const g of [...m[2].matchAll(/"([^"]+)"/g)].map((x) => x[1])) {
+    if (!signs.has(g)) {
+      bad.push(["missing", `phrase ${JSON.stringify(m[1])}: gloss ${JSON.stringify(g)}`]);
+    }
+  }
+}
+
 const sliceOf = (name) => {
   const i = src.indexOf(`const ${name}`);
   return i === -1 ? "" : src.slice(i, src.indexOf("];", i));
