@@ -2,7 +2,7 @@ A Deaf customer cannot ask a question at a hotel front desk, a bank counter, a c
 
 Setu works in both directions. The customer signs and the staff member hears it spoken in their own language. The staff member speaks or types and the customer sees it signed back by an animated signer. Underneath both is a board of common phrases in six Indian languages for the things that must be exact: prices, room types, account balances, show timings, return policies.
 
-All of it runs in a browser tab on the terminal, tablet or phone the counter already has. No server, no API key, no bill per use, and the camera feed never leaves the device. The model is 2 MB and caches on the first visit.
+All of it runs in a browser tab on the terminal, tablet or phone the counter already has. No server, no API key, no bill per use, and the camera feed never leaves the device. The recogniser is 2 MB, sitting on a 14 MB hand and face tracker, and both cache on the first visit.
 
 That is the part we care most about, because it decides whether this reaches a counter at all.
 

@@ -1,0 +1,95 @@
+THE PROBLEM
+
+Every tertiary sector runs on a short conversation at a counter. A Deaf customer cannot have it.
+
+At a hotel front desk it means checking in without knowing what the room costs, what is included, or what the cancellation terms are, and finding out at checkout. At a bank counter it means signing a form nobody explained, and a KYC or loan conversation conducted by pointing. At a cinema or a stadium box office it means not being able to ask which show has subtitles or where the accessible seating is, so the customer stops coming. At a shop till it means taking whatever they are given and not asking about the return policy, the warranty, or why the price differs from the label.
+
+None of this is because staff are unwilling. It is that there is no shared language for the sixty seconds the exchange takes. India has very few certified sign language interpreters and none of them are standing behind a counter. Written notes fail more often than hearing people expect, because the two sides often do not share a written language either, and because written Hindi or English is a second language for many Deaf signers whose first language is Indian Sign Language.
+
+The result is a customer who transacts with less information than everyone else, or who brings a family member to interpret their own bank balance, or who stops going.
+
+THE IDEA
+
+Put the bridge in the terminal that is already on the counter, and make it cost nothing to run.
+
+Setu is two-way. The customer signs, and the staff member hears it spoken in one of six Indian languages. The staff member picks or types a sentence, and the customer sees it as text and as signs played back by an animated signer. It opens as a web page on the till, the tablet, or either person's phone. Nothing is installed.
+
+Underneath it are phrase boards for the sentences that have to be exact, and those never run a model at all.
+
+ONE BUILD, ONE COUNTER AT A TIME
+
+The recognition stack is identical everywhere. What changes between a hotel and a bank is four things: which phrases a person reaches for, what spoken words map onto, what the place calls itself, and what the two people at the counter are called. So that is all a setting is, and adding one is a data entry rather than a rewrite.
+
+There are six: hotel front desk, bank counter, box office, shop counter, and the healthcare and travel settings we started from. Choosing one renames the interface around it. The same control reads Doctor and Patient in a hospital, Teller and Customer at a bank, Front desk and Guest at a hotel. A shop assistant is never shown a hospital.
+
+WHY ON-DEVICE AND FREE IS THE IDEA, NOT A DETAIL
+
+Accessibility technology in India does not usually fail on capability. It fails on deployment economics.
+
+A bank branch will not approve a monthly cloud subscription so that one customer a week can ask a question. A retail chain will not put a recurring per-terminal licence on four thousand stores for a use case with no revenue attached. So these things get piloted at a flagship branch in a metro, photographed, and never reach the four thousandth store. The pilot becomes the product.
+
+Something that costs nothing to run has a different fate. It can be copied to every terminal in a chain at once, because the marginal cost of the next terminal is zero and nobody has to approve anything. That is the difference between a demonstration and a rollout, and it is why the system is built with no backend at all rather than as a cloud service that happens to have an offline mode.
+
+Two things follow that matter specifically in these sectors.
+
+Privacy stops being a policy document and becomes a property of the architecture. In financial services this is not a nice-to-have. The customer's face and their question about their own account are never transmitted anywhere, so there is no third-party processor for a compliance team to vet, no retention schedule to write, and nothing to leak. The answer to "where does the video go" is that there is no video leaving the device, only numbers derived from it, and they stay in the tab.
+
+And it works when the internet does not, which at a rural branch, a small retailer or a hill-station hotel is often.
+
+THREE LAYERS, DIFFERENT GUARANTEES
+
+Different parts of an exchange need different levels of certainty, so we did not build one model and hope.
+
+The phrase boards are exact. Written text, translated once and shipped inside the app, saying the same correct thing every time with no model involved. There are 350 phrases across the six settings in six Indian languages: 266 for the customer and 84 for the staff member. This is the main surface, and it is what staff should use whenever getting it wrong means a customer agrees to something they did not understand.
+
+Recognition is the shortcut on top. A small neural network reads 38 trained signs from the camera and offers a short list of what it thinks was signed. Tested on a signer it has never seen, and averaged over five separate training runs rather than quoted from the best single run, it is right first about 74% of the time and has the right answer in its top five about 95% of the time. We built the interface around the second number. A shortlist of five that is nearly always right beats one answer that is occasionally confidently wrong, and it leaves the choice with a person.
+
+The dictionary is the long tail. Past the trained vocabulary, another 203 words are matched against a single example of each sign taken from published Indian Sign Language dictionaries. Money, bill, ticket, hotel, expensive, bank, the days of the week, the digits: the words a customer at a counter actually reaches for exist in those sources as exactly one recording each. That is far too little to train a classifier on and enough to compare against. It is right about half the time, so it is presented as a labelled shortlist of closest guesses and never as an answer.
+
+KNOWING WHEN TO SAY NOTHING
+
+We spent real effort on refusal, which is the part most sign recognition work skips.
+
+A classifier handed something it has never seen does not fail cleanly. It picks whichever of its classes is nearest and reports high confidence in it. At a bank counter that behaviour is worse than useless, because a confident wrong answer gets acted on.
+
+So the system checks that both hands were actually visible before it speaks at all, its confidence numbers are calibrated so that 80% means roughly 80% rather than 99%, and when it is unsure it falls back to the phrase board instead of guessing. The reliable path is the default and the clever path is the shortcut, not the other way round.
+
+WHAT IT LOOKS LIKE AT EACH COUNTER
+
+Hospitality. Check-in, room type, tariff, what is included, checkout time. The guest can say the room is too cold or the key does not work. Two phrases exist because a hearing person would not think of them: a Deaf guest will not hear the fire alarm and will not hear you knock, and the front desk has the matching reply that someone will come to the door.
+
+Financial services. Account opening, balance and transaction queries, which document is needed, and above all making sure a customer knows what they are signing. "I do not understand this form, please explain it before I sign" and "please do not process this yet" sit at the top of the customer's board. The teller's board answers them: "I will explain this fully before you sign anything", "do not sign until you are sure", and the charges. This is the exchange the phrase board exists for, and the camera is deliberately not the instrument here.
+
+Entertainment. Which screening is subtitled, where accessible seating is, how long it runs, what time the interval is, and how to get a refund. The first question decides whether a Deaf customer buys a ticket at all, so it is one tap on both sides. A guest who cannot hear announcements can say so, and the box office can answer that someone will come and tell them.
+
+Retail. Price, size, availability, warranty, the return window and the exchange policy, plus the till exchange that currently happens in gestures. The staff side covers stock, discounts, card or cash, and closing time.
+
+The same build also serves hospitals and travel counters with no changes, which is where we started.
+
+WHO BENEFITS
+
+Deaf and hard of hearing customers, who can transact on their own without bringing a relative to interpret their own private business.
+
+Frontline staff, who are currently put in an impossible position several times a month and given no tool at all for it.
+
+Operators, because there is no per-seat licence, no integration project, and nothing stopping them putting it on every terminal in the chain tomorrow. Accessibility obligations under the Rights of Persons with Disabilities Act get met with something that is actually used rather than a signboard.
+
+FEASIBILITY
+
+The technical risk is low and largely retired. Recognition runs on a standard browser and a standard webcam, on hardware the counter already has. The constraint is a camera and a modern browser, not a GPU. The recogniser is 2 MB and sits on a 13 MB hand and face tracker, both served from the site and cached on the first visit. It is trained only on freely available and openly licensed Indian Sign Language data, so there is no licence that can be withdrawn and no vendor to depend on.
+
+The work ahead is not the model. It is vocabulary coverage for each sector, recordings for words that exist in no corpus we can reach, and review of the phrase translations by Deaf signers and native speakers. None of those are substituted by engineering.
+
+WHAT IT IS NOT, STATED PLAINLY
+
+Setu assists an exchange. It does not replace a qualified interpreter, and it should not be relied on for anything contractual or for financial consent, where the phrase board's exact wording is the correct instrument.
+
+The trained vocabulary is small and practical, not general. It recognises citation-form signs rather than fluent connected signing. Accuracy on a live camera in a busy branch will be lower than on the curated recordings we tested against, and lower again for a signer recorded in very different conditions.
+
+The phrase translations are machine generated by an open model and are not yet reviewed. We know there are errors in them, and we can name examples. Automated checks catch empty output, untranslated passthrough and script leakage; no automated check catches grammar. Until a Deaf signer and a native speaker of each language have read every line, this table is a draft that happens to be wired up. Separately, the devices we tested ship no Marathi speech voice, so Marathi is read aloud in the nearest voice that shares its script, and the app says so on the language screen rather than letting a Marathi speaker discover it at a counter.
+
+We would rather write all of that here than have a bank find it at a counter.
+
+STATUS
+
+Built and deployed, not proposed. Open source, no paid service anywhere, nothing to run, and it will stay free.
