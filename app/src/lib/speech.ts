@@ -40,7 +40,41 @@ export function refreshVoices() {
   return voices;
 }
 
-export function voiceFor(lang: LangCode): SpeechSynthesisVoice | null {
+/**
+ * Warm the voice list as soon as this module loads.
+ *
+ * getVoices() returns [] on the first call in Chrome and Safari: the list
+ * arrives asynchronously and only a "voiceschanged" listener sees it. That
+ * listener used to live in SignBridge, which is lazy-loaded and only mounts
+ * when someone opens the camera. So a person who just tapped phrases never
+ * registered it, voiceFor returned null, and the utterance went out with no
+ * voice set -- which makes the browser read Devanagari or Tamil aloud in its
+ * default en-US voice. That is the "Hello does not work" report: it was
+ * speaking, in the wrong voice, and sounded like nothing useful.
+ *
+ * Belongs at module scope, because every caller of speak() needs it, not just
+ * the one component that happened to remember.
+ */
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  refreshVoices();
+  window.speechSynthesis.addEventListener("voiceschanged", refreshVoices);
+}
+
+/**
+ * Languages with no system voice, and the nearest voice that shares a script.
+ *
+ * Marathi is the live case: macOS, Windows and Android all ship Hindi but
+ * commonly ship no mr-IN voice, and we offer Marathi in the picker. Without
+ * this the text is handed to an en-US voice, which reads Devanagari as noise.
+ * Hindi reading Marathi is wrong in prosody and some vowels, and it is
+ * intelligible, which the alternative is not. hasVoiceFor() lets the UI say so
+ * rather than pretending.
+ */
+const SCRIPT_FALLBACK: Partial<Record<LangCode, string>> = {
+  "mr-IN": "hi",
+};
+
+function lookup(lang: LangCode): SpeechSynthesisVoice | null {
   if (!voices.length) refreshVoices();
   const base = lang.split("-")[0];
   return (
@@ -48,6 +82,20 @@ export function voiceFor(lang: LangCode): SpeechSynthesisVoice | null {
     voices.find((v) => v.lang.replace("_", "-").startsWith(`${base}-`)) ??
     null
   );
+}
+
+export function voiceFor(lang: LangCode): SpeechSynthesisVoice | null {
+  const direct = lookup(lang);
+  if (direct) return direct;
+  const near = SCRIPT_FALLBACK[lang];
+  if (!near) return null;
+  if (!voices.length) refreshVoices();
+  return voices.find((v) => v.lang.replace("_", "-").startsWith(`${near}-`)) ?? null;
+}
+
+/** Whether this device can speak `lang` in its own voice, for honest UI. */
+export function hasVoiceFor(lang: LangCode): boolean {
+  return lookup(lang) !== null;
 }
 
 export function speak(text: string, lang: LangCode) {
