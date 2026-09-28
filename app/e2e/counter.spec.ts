@@ -385,3 +385,18 @@ test("service change keeps drafts, filters phrases, and preserves their original
   await expect(page.locator(".library")).not.toContainText("unexpected charge");
   await expect(page.locator(".library")).not.toContainText("return an item");
 });
+
+test("parent service phrases retain honest English fallback when Hindi is selected", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Service type", { exact: true }).selectOption("banking");
+  await page.getByLabel("Message language").selectOption("hi-IN");
+  await page.getByRole("button", { name: "Phrase library", exact: true }).click();
+  await page.getByLabel("Find a phrase").fill("My card is lost");
+  await expect(page.locator(".library-phrase")).toContainText("English only");
+  await page.locator(".library-phrase").click();
+  await expect(page.getByRole("status")).toContainText("English only");
+  await expect(page.getByLabel("Review or type a message")).toHaveAttribute("lang", "en-IN");
+  await page.getByRole("button", { name: "Send to staff", exact: true }).click();
+  await expect(page.locator(".message-display > p")).toHaveAttribute("lang", "en-IN");
+  await expect(page.getByRole("log")).toContainText("My card is lost. Please block it.");
+});

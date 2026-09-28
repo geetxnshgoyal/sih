@@ -1,3 +1,4 @@
+import { additionalServicePhrases } from "./servicePhrases";
 export type Role = "customer" | "staff";
 export type Language = import("./speech").LangCode;
 export type ServiceId =
@@ -8,7 +9,7 @@ export type Phrase = {
   role: Role;
   category: string;
   en: string;
-  hi: string;
+  hi?: string;
 };
 export const phrases: Phrase[] = [
   {
@@ -261,9 +262,10 @@ export const phrases: Phrase[] = [
     en: "Would you like me to explain anything else?",
     hi: "क्या आप चाहते हैं कि मैं कुछ और समझाऊँ?",
   },
+  ...additionalServicePhrases,
 ];
 export const phraseText = (phrase: Phrase, language: Language) =>
-  language === "hi-IN" ? phrase.hi : phrase.en;
+  language === "hi-IN" && phrase.hi ? phrase.hi : phrase.en;
 
 export const services: {
   id: ServiceId;
@@ -320,3 +322,6 @@ export const services: {
     steps: ["public-1", "public-2", "public-3", "public-4", "thanks"],
   },
 ];
+
+export const phraseLanguage = (phrase: Phrase, language: Language): Language =>
+  language === "hi-IN" && phrase.hi ? "hi-IN" : "en-IN";

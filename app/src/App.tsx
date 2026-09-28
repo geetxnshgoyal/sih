@@ -28,6 +28,7 @@ import {
 import {
   phrases,
   phraseText,
+  phraseLanguage,
   services,
   type ServiceId,
   type Role,
@@ -143,7 +144,9 @@ function Workspace() {
     setSelected(phrase);
     setSource("Phrase board");
     setView("counter");
-    setNotice("Phrase selected. Review it, then send.");
+    setNotice(phraseLanguage(phrase, language) !== language
+      ? "This phrase is available in English only. Review it, then send."
+      : "Phrase selected. Review it, then send.");
   }
   function send() {
     if (!draft.trim()) return;
@@ -151,7 +154,7 @@ function Workspace() {
     addMessage({
       role,
       text: draft.trim(),
-      language: selected && language !== "hi-IN" ? "en-IN" : language,
+      language: selected ? phraseLanguage(selected, language) : language,
       source,
       phraseId: selected?.id,
       service: services.find(
@@ -447,7 +450,7 @@ function Workspace() {
                           }
                           onClick={() => choose(item)}
                         >
-                          <span lang={language === "hi-IN" ? "hi" : "en"}>
+                          <span lang={phraseLanguage(item, language)}>
                             {phraseText(item, language)}
                           </span>
                           {selected?.id === item.id ? (
@@ -473,7 +476,7 @@ function Workspace() {
                   </div>
                   <textarea
                     id="message"
-                    lang={selected && language !== "hi-IN" ? "en-IN" : language}
+                    lang={selected ? phraseLanguage(selected, language) : language}
                     value={draft}
                     maxLength={1500}
                     placeholder={
@@ -739,6 +742,7 @@ function Workspace() {
                   >
                     <span>{phrase.category}</span>
                     <strong>{phrase.en}</strong>
+                    {!phrase.hi && <span className="small-note">English only</span>}
                     <p lang="hi">{phrase.hi}</p>
                     <span className="inline-link">
                       Use this phrase <ArrowRight size={16} />

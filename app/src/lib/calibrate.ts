@@ -33,13 +33,14 @@
  */
 
 /**
- * Fitted out-of-fold over 7 signer groups at close range, for the 83-sign model
- * that ships (train/train_clinical.py --vocab universal).
+ * Fitted out-of-fold over 7 signer groups at close range, for the 38-sign model
+ * that ships (train/train_clinical.py --vocab clinical).
  *
- * 1.69 rather than the 2.34 the old 264-class model needed. A temperature
+ * 1.29 rather than the 2.34 the old 264-class model needed. A temperature
  * closer to 1.0 means the raw softmax was already nearer honest, which is what
  * a vocabulary the model can actually separate buys you. Measured ECE before
- * scaling: 13.9pp, against 23.5pp for 264 classes.
+ * scaling: 7.3pp, falling to 4.6pp after. Value and ECE both live in
+ * app/public/model/metrics.json; this constant must match it.
  *
  * REFIT AFTER ANY RETRAIN. T belongs to the weights, not the architecture, and
  * train_clinical.py prints the new value.

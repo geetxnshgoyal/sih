@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node --import ./tests/register.mjs scripts/check-glosses.mjs && tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check": "tsc -b --noEmit && vite build",
+    "check": "npm run check:glosses && tsc -b --noEmit && vite build",
     "test": "node --import ./tests/register.mjs --test tests/*.test.ts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:glosses": "node --import ./tests/register.mjs scripts/check-glosses.mjs"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "1.0.1",

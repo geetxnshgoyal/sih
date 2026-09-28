@@ -1072,7 +1072,7 @@ code{
 .about-credit a:hover{opacity:1}
 
 /* ---------------------------------------------------------------------------
-   The vocabulary, shown on request. A signer needs to know WHICH 83 signs are
+   The vocabulary, shown on request. A signer needs to know WHICH signs are
    recognised: without the list, signing anything else looks like a broken
    detector rather than a stated limit, which is the wrong thing to conclude and
    the wrong thing to demo.
@@ -1100,8 +1100,8 @@ code{
 
 /* Dictionary shortlist: words reached by nearest-neighbour lookup rather than
    by the classifier. Visually separated from .cand on purpose. These are a
-   weaker signal (46% top-1 from an unseen corpus against the classifier's
-   68.3%), so they must not read as the model's answer. */
+   weaker signal (49.6% top-1 overall, 47.1% from an unseen corpus, against the
+   classifier's 73.9%), so they must not read as the model's answer. */
 .dict{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line-2);
       pointer-events:auto}
 .dict-head{font-size:10.5px;letter-spacing:.02em;color:var(--faint);

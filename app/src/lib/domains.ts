@@ -20,6 +20,9 @@ export const DOMAIN_LIST: Domain[] = services.map((service) => ({
   tagline: "Accessible two-way service communication",
   station: service.label,
   quick: [
+    { glosses: ["I", "Deaf"], caption: "I am Deaf", urgent: true },
+    { glosses: ["please", "wait"], caption: "Please wait" },
+    { glosses: ["I", "no", "understand"], caption: "I do not understand" },
     { glosses: ["Hello"], caption: "Hello" },
     { glosses: ["Thank you"], caption: "Thank you" },
   ],

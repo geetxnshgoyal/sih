@@ -15,8 +15,8 @@ import { segmentQuality } from "../lib/segment";
  *
  * Recording here removes the domain gap instead of modelling around it: same
  * camera, same lighting, same distance, same hands as the demo. A 20-30 sign
- * vocabulary recorded this way is a far easier problem than 264 classes of
- * someone else's footage.
+ * vocabulary recorded this way is a far easier problem than even the 38
+ * classes that ship, all of them someone else's footage.
  *
  * Output is a JSON file of raw unit-coordinate frames — the same thing
  * features.to_unit() produces from the INCLUDE pickles, so train/preprocess.py

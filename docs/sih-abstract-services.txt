@@ -1,0 +1,31 @@
+A Deaf customer cannot ask a question at a hotel front desk, a bank counter, a cinema box office or a shop till. There are very few sign language interpreters in India and none of them are standing behind a counter. So the customer writes a note in a language the staff member may not read well, or points, or takes whatever they are given. At a bank that means signing a form nobody explained. At a hotel it means not knowing what the room costs until checkout.
+
+Setu works in both directions. The customer signs and the staff member hears it spoken in their own language. The staff member speaks or types and the customer sees it signed back by an animated signer. Underneath both is a board of common phrases in six Indian languages for the things that must be exact: prices, room types, account balances, show timings, return policies.
+
+All of it runs in a browser tab on the terminal, tablet or phone the counter already has. No server, no API key, no bill per use, and the camera feed never leaves the device. The model is 2 MB and caches on the first visit.
+
+That is the part we care most about, because it decides whether this reaches a counter at all.
+
+A bank branch or a hotel is not going to sign up for a monthly cloud bill so one customer a week can ask a question. Anything that needs one gets piloted at a flagship branch and never reaches the other four thousand. Something that costs nothing to run can just be copied everywhere at once.
+
+Privacy comes from the design, not a policy document. In financial services this stops being a nice property and becomes a requirement: the customer's face and their question about their own account are never transmitted anywhere, so there is no third-party processor to vet, nothing to retain, and nothing to leak.
+
+It also works when the internet does not, which at a rural branch or a small retailer is often.
+
+We split the system into layers because different parts of an exchange need different guarantees.
+
+The phrase board is exact. It is written text, translated once and shipped with the app, and it says the same right thing every time. No model is involved. This is the main surface, and it is what staff should use when getting it wrong means a customer signs something they did not understand.
+
+Recognition is the shortcut. A small neural network reads a vocabulary of common signs from the camera and shows staff a short list of what it thinks was signed. Tested on a signer it has never seen, averaged over five separate training runs, it gets the sign right first about 74% of the time and has it in the top five about 95% of the time. We built the interface around the second number, because a list of five that is nearly always right beats one answer that is occasionally confidently wrong.
+
+Past that vocabulary, another 200 words are matched against a single example of each sign taken from published Indian Sign Language dictionaries. Words a customer needs, like money, bill, ticket, hotel, expensive, bank, the days of the week and the digits, exist there as exactly one recording each. Far too little to train a classifier on, but enough to compare against.
+
+We also spent real effort on making it shut up. A classifier handed something it has never seen does not fail cleanly, it picks whichever class is closest and reports high confidence. So Setu checks both hands were actually visible before it speaks, and its confidence numbers are calibrated so 80% roughly means 80%. At a bank counter a confident wrong answer is worse than no answer.
+
+Who it is for: Deaf and hard of hearing customers, who can transact without bringing someone to interpret for them. Frontline staff in hospitality, banking, entertainment and retail, who can serve a customer they currently cannot. And operators, because there is no per-seat licence and nothing stopping them putting it on every terminal in a chain tomorrow.
+
+The same build serves hospitals and travel counters without changes. That is where we started, and the vocabulary, phrases and sign playback carry straight across.
+
+What it is not: Setu assists an exchange, it does not replace a qualified interpreter, and it should not be relied on for anything contractual or for financial consent. The trained vocabulary is small and practical, not general. Phrase translations are machine generated and are being checked by Deaf signers. Accuracy on a live camera in a busy branch will be lower than on the recordings we tested with, and when the model is unsure the interface falls back to the phrase board instead of guessing.
+
+This is built and deployed, not proposed. It is open source, uses no paid service anywhere, and is trained only on freely available and openly licensed Indian Sign Language data. It will stay free.

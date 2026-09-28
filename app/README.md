@@ -31,7 +31,7 @@ Open http://127.0.0.1:5174 (or the address printed by Vite if that port is occup
 ## Working features and honest limits
 
 - Two-way written phrases and typed messages, editable drafts, source-labelled shared display, transcript download and session reset. Messages clear on page reload.
-- Written phrases in English and Hindi. Six existing speech language choices are retained. Other selections use an explicit English fallback for written phrases. Custom text is never translated automatically.
+- Guided-demo phrases are available in English and Hindi. Additional shared, banking, hospitality and retail phrases from the parent project are English-only and labelled accordingly. Six existing speech language choices are retained. Other selections use an explicit English fallback for written phrases. Custom text is never translated automatically.
 - Real browser speech input where supported. Microphone permission and possibly an online service are required. Actual results remain drafts for review. Failures never generate sample transcripts.
 - Read-aloud uses installed browser voices and reports missing voices or playback errors. Audible output and live microphone accuracy still need device testing.
 - **Try sign recognition** retains the original local model, tracker, segmenter and dictionary matching. General-vocabulary results go to an editable draft. Live signer accuracy is unverified; full service-specific sentences and ISL grammar are not supported.
@@ -53,20 +53,21 @@ Open http://127.0.0.1:4174 online, wait for the service worker to register, then
 
 ```sh
 npm run check
+npm run check:glosses
 npm test
 npm run lint
 npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser suite requires a current production build and port 4174 free. It tests both communication directions, all six service scenarios, preserved messages/drafts across setting changes, Hindi and typed replies, language fallback, transcript export/reset, unsupported speech, actual sign playback, missing model/camera errors, cached offline reload, mobile/large-text/keyboard interaction and automated WCAG A/AA checks.
+The browser suite requires a current production build and port 4174 free. It tests both communication directions, all six service scenarios, preserved messages/drafts across setting changes, Hindi and typed replies, language fallback (including English-only parent phrases under Hindi), transcript export/reset, unsupported speech, actual sign playback, missing model/camera errors, cached offline reload, mobile/large-text/keyboard interaction and automated WCAG A/AA checks.
 
 Fault tests inject unavailable devices/services; they do not prove live microphone or camera translation accuracy. Existing recognition dependencies produce a large build-chunk warning and lint reports four warnings, no errors.
 
 ## Updated files
 
 - `src/App.tsx`, `src/ServiceWorkspace.css`, `src/context/SessionContext.tsx`: general service workspace, service selection, guided demos and shared conversation.
-- `src/lib/phrases.ts`, `domains.ts`, `phrasebook.ts`, `phrasebookTable.ts`, `components/PhraseBoard.tsx`: service-specific English/Hindi phrases and shared communication requests.
+- `src/lib/phrases.ts`, `servicePhrases.ts`, `domains.ts`, `phrasebook.ts`, `phrasebookTable.ts`, `components/PhraseBoard.tsx`: service-specific English/Hindi phrases and shared communication requests.
 - `src/lib/browserSpeech.ts`, `speech.ts`, `serviceVocabulary.ts`, `glossTranslate.ts`, `reverse.ts`, `sentence.ts`, `components/SignBridge.tsx`, `hooks/useSignLibrary.ts`: preserved real speech/ISL infrastructure with honest status and vocabulary limits.
 - `index.html`, `public/manifest.webmanifest`, `public/favicon.svg`, `public/sw.js`: neutral identity and refreshed offline cache.
 - `e2e/counter.spec.ts`, `playwright.config.ts`, package files and `.gitignore`: browser and accessibility verification.
