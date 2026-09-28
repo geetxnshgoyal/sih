@@ -1,0 +1,47 @@
+A woman in an SC-majority village has plastered walls for eleven years. She has no certificate, so on paper she is unskilled, and every scheme treats her as someone who must be trained from zero. The training on offer is a six month course in a town she cannot travel to daily, for a job that does not exist in her block. She does not take it. This is the ordinary failure, and it is not caused by a shortage of schemes.
+
+Hunar is a voice assistant that starts from the opposite end. It asks, in her own language, what she already does. Then it does two things that no form does.
+
+FIRST, IT CERTIFIES WHAT ALREADY EXISTS
+
+Recognition of Prior Learning is an existing government instrument. It gives NSQF-aligned certification to people who learned by doing rather than in a classroom, and it takes days rather than months. It is also almost unknown to the people who would benefit most.
+
+So the first recommendation Hunar gives is usually not a course. It is: you are already at an NSQF level for this trade, here is the assessment that certifies it, here is where it is, and here is what it costs. An uncertified worker becomes a certified one in weeks. A course is recommended only when it genuinely adds something the person does not already have.
+
+SECOND, IT ONLY NAMES WORK THAT IS ACTUALLY REACHABLE
+
+Recommending a data entry qualification to someone in a block with no employer for it is how skilling schemes produce certificates and no income. Hunar ranks against what exists within reach: the trades and enterprises present in that district, PM Vishwakarma craft categories, producer organisations, and the distance a person can actually travel and return from in a day. If the honest answer is that nothing suitable is within reach, it says so rather than inventing an aspiration.
+
+THE RECOMMENDATIONS ARE RETRIEVED, NOT GENERATED
+
+This is the most important engineering decision and it is the one we have already made once, in a shipped system.
+
+A language model asked to suggest a qualification will produce a plausible course name, a plausible code and a plausible level, and some of them will not exist. Sending a person to a training centre that is not there, for a qualification nobody awards, is worse than saying nothing. So the model is used only to understand what the person said. Every recommendation is retrieved from the National Qualification Register, the government's own register of NSQF-aligned qualifications, and carries its real code, level, sector, duration and awarding body. When nothing matches well enough, the assistant says it does not know and routes to a human at the block office.
+
+TWO OUTPUTS, BECAUSE TWO PEOPLE NEED DIFFERENT THINGS
+
+For the individual: a spoken plan in their language. What can be certified now, what training is worth the time, where it is, what it costs, and which support they are eligible for.
+
+For the district officer: the same conversations, aggregated into a livelihood map of the block. Not a survey, a by-product. "In these nine villages, 142 people already work in leather and none are certified. The nearest assessment centre is sixty kilometres away." That is precisely the evidence a Grants-in-Aid proposal under PM-AJAY has to make, and producing it is currently a separate and expensive exercise. The GIA component funds comprehensive livelihood projects covering skill development, infrastructure and asset acquisition. Deciding what to fund is the hard part, and it is the part this answers.
+
+WHY VOICE, AND WHY IT RUNS WHERE IT RUNS
+
+Voice is not a feature here, it is the access condition. A text interface in English or formal Hindi excludes exactly the people the GIA component exists for.
+
+Speech recognition for Indian languages is not small enough to run offline on a low-end phone, and we will not pretend otherwise. Hunar runs on the device already present at the point of contact, a Common Service Centre operator's machine or a block office terminal, using open models from AI4Bharat and others. The person needs no app and no smartphone. They speak. The qualification catalogue and any plan already generated are cached, so the parts that must work without a connection do.
+
+Nothing in it depends on a paid API, so there is no per-query cost and no bill that arrives after the pilot ends. That matters more than it sounds: schemes that cost money per use get piloted in one district and never reach the rest.
+
+THE RISK WE TAKE MOST SERIOUSLY
+
+A system that maps SC individuals to livelihoods can quietly reproduce the caste occupational order it is meant to help people escape. If it learns that people like this user do this kind of work, it will recommend hereditary trades back to them with the authority of a computer.
+
+So caste is used for one thing only, which is scheme eligibility, and it is never an input to a recommendation. Recommendations come from what the person says they do and what they say they want, including when what they want is to leave the trade they are in. Aspiration is asked for explicitly rather than inferred. We would rather state this plainly at submission than be asked about it later.
+
+WHAT IS BUILT AND WHAT IS NOT
+
+Hunar is not built. We are not going to claim otherwise.
+
+What we have built and deployed is a two-way Indian Sign Language bridge that runs entirely on the device, speaks six Indian languages, uses no paid service, and refuses to answer when it is not confident rather than guessing. It is open source and it is live. The pieces this problem needs, Indian language speech, offline-first operation, calibrated refusal and retrieval instead of generation, are ones we have already had to get right once rather than ones we are hoping to learn.
+
+The honest limits: speech recognition is markedly worse for rural dialects, for women's voices and for code-mixed speech than published benchmarks suggest, and that is the population here. Local demand data is patchy and uneven between districts. And a recommendation is only as good as the catalogue behind it. We would rather build the narrow thing that works than the broad thing that demonstrates.
