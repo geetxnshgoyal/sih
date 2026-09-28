@@ -15,7 +15,7 @@
 // release cached the 264-class model cache-first and never bumped, so every
 // returning visitor kept being served a superseded model while the site
 // advertised a better one.
-const VERSION = "setu-v18";
+const VERSION = "setu-v19";
 const SHELL = `${VERSION}-shell`;
 const MODEL = `${VERSION}-model`;
 
@@ -82,6 +82,34 @@ self.addEventListener("fetch", (e) => {
   // retrained model failed to reach anyone who had already visited. Stale
   // content is served once and heals itself by the next load, without needing
   // a human to remember to bump a version string.
+  //
+  // EXCEPT the small text tables. Stale-while-revalidate means the first load
+  // after a deploy is answered by the PREVIOUS service worker out of its own
+  // cache, so a returning user gets the old table for that whole visit and
+  // only heals on the next reload. For a 2 MB weights file that is the right
+  // trade. For the phrase board it is not: the board is the path we tell
+  // people is exact, and a stale table silently drops every phrase back to
+  // English, which is the one failure the board exists to prevent. These are
+  // tens to low hundreds of KB, so network-first costs a round trip and
+  // falls back to cache when offline.
+  const SMALL_TABLES = [
+    "_phrasebook.json", "_utterances.json", "_bank.json",
+    "labels.json", "metrics.json", "_framing.json", "model.json",
+  ];
+  if (sameOrigin && SMALL_TABLES.some((f) => url.pathname.endsWith(f))) {
+    e.respondWith((async () => {
+      const cache = await caches.open(MODEL);
+      try {
+        const fresh = await fetch(req);
+        if (fresh.ok) cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        return (await cache.match(req)) || Response.error();
+      }
+    })());
+    return;
+  }
+
   const isModel = sameOrigin && (url.pathname.includes("/model/") || url.pathname.includes("/signs/"));
   if (isModel) {
     e.respondWith((async () => {
