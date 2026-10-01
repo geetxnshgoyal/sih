@@ -68,6 +68,11 @@ def main() -> int:
             with open(ROOT / rel, "rb") as fh:
                 obj = SafeUnpickler(fh).load()
             unit = features.to_unit(obj["keypoints"], obj["vid_shape"])
+            # Undo MediaPipe's aspect-dependent normalisation before anchoring.
+            # INCLUDE is uniformly 1920x1080, so without this every skeleton
+            # here is stretched 1.78x vertically relative to a square-format
+            # corpus or a differently-shaped webcam. See features.isotropic.
+            unit = features.isotropic(unit, features.aspect_of(obj["vid_shape"]))
             seq = features.resample(features.anchor(unit))
             if not np.all(np.isfinite(seq)):
                 failed.append(rel)
@@ -84,6 +89,8 @@ def main() -> int:
     if failed[:3]:
         for f in failed[:3]:
             print(f"  ! {f}")
+
+    features.check_isotropy(X[:400], "INCLUDE")
 
     counts = np.bincount(y, minlength=len(labels))
     print(f"\nsamples per class: min {counts.min()}  median {int(np.median(counts))}  max {counts.max()}")

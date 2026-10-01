@@ -21,7 +21,7 @@ the only metric that can see it is one where the two arms differ solely in
 whether those points are present.
 
 It also unblocks the work now. The full re-extraction is 46 Zenodo parts, of
-which 8 are done; this subset — 687 clips, 51 classes — is already on disk.
+which 8 are done; this subset, 687 clips, 51 classes, is already on disk.
 
 Layout note
 -----------
@@ -50,6 +50,7 @@ OUT = ROOT / "data" / "dataset_face.npz"
 
 POSE_KEEP = features.POSE_KEEP          # 23
 N_HEAD = POSE_KEEP + 21 + 21            # 65
+INCLUDE_ASPECT = 1920 / 1080            # every INCLUDE clip; see features.isotropic
 N_FULL = N_HEAD + len(FACE_SUBSET)      # 113
 
 
@@ -77,7 +78,7 @@ def signer_lookup() -> dict:
 def build_points(npz) -> tuple[np.ndarray, np.ndarray]:
     """One clip -> (head-only (T,65,3), full-face (T,113,3)) in unit coordinates.
 
-    MediaPipe already returns normalised x,y here, so there is no to_unit step —
+    MediaPipe already returns normalised x,y here, so there is no to_unit step , 
     unlike the pose release, which stores pixels.
     """
     pose = npz["pose"][:, :POSE_KEEP, :3]   # drop the visibility channel and the legs
@@ -93,7 +94,7 @@ def build_points(npz) -> tuple[np.ndarray, np.ndarray]:
 def main() -> int:
     files = sorted(SRC.rglob("*.npz"))
     if not files:
-        print(f"no clips under {SRC.relative_to(ROOT)} — run the extract loop first")
+        print(f"no clips under {SRC.relative_to(ROOT)}, run the extract loop first")
         return 1
     print(f"{len(files)} clips with face mesh")
 
@@ -126,6 +127,11 @@ def main() -> int:
 
             # Same transform as features.extract, minus the final standardisation:
             # train.py standardises after augmenting, in coordinate space.
+            # These were re-extracted from INCLUDE's own video, which is
+            # uniformly 1920x1080 (verified: every vid_shape in the pose
+            # release is (1080, 1920)). See features.isotropic.
+            head = features.isotropic(head, INCLUDE_ASPECT)
+            full = features.isotropic(full, INCLUDE_ASPECT)
             seq_head = features.resample(features.anchor(head))
             seq_full = features.resample(features.anchor(full))
             if not (np.all(np.isfinite(seq_head)) and np.all(np.isfinite(seq_full))):

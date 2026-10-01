@@ -1,39 +1,133 @@
 {
-  "random_split": {
-    "top1": 0.9031505250875146,
-    "top5": 0.9743290548424738
-  },
+  "classes": 38,
+  "labels": [
+    "I",
+    "you",
+    "he",
+    "she",
+    "we",
+    "they",
+    "Hello",
+    "Thank you",
+    "How are you",
+    "Alright",
+    "Pleased",
+    "good",
+    "bad",
+    "sick",
+    "healthy",
+    "weak",
+    "strong",
+    "alive",
+    "Death",
+    "Doctor",
+    "Hospital",
+    "Medicine",
+    "Patient",
+    "Deaf",
+    "Blind",
+    "hot",
+    "cold",
+    "warm",
+    "cool",
+    "Today",
+    "Tomorrow",
+    "Yesterday",
+    "Time",
+    "Morning",
+    "Evening",
+    "Night",
+    "Bathroom",
+    "Bedroom"
+  ],
+  "clips": 740,
+  "encoder": "encoder_stacked.weights.h5",
   "held_out_group": [
     {
       "group": 0,
-      "top1": 0.4272030651340996,
-      "top5": 0.6717752234993615,
-      "close_top1": 0.429757343550447,
-      "close_top5": 0.6883780332056194
+      "corpus": "INCLUDE",
+      "clips": 188,
+      "top1": 0.6968085106382979,
+      "top5": 0.9095744680851063
     },
     {
       "group": 1,
-      "top1": 0.6741463414634147,
-      "top5": 0.8926829268292683,
-      "close_top1": 0.655609756097561,
-      "close_top5": 0.8809756097560976
+      "corpus": "INCLUDE",
+      "clips": 221,
+      "top1": 0.7873303167420814,
+      "top5": 0.9819004524886877
     },
     {
       "group": 2,
-      "top1": 0.45776727702303605,
-      "top5": 0.7064382752510336,
-      "close_top1": 0.4619019492025989,
-      "close_top5": 0.7170702894270525
+      "corpus": "INCLUDE",
+      "clips": 233,
+      "top1": 0.7682403433476395,
+      "top5": 0.9742489270386266
+    },
+    {
+      "group": 4,
+      "corpus": "CISLR",
+      "clips": 20,
+      "top1": 0.3,
+      "top5": 0.65
+    },
+    {
+      "group": 5,
+      "corpus": "CISLR",
+      "clips": 33,
+      "top1": 0.2727272727272727,
+      "top5": 0.48484848484848486
+    },
+    {
+      "group": 6,
+      "corpus": "CISLR",
+      "clips": 26,
+      "top1": 0.4230769230769231,
+      "top5": 0.7307692307692307
     }
   ],
   "held_out_mean": {
-    "top1": 0.5197055612068501,
-    "top5": 0.7569654751932212
+    "top1": 0.7507930569093396,
+    "top5": 0.9552412825374735
   },
-  "held_out_close_mean": {
-    "top1": 0.515756349616869,
-    "top5": 0.7621413107962565
-  },
-  "classes": 264,
-  "clips": 4284
+  "temperature": 1.2900000000000007,
+  "ece_before": 0.072923705457153,
+  "ece_after": 0.04642196621709659,
+  "bands": [
+    {
+      "floor": 0.3,
+      "speaks": 0.9042995839112344,
+      "accuracy": 0.7561349693251533
+    },
+    {
+      "floor": 0.4,
+      "speaks": 0.8238557558945908,
+      "accuracy": 0.797979797979798
+    },
+    {
+      "floor": 0.5,
+      "speaks": 0.7503467406380028,
+      "accuracy": 0.822550831792976
+    },
+    {
+      "floor": 0.7,
+      "speaks": 0.5533980582524272,
+      "accuracy": 0.9223057644110275
+    },
+    {
+      "floor": 0.9,
+      "speaks": 0.33841886269070737,
+      "accuracy": 0.9467213114754098
+    }
+  ],
+  "cannot_say": [
+    "pain",
+    "water",
+    "help",
+    "yes",
+    "no",
+    "please",
+    "fever",
+    "breathe"
+  ]
 }

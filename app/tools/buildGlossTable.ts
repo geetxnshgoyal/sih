@@ -1,5 +1,5 @@
 /**
- * Offline gloss reordering — ISL gloss order -> natural spoken sentence.
+ * Offline gloss reordering: ISL gloss order -> natural spoken sentence.
  *
  *   ANTHROPIC_API_KEY=... node --experimental-strip-types app/tools/buildGlossTable.ts
  *
@@ -11,7 +11,7 @@
  *     way to hold an Anthropic key in client-side code.
  *  2. The stage demo must never depend on a live network call. `speech.ts`
  *     already states this policy for Bhashini and it applies with equal force
- *     here — a 500 ms round trip is fine while a user finishes signing, but a
+ *     here: a 500 ms round trip is fine while a user finishes signing, but a
  *     timeout in front of judges is not recoverable.
  *
  * So translation happens here, once, and ships as a static table the app reads
@@ -20,7 +20,7 @@
  *
  * What the model is actually asked to do
  * --------------------------------------
- * Not word substitution — that is what `reverse.ts` already does and correctly
+ * Not word substitution: that is what `reverse.ts` already does and correctly
  * refuses to call translation. Here the model is given the gloss sequence in
  * SIGNED order plus the domain, and asked to produce the sentence a fluent
  * speaker of each language would actually say. "STATION GO WHERE" becomes
@@ -85,12 +85,12 @@ spoken word order: ISL is topic-comment, drops copulas and articles, places
 question markers at the end, and has no separate word for many function words.
 
 Your job is to write what a fluent speaker of each target language would ACTUALLY
-SAY to mean the same thing — not a word-by-word substitution of the glosses.
+SAY to mean the same thing: not a word-by-word substitution of the glosses.
 
 Rules:
 - Produce ONE natural sentence per language. No alternatives, no notes, no glosses.
 - Preserve the speech act. A gloss sequence ending in a question marker, or one
-  whose note says it is a request, must come out as a question or request — not a
+  whose note says it is a request, must come out as a question or request, not a
   flat statement. This is the single most common failure: rendering a question as
   a statement changes the meaning.
 - The vocabulary is a fixed lexicon of 264 isolated signs with no YES, NO, PLEASE,
@@ -98,7 +98,7 @@ Rules:
   WHEN, "Price" for HOW MUCH, and "Mean" for WHAT DOES X MEAN. Read these as the
   question words they stand in for.
 - These are real patients and travellers. Use plain, respectful, everyday register
-  — the way a person speaks at a hospital reception desk, not formal written prose.
+: the way a person speaks at a hospital reception desk, not formal written prose.
 - Use the correct script for each language. Never transliterate into Latin.
 - Where a language marks politeness (Hindi आप, Tamil நீங்கள்), use the polite form.
 - Set "reordered" true when the natural spoken order differs from the signed order.`;

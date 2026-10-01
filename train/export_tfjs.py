@@ -16,9 +16,26 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-MODEL = ROOT / "models" / "gloss_classifier.keras"
-LABELS = ROOT / "models" / "labels.json"
-METRICS = ROOT / "models" / "metrics.json"
+import os
+# Which vocabulary ships. Held-out INCLUDE signers, same protocol throughout.
+# The clinical row is the MEAN OF FIVE SEEDS, because one run is a draw: five
+# identical runs gave 72.7, 72.2, 75.5, 75.4 and 73.8, a spread of 3.3 points.
+#
+#     clinical    38 classes   73.9% +/- 1.5 top-1   95.1% top-5   <- ships
+#     universal   83 classes   68.1% top-1           90.4% top-5
+#     general    264 classes   55.0% top-1           83.0% top-5
+#
+# Single-seed figures for the other two, so treat the gaps as approximate. Only
+# a difference beyond about 4.2 points is meaningful at this noise level, which
+# the 5.8 to 38 gap clears and smaller claims do not.
+#
+# 38 clinical classes beat 83 by 7.0 points top-1 and 5.1 top-5 while covering
+# the words a hospital needs. The words the classifier drops are not lost: the
+# 116-word dictionary bank and the 145-phrase board both still carry them.
+_SRC = ROOT / "models" / os.environ.get("SETU_VOCAB", "clinical")
+MODEL = _SRC / "gloss_classifier.keras"
+LABELS = _SRC / "labels.json"
+METRICS = _SRC / "metrics.json"
 OUT = ROOT / "app" / "public" / "model"
 
 
@@ -46,7 +63,7 @@ def patch_keras3_topology(model_json: Path) -> None:
 
 def main() -> int:
     if not MODEL.exists():
-        print(f"missing {MODEL} — run train/train.py first")
+        print(f"missing {MODEL}: run train/train.py first")
         return 1
 
     OUT.mkdir(parents=True, exist_ok=True)
@@ -68,6 +85,17 @@ def main() -> int:
     # Keras config at all, so none of that can go wrong. Inference is identical;
     # the app loads it with tf.loadGraphModel instead of tf.loadLayersModel.
     model = keras.models.load_model(MODEL)
+
+    # Two outputs from one graph: the 83-way softmax, and the 256-d embedding
+    # feeding it. The embedding is an intermediate tensor that already exists,
+    # so exposing it adds no weights and no download, but it is what lets the
+    # app look a sign up in a reference bank instead of being limited to the 83
+    # answers the softmax can give. See train/build_bank.py.
+    emb = model.layers[-2].output
+    model = keras.Model(model.input, [model.output, emb], name="gloss")
+    print(f"exporting 2 outputs: softmax {model.output_shape[0]} "
+          f"and embedding {model.output_shape[1]}")
+
     sm = ROOT / "models" / "saved_model"
     if sm.exists():
         shutil.rmtree(sm)

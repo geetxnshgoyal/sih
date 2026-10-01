@@ -4,8 +4,8 @@ import { translateGlosses, type Translation } from "./glossTranslate";
 /**
  * Assemble recognised signs into an utterance.
  *
- * ISL word order is not spoken word order — "STATION GO WHERE" rather than
- * "where do I go for the station" — so a faithful system reorders glosses
+ * ISL word order is not spoken word order, "STATION GO WHERE" rather than
+ * "where do I go for the station": so a faithful system reorders glosses
  * before speaking. That reordering is a language task, and the honest options
  * are an LLM call or a linguist-written grammar.
  *
@@ -15,7 +15,7 @@ import { translateGlosses, type Translation } from "./glossTranslate";
  * `glossTranslate.ts` for the lookup and the provenance contract.
  *
  * The original caution still governs everything outside that table. A sequence
- * with no precomputed entry is NOT reordered — it falls back to the phrasebook,
+ * with no precomputed entry is NOT reordered, it falls back to the phrasebook,
  * or to glosses in signed order, and reports which of the three happened so the
  * UI can label it. Inventing plausible word order at runtime would produce
  * confident mistranslation, which remains worse than none.
@@ -28,10 +28,19 @@ export type Utterance = {
   glosses: string[];
   text: string;
   at: string;
+  /**
+   * Confidence of the LEAST certain sign in the utterance.
+   *
+   * Minimum, not mean: an utterance is only as trustworthy as its weakest
+   * component. "I need PARACETAMOL" where the drug name was a 35% guess is a
+   * 35% utterance, however sure the model was about "I" and "need". Averaging
+   * would hide exactly the sign that matters most.
+   */
+  conf: number;
 };
 
 /**
- * Sign pairs that read naturally when run together. Kept small and explicit —
+ * Sign pairs that read naturally when run together. Kept small and explicit , 
  * this is a phrasebook, not a grammar, and it should not pretend otherwise.
  */
 const PHRASE_PAIRS: Record<string, Record<LangCode, string>> = {
@@ -82,7 +91,7 @@ export function assembleWithSource(glosses: string[], lang: LangCode): Translati
     parts.push(phraseFor(glosses[i], lang));
   }
 
-  // 3. no pair matched either — this is signed order, and says so
+  // 3. no pair matched either, this is signed order, and says so
   return {
     text: parts.join(" "),
     source: usedPair ? "phrasebook" : "gloss-order",
@@ -101,17 +110,33 @@ export function assemble(glosses: string[], lang: LangCode): string {
  */
 export class UtteranceBuilder {
   private glosses: string[] = [];
+  private confs: number[] = [];
   private lastAt = 0;
 
   get pending(): string[] { return [...this.glosses]; }
 
-  /** Returns a completed utterance if this sign started a new one. */
-  add(gloss: string, now: number): Utterance | null {
+  /**
+   * Returns a completed utterance if this sign started a new one.
+   *
+   * `conf` is required. It used to be dropped here, and the closing path then
+   * emitted a hardcoded 1: so every finished utterance displayed 100% no
+   * matter how uncertain its signs were, while the live readout showed the
+   * honest number. That is the worst possible combination: the transient view
+   * was truthful and the permanent record was not.
+   */
+  add(gloss: string, now: number, conf: number): Utterance | null {
     let finished: Utterance | null = null;
     if (this.glosses.length && now - this.lastAt > UTTERANCE_GAP_MS) {
       finished = this.flushAt(new Date(this.lastAt));
     }
+    // A held gesture can be segmented more than once. Treat consecutive copies
+    // inside one utterance as the same sign so a single response cannot become
+    // "healthy healthy" merely because the camera fired twice.
+    if (this.glosses.at(-1)?.localeCompare(gloss, undefined, { sensitivity: "base" }) === 0) {
+      return finished;
+    }
     this.glosses.push(gloss);
+    this.confs.push(conf);
     this.lastAt = now;
     return finished;
   }
@@ -123,14 +148,21 @@ export class UtteranceBuilder {
     return this.flushAt(new Date(this.lastAt));
   }
 
+  flush(): Utterance | null {
+    return this.glosses.length ? this.flushAt(new Date(this.lastAt)) : null;
+  }
+
   private flushAt(when: Date): Utterance {
     const glosses = this.glosses;
+    const conf = this.confs.length ? Math.min(...this.confs) : 0;
     this.glosses = [];
-    return { glosses, text: "", at: when.toLocaleTimeString() };
+    this.confs = [];
+    return { glosses, text: "", at: when.toLocaleTimeString(), conf };
   }
 
   reset() {
     this.glosses = [];
+    this.confs = [];
     this.lastAt = 0;
   }
 }

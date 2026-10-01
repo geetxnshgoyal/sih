@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Mic, SendHorizontal, Square } from "lucide-react";
 import SignPlayer from "./SignPlayer";
-import { createRecogniser, textToGlosses, type SignLibrary } from "../lib/reverse";
+import { createRecogniser, textToGlosses } from "../lib/reverse";
 import { LANGUAGES, type LangCode } from "../lib/speech";
+import { useSignLibrary } from "../hooks/useSignLibrary";
 
 /**
- * Direction B — the hearing person's half of the conversation.
+ * Direction B: the hearing person's half of the conversation.
  *
  * They speak; it is transcribed, matched to signs we can play, and shown to
  * the deaf user as an animated skeleton plus large text. Text is not a
- * fallback here — many deaf users read the spoken language, and it carries the
+ * fallback here: many deaf users read the spoken language, and it carries the
  * words we have no sign for.
  */
 export default function HearingSide({
@@ -19,7 +21,7 @@ export default function HearingSide({
   lang: LangCode;
   synonyms?: Record<string, string>;
 }) {
-  const [library, setLibrary] = useState<SignLibrary>({});
+  const { library, getClip } = useSignLibrary();
   const [listening, setListening] = useState(false);
   const [heard, setHeard] = useState("");
   const [queue, setQueue] = useState<string[]>([]);
@@ -31,10 +33,6 @@ export default function HearingSide({
   const timerRef = useRef<number>(0);
 
   useEffect(() => {
-    fetch("/model/_signs.json")
-      .then((r) => r.json())
-      .then(setLibrary)
-      .catch(() => setLibrary({}));
     setSupported(!!createRecogniser(lang));
     return () => { window.clearTimeout(timerRef.current); };
   }, [lang]);
@@ -84,18 +82,20 @@ export default function HearingSide({
   }
 
   const current = queue[at];
-  const frames = current ? library[current] ?? null : null;
+  const clip = current ? library[current] ?? null : null;
+  const frames = clip?.body ?? null;
+  useEffect(() => { if (current && !frames?.length) void getClip(current); }, [current, frames, getClip]);
   const langLabel = LANGUAGES.find((l) => l.code === lang)?.label ?? lang;
 
   return (
     <section className="card hearing">
       <div className="card-h">
-        <span>Hearing person speaks · {langLabel}</span>
-        <span className="mono">{Object.keys(library).length} signs</span>
+        <span>Speech to signs</span>
+        <span className="mono">{langLabel}</span>
       </div>
 
       <div className="hearing-stage">
-        <SignPlayer frames={frames} />
+        <SignPlayer frames={frames} faceFrames={clip?.face} fps={clip?.fps ?? 14} />
         <div className="hearing-gloss">
           {current ? (
             <>
@@ -104,33 +104,52 @@ export default function HearingSide({
             </>
           ) : (
             <span className="idle-note">
-              {heard ? "no signs matched" : "Speak, and it will be signed here."}
+              {heard ? "No matching sign in the current library." : "Speak or type. The response appears here as signs."}
             </span>
+          )}
+          {queue.length > 0 && (
+            <div className="queue-pills" aria-label="Matched signs">
+              {queue.map((g, i) => (
+                <span key={`${g}-${i}`} className={i === at ? "on" : ""}>{g}</span>
+              ))}
+            </div>
           )}
         </div>
       </div>
 
       <div className="card-b">
-        <div className="row">
+        <div className="input-row">
           {supported ? (
             <button className={listening ? "" : "go"} onClick={listening ? stopListening : listen}>
-              {listening ? "Stop listening" : "Speak"}
+              {listening ? <Square size={16} /> : <Mic size={17} />}
+              {listening ? "Stop" : "Speak"}
             </button>
           ) : null}
-          <input
-            className="say"
-            value={typed}
-            placeholder="or type what you would say"
-            onChange={(e) => setTyped(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) { submit(typed); setTyped(""); } }}
-          />
+          <div className="type-submit">
+            <input
+              className="say"
+              value={typed}
+              placeholder="Type what you would say"
+              onChange={(e) => setTyped(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && typed.trim()) { submit(typed); setTyped(""); } }}
+            />
+            <button
+              className="icon-command send"
+              onClick={() => { if (typed.trim()) { submit(typed); setTyped(""); } }}
+              disabled={!typed.trim()}
+              aria-label="Send typed phrase"
+              title="Send"
+            >
+              <SendHorizontal size={17} />
+            </button>
+          </div>
         </div>
 
         {heard && <p className="heard">“{heard}”</p>}
 
         {skipped.length > 0 && (
           <p className="note skipped">
-            No sign for: {skipped.join(", ")} — shown as text only.
+            No sign for: {skipped.join(", ")}. Shown as text only.
           </p>
         )}
 

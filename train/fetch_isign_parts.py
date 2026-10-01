@@ -53,19 +53,66 @@ def token() -> str:
     return (Path.home() / ".cache" / "huggingface" / "token").read_text().strip()
 
 
-def download(name: str, dest: Path, tok: str) -> bool:
-    """curl -C -, because resumption is its job and it is not my code."""
-    # Measured 1.15 MB/s to this host, so a part is ~11 hours and drops are
-    # expected rather than exceptional. High retry count, and --speed-limit
-    # kills a connection that has genuinely stalled so the retry can start
-    # rather than hanging on a dead socket.
-    cmd = ["curl", "-sSL", "-C", "-", "--retry", "999", "--retry-delay", "10",
-           "--retry-all-errors", "--connect-timeout", "30",
-           "--speed-limit", "10000", "--speed-time", "120",
-           "-H", f"Authorization: Bearer {tok}", "-o", str(dest), URL.format(name)]
-    print(f"  downloading {name} ...", flush=True)
-    return subprocess.run(cmd).returncode == 0
+def part_size(name: str, tok: str) -> int | None:
+    """Content-Length for one part, so "finished" is a fact and not a guess."""
+    import urllib.request
+    try:
+        req = urllib.request.Request(URL.format(name), method="HEAD",
+                                     headers={"Authorization": f"Bearer {tok}"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            return int(r.headers["Content-Length"])
+    except Exception:
+        return None
 
+
+def download(name: str, dest: Path, tok: str, expected: int | None = None) -> bool:
+    """Fetch one part, resuming from whatever is already on disk.
+
+    The retry loop is HERE and not inside curl, and that distinction is the
+    whole bug that lost 24 hours. `-C -` computes its resume offset ONCE, when
+    curl starts, from the file's size at that moment. `--retry` then re-runs the
+    transfer within the same invocation and restarts from that original offset,
+    discarding everything fetched since. Observed directly: the file reached
+    9.05 GB overnight and was back to 0.43 GB by morning, because each of the
+    100 network errors threw away all progress made since the process began.
+
+    Calling curl afresh per attempt makes `-C -` recompute the offset against
+    the file as it actually is, so a dropped connection costs one attempt rather
+    than everything. Hugging Face honours Range on this URL (206 on three of
+    three probes), so resumption genuinely works once curl is asked correctly.
+    """
+    import time
+    attempt = 0
+    stalled = 0
+    while True:
+        attempt += 1
+        before = dest.stat().st_size if dest.exists() else 0
+        if expected and before >= expected:
+            return True
+        rc = subprocess.run(
+            ["curl", "-sSL", "-C", "-",
+             # no --retry: one attempt per invocation, so the next one re-reads
+             # the file size instead of rewinding to a stale offset
+             "--connect-timeout", "30",
+             "--speed-limit", "10000", "--speed-time", "120",
+             "-H", f"Authorization: Bearer {tok}",
+             "-o", str(dest), URL.format(name)]).returncode
+        after = dest.stat().st_size if dest.exists() else 0
+        if rc == 0 and (not expected or after >= expected):
+            return True
+        gained = after - before
+        if gained <= 0:
+            stalled += 1
+            if stalled >= 12:
+                print(f"    {name}: 12 attempts with no progress, giving up "
+                      f"at {after/1e9:.2f} GB", flush=True)
+                return False
+        else:
+            stalled = 0
+        pct = f" ({after/expected*100:.1f}%)" if expected else ""
+        print(f"    {name}: attempt {attempt} exit {rc}, +{gained/1e6:.0f} MB, "
+              f"now {after/1e9:.2f} GB{pct}", flush=True)
+        time.sleep(5)
 
 def to_contract(data: np.ndarray) -> np.ndarray | None:
     pose = data[:, 0, 0:features.POSE_KEEP, :3]
@@ -129,7 +176,7 @@ def main() -> int:
             print(f"  {name}: already parsed")
             continue
         pf = OUT / name
-        if not download(name, pf, tok):
+        if not download(name, pf, tok, part_size(name, tok)):
             print(f"  {name}: download failed, stopping (rerun to resume)")
             return 1
 

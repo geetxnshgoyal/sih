@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Setu · Phase 0 — Signs to Speech</title>
+<title>Setu · Phase 0: Signs to Speech</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
@@ -192,7 +192,7 @@ select{
   <div class="brand">
     <div class="mark">से</div>
     <div>
-      <h1>Setu — ISL to Regional Speech</h1>
+      <h1>Setu: ISL to Regional Speech</h1>
       <p>Phase 0 · proof of concept</p>
     </div>
   </div>
@@ -203,7 +203,7 @@ select{
   <section class="card">
     <div class="card-h">
       <span>Live camera · hand landmarks</span>
-      <span class="mono" id="fps">—</span>
+      <span class="mono" id="fps">, </span>
     </div>
     <div class="stage" id="stage">
       <video id="video" playsinline muted autoplay></video>
@@ -279,7 +279,7 @@ select{
             <div><b>THANK YOU</b><small>Both flat palms brought together in front of the chest.</small></div>
           </div>
         </div>
-        <p class="note" style="margin-top:13px">Hold until the ring fills. Below 75% confidence nothing fires — <b style="color:var(--muted)">silence beats a wrong word</b>.</p>
+        <p class="note" style="margin-top:13px">Hold until the ring fills. Below 75% confidence nothing fires, <b style="color:var(--muted)">silence beats a wrong word</b>.</p>
       </div>
     </section>
 
@@ -289,7 +289,7 @@ select{
     </section>
 
     <p class="note" style="padding:0 4px">
-      Rules over landmarks — no training, no network after load. Phase 1 replaces
+      Rules over landmarks: no training, no network after load. Phase 1 replaces
       <code>classify()</code> with a trained model over the same landmark stream; nothing else changes.
     </p>
   </div>
@@ -385,7 +385,7 @@ function waveScore(){
 }
 
 /* ================================================================
-   2 · classify() — THE SWAPPABLE PIECE.
+   2 · classify(): THE SWAPPABLE PIECE.
    Phase 1 replaces this entire function with a trained model over
    the same landmark stream. Signature stays: hands -> {gloss, conf}.
    ================================================================ */
@@ -394,7 +394,7 @@ function classify(hands){
   const H = hands.map(describe);
   const s = {};
 
-  // THANK YOU — two flat palms brought together
+  // THANK YOU: two flat palms brought together
   if (H.length === 2){
     const [a,b] = H;
     const sc = (a.scale + b.scale)/2;
@@ -405,7 +405,7 @@ function classify(hands){
     s.THANK_YOU = flat*0.42 + wristGap*0.24 + tipGap*0.24 + tight*0.10;
   }
 
-  // HELP — thumbs up, optionally on the flat other palm
+  // HELP: thumbs up, optionally on the flat other palm
   for (const h of H){
     const up = ramp((h.lm[5].y - h.lm[4].y)/h.scale, 0.15, 0.75);
     let v = h.fourShut*0.45 + up*0.40 + h.thumb*0.15;
@@ -413,7 +413,7 @@ function classify(hands){
     s.HELP = Math.max(s.HELP ?? 0, v);
   }
 
-  // HELLO — one open palm, fingers spread
+  // HELLO: one open palm, fingers spread
   for (const h of H){
     s.HELLO = Math.max(s.HELLO ?? 0,
       h.fourOpen*0.75 + h.spread*0.15 + waveScore()*0.10);
@@ -427,7 +427,7 @@ function classify(hands){
 }
 
 /* ================================================================
-   3 · Stability gate — silence beats a wrong word.
+   3 · Stability gate: silence beats a wrong word.
    ================================================================ */
 const WINDOW=14, NEEDED=10, FLOOR=0.75, COOLDOWN=1800;
 const win = [];
@@ -472,7 +472,7 @@ function loadVoices(){
   const v = pickVoice(langSel.value);
   voiceNote.innerHTML = v
     ? `Voice: <code>${v.name}</code>`
-    : `No <code>${langSel.value}</code> voice installed — the browser will use its default. On macOS add one under System Settings → Accessibility → Spoken Content → Manage Voices.`;
+    : `No <code>${langSel.value}</code> voice installed: the browser will use its default. On macOS add one under System Settings → Accessibility → Spoken Content → Manage Voices.`;
 }
 speechSynthesis.addEventListener("voiceschanged", loadVoices);
 langSel.addEventListener("change", loadVoices);
@@ -553,7 +553,7 @@ try {
 } catch (e) {
   setStatus("err","Model failed to load");
   showErr("Could not load the MediaPipe hand model: " + e.message +
-    "\nThe first load needs internet — the model and WASM come from a CDN. After that it is cached.");
+    "\nThe first load needs internet, the model and WASM come from a CDN. After that it is cached.");
 }
 loadVoices();
 
@@ -594,7 +594,7 @@ stopBtn.onclick = () => {
   startBtn.disabled=false; stopBtn.disabled=true;
   win.length=0; trail.length=0;
   setStatus("ok","Model ready");
-  fpsEl.textContent="—";
+  fpsEl.textContent=", ";
 };
 
 clearBtn.onclick = () => { logEl.innerHTML=""; };

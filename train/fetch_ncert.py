@@ -46,6 +46,8 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
+from pipeline_words import priority_key
+from face import FACE_SUBSET
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "ncert_landmarks"
@@ -89,13 +91,24 @@ def safe(name: str) -> str:
     return "".join(c if c.isalnum() or c in " _-" else "_" for c in name)[:80]
 
 
-def catalogue(limit: int) -> list[dict]:
+def catalogue(limit: int, refresh: bool = False) -> list[dict]:
+    if META.exists() and not refresh:
+        try:
+            cached = json.loads(META.read_text())
+            if isinstance(cached, list) and cached:
+                return cached[:limit] if limit else cached
+        except (OSError, json.JSONDecodeError):
+            pass
+
     import yt_dlp
+    # Playlist enumeration occasionally stalls on YouTube API pagination. Keep
+    # retries and timeouts bounded so the coordinator can continue to the next
+    # licensed source and record the failure instead of hanging indefinitely.
     opts = {"quiet": True, "extract_flat": "in_playlist", "skip_download": True,
-            "socket_timeout": 60, "playlistend": 20000}
+            "socket_timeout": 15, "playlistend": 1000, "retries": 0,
+            "extractor_retries": 0, "ignoreerrors": True}
     items: dict[str, dict] = {}
     sources = [f"https://www.youtube.com/playlist?list={p}" for p in PLAYLISTS]
-    sources.append(f"{CHANNEL}/videos")
     for src in sources:
         try:
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -158,7 +171,7 @@ def process(item: dict, work: Path, holistic) -> bool:
         aspect = (w / h) if h else 16 / 9
         src_fps = cap.get(cv2.CAP_PROP_FPS) or TARGET_FPS
         stride = max(1, int(round(src_fps / TARGET_FPS)))
-        pose, lh, rh = [], [], []
+        pose, face, lh, rh = [], [], [], []
         fi = -1
         while True:
             ok, frame = cap.read()
@@ -169,6 +182,7 @@ def process(item: dict, work: Path, holistic) -> bool:
                 continue
             res = holistic.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             pose.append(to_array(res.pose_landmarks, N_POSE, 4))
+            face.append(to_array(res.face_landmarks, 468, 3)[FACE_SUBSET])
             lh.append(to_array(res.left_hand_landmarks, N_HAND, 3))
             rh.append(to_array(res.right_hand_landmarks, N_HAND, 3))
         cap.release()
@@ -185,8 +199,11 @@ def process(item: dict, work: Path, holistic) -> bool:
 
         dest.parent.mkdir(parents=True, exist_ok=True)
         tmp = dest.with_suffix(".tmp.npz")
-        np.savez_compressed(tmp, pose=np.stack(pose)[lo:hi], lh=LH[lo:hi],
-                            rh=RH[lo:hi], aspect=np.float32(aspect))
+        np.savez_compressed(tmp, pose=np.stack(pose)[lo:hi], face=np.stack(face)[lo:hi],
+                            lh=LH[lo:hi], rh=RH[lo:hi], aspect=np.float32(aspect),
+                            fps=np.float32(TARGET_FPS), source=np.array("ncert"),
+                            source_url=np.array(f'https://www.youtube.com/watch?v={item["id"]}'),
+                            extraction_version=np.int32(2))
         tmp.replace(dest)
         return True
     finally:
@@ -197,16 +214,28 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--list", action="store_true")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--batch-size", type=int, default=0,
+                    help="process at most this many unfinished clips")
+    ap.add_argument("--tier", type=int, choices=[0, 1, 2])
     ap.add_argument("--complexity", type=int, default=1, choices=[0, 1, 2])
+    ap.add_argument("--refresh-catalogue", action="store_true",
+                    help="refresh the cached YouTube playlist catalogue")
     args = ap.parse_args()
 
-    items = catalogue(args.limit)
+    items = sorted(catalogue(args.limit, args.refresh_catalogue),
+                   key=lambda item: priority_key(item["word"]))
+    if args.tier is not None:
+        items = [item for item in items if priority_key(item["word"])[0] == args.tier]
     words = sorted({i["word"] for i in items})
     print(f"{len(items)} clips, {len(words)} distinct words")
     if args.list:
         for w in words:
             print(f"  {w}")
         return 0
+
+    if args.batch_size:
+        items = [item for item in items
+                 if not (OUT / safe(item["word"]) / f'{item["id"]}.npz').exists()][:args.batch_size]
 
     import mediapipe as mp
     OUT.mkdir(parents=True, exist_ok=True)

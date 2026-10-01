@@ -1,5 +1,5 @@
 """
-Extract landmarks from INCLUDE raw video — including the 468-point face mesh.
+Extract landmarks from INCLUDE raw video, including the 468-point face mesh.
 
     .venv-mp/bin/python train/extract_video.py            # all downloaded parts
     .venv-mp/bin/python train/extract_video.py --stream   # download, extract, delete
@@ -14,7 +14,7 @@ wh-question, mouth morphemes distinguishing otherwise identical handshapes.
 None of that is recoverable without the mesh, so a hands-only model renders a
 question as a statement.
 
-Runs MediaPipe 0.10's legacy Holistic — the same tool AI4Bharat used to build
+Runs MediaPipe 0.10's legacy Holistic: the same tool AI4Bharat used to build
 the pose release, so re-extracted landmarks stay consistent with what is
 already trained. (MediaPipe 1.x's HolisticLandmarker is present in the Python
 package but non-functional: "Check failed: service_ Service is unavailable".)
@@ -51,7 +51,7 @@ def empty(n: int, dims: int) -> np.ndarray:
 
 def to_array(landmarks, n: int, dims: int) -> np.ndarray:
     """A missing hand or face becomes zeros, matching how the pose release
-    stores undetected parts — so downstream code needs no special case."""
+    stores undetected parts: so downstream code needs no special case."""
     if landmarks is None:
         return empty(n, dims)
     out = np.zeros((n, dims), dtype=np.float32)
@@ -110,7 +110,7 @@ def process_zip(zip_path: Path, holistic, keep_video: bool) -> int:
         # Write to a temp file and rename, rather than writing dest in place.
         #
         # np.savez_compressed builds a zip incrementally, so a process killed
-        # mid-write leaves a truncated .npz that still EXISTS — which means the
+        # mid-write leaves a truncated .npz that still EXISTS, which means the
         # `dest.exists()` skip above treats it as done, and the corruption only
         # surfaces hours later as "Bad CRC-32" in preprocess_face.py. That is
         # exactly what happened on 31 Aug: 29 Jobs clips were lost this way when

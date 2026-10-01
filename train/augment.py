@@ -11,7 +11,7 @@ Operates on the anchored (T, 65, 3) tensor, before standardisation.
 import numpy as np
 
 # MediaPipe pose landmarks come in left/right pairs. Mirroring the body means
-# swapping each pair, not just negating x — otherwise the left elbow ends up
+# swapping each pair, not just negating x, otherwise the left elbow ends up
 # labelled as the right one and the skeleton is inconsistent.
 POSE_PAIRS = [(1, 4), (2, 5), (3, 6), (7, 8), (9, 10),
               (11, 12), (13, 14), (15, 16), (17, 18), (19, 20), (21, 22)]
@@ -45,7 +45,7 @@ def perspective(seq: np.ndarray, rng, d_lo=1.6, d_hi=9.0) -> np.ndarray:
     This replaces an earlier scale_jitter that was a no-op: multiplying every
     coordinate by a constant is removed exactly by the unit-variance
     standardisation downstream (verified: max diff 4e-16). Distance is NOT a
-    scale change, it is a projective one — points nearer the lens spread
+    scale change, it is a projective one, points nearer the lens spread
     outward more than far ones, and that non-linearity does survive
     normalisation.
 
@@ -86,7 +86,7 @@ def z_noise(seq: np.ndarray, rng, scale=0.35) -> np.ndarray:
 
 
 def time_mask(seq: np.ndarray, rng, max_width=5) -> np.ndarray:
-    """Blank a few consecutive frames — occlusion, or a dropped detection."""
+    """Blank a few consecutive frames, occlusion, or a dropped detection."""
     out = seq.copy()
     w = int(rng.integers(2, max_width + 1))
     s = int(rng.integers(0, max(len(out) - w, 1)))
@@ -106,11 +106,33 @@ def time_mask(seq: np.ndarray, rng, max_width=5) -> np.ndarray:
 # Mirror stays off: switching to HolisticLandmarker made the browser's
 # handedness convention match the training extraction, so it is no longer
 # guarding against anything.
+def hand_dropout(seq: np.ndarray, rng, max_frac=0.35) -> np.ndarray:
+    """Blank one hand for a run of frames, as MediaPipe does in the wild.
+
+    Every other augmentation here perturbs geometry. None of them reproduce the
+    failure that actually happens: the hand tracker losing a hand. Measured hand
+    presence is 0.89 on INCLUDE, 0.79 on the ISL dictionary and as low as 0.44
+    before trimming, and a zeroed hand is not noise, it is a specific point in
+    feature space the model has never been trained to tolerate.
+
+    A contiguous run rather than scattered frames, because that is the shape of
+    a real dropout: the tracker loses the hand and takes a moment to find it.
+    """
+    seq = seq.copy()
+    t = seq.shape[0]
+    width = int(rng.integers(1, max(int(t * max_frac), 2)))
+    start = int(rng.integers(0, max(t - width, 1)))
+    hand = LEFT_HAND if rng.random() < 0.5 else RIGHT_HAND
+    seq[start:start + width, hand, :] = 0.0
+    return seq
+
+
 USE_MIRROR = False
 USE_PERSPECTIVE = True
 USE_ROTATE = True
 USE_Z_NOISE = False
 USE_TIME_MASK = True
+USE_HAND_DROPOUT = False   # switched on per experiment, see eval_robust.py
 
 
 def augment_batch(X: np.ndarray, y: np.ndarray, rng, factor: int = 4):
@@ -133,6 +155,8 @@ def augment_batch(X: np.ndarray, y: np.ndarray, rng, factor: int = 4):
                 a = z_noise(a, rng)
             if USE_TIME_MASK and rng.random() < 0.5:
                 a = time_mask(a, rng)
+            if USE_HAND_DROPOUT and rng.random() < 0.5:
+                a = hand_dropout(a, rng)
             A[j] = a
         Xs.append(A)
         ys.append(y)

@@ -39,13 +39,20 @@ NODE_HARNESS = r"""
 import { readFileSync } from "node:fs";
 const tsSrc = readFileSync(process.argv[2], "utf8");
 
-// strip TypeScript syntax the JS engine will not accept
+// strip TypeScript syntax the JS engine will not accept.
+//
+// This is an allowlist of type names, not a parser, so a new annotation in
+// features.ts breaks this harness rather than the contract it guards. That is
+// the safe direction to fail in (a loud crash, not a silent pass) but it does
+// mean the list has to grow when the file does.
 const js = tsSrc
   .replace(/^\s*export\s+type[\s\S]*?;\s*$/gm, "")
   .replace(/:\s*Float64Array\b/g, "").replace(/:\s*Float32Array\b/g, "")
   .replace(/:\s*PointFrame\[\]/g, "").replace(/:\s*PointFrame\b/g, "")
   .replace(/:\s*Landmark\[\]\s*\|\s*null/g, "").replace(/:\s*Landmark\b/g, "")
   .replace(/:\s*number\[\]/g, "").replace(/:\s*number\b/g, "")
+  .replace(/:\s*boolean\b/g, "").replace(/:\s*string\b/g, "")
+  .replace(/:\s*void\b/g, "")
   .replace(/\bexport\s+const\b/g, "const")
   .replace(/\bexport\s+function\b/g, "function")
   .replace(/new Array\(N_POINTS\)/g, "new Array(N_POINTS)");

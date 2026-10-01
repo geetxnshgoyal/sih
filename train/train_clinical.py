@@ -1,0 +1,322 @@
+"""
+Train a curated vocabulary: fewer signs, each one worth saying.
+
+    .venv-tf/bin/python train/train_clinical.py                 # 38-sign clinical
+    .venv-tf/bin/python train/train_clinical.py --vocab universal   # 83-sign, both settings
+
+Reads  data/dataset_merged.npz  +  models/encoder_pretrain.weights.h5
+Writes models/clinical/  (gloss_classifier.keras, labels.json, metrics.json)
+       run/clinical_eval.json
+
+Why a smaller vocabulary
+------------------------
+Measured on held-out INCLUDE group 0, holding data, recipe and protocol fixed
+and varying only the number of classes (run/vocab_eval.json):
+
+    classes    top-1    top-5
+       20      76.1%    94.8%
+       80      66.0%    92.8%
+      264      56.1%    81.4%
+
+264 classes costs about ten points of top-1 and thirteen of top-5. Each extra
+class is another way to be wrong across ~19 clips from about ten signers, and
+most of them are words a clinic will never need. Yellow, Grey and Thursday are
+not worth the accuracy they take from Doctor.
+
+What this vocabulary CANNOT say
+-------------------------------
+INCLUDE is a general-purpose corpus, so the most important clinical words are
+simply not in it at any count:
+
+    pain  water  help  yes  no  please  fever  breathe  emergency  head  stomach
+
+Those stay on the phrase board, which is exact, offline and needs no model. This
+is the honest division of labour: the board carries what must never be wrong,
+and recognition carries what is convenient. Anyone reading a headline accuracy
+number for this model should read that list first.
+"""
+import argparse
+import json
+import sys
+from pathlib import Path
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+
+sys.path.insert(0, str(Path(__file__).parent))
+import augment as aug
+from train import BATCH, EPOCHS, build_model, close_range, standardise
+from train_production import VAL_FRACTION, ece, fit_temperature, temperature_scale
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / "data" / "dataset_merged.npz"
+# Stacked encoder: SSL on the ISL dictionary, THEN supervised ASL. Measured on
+# this same vocabulary, identical arms, held-out signer (run/stacked_eval.json):
+#
+#     none      54.5%      asl       69.1%   <- what shipped
+#     ssl       52.8%      stacked   72.2%   (+3.1)
+#
+# The two signals compound rather than one overwriting the other: starting the
+# ASL stage from a representation that already knows how Indian hands move
+# produces a better ASL encoder, and that survives fine-tuning. It is also the
+# only use in which the ISL dictionary paid for itself -- alone it was worth
+# +1.3, as an initialiser it is worth +3.1 on top of ASL.
+ENCODER = ROOT / "models" / "encoder_stacked.weights.h5"
+ENCODER_FALLBACK = ROOT / "models" / "encoder_pretrain.weights.h5"
+OUT_BASE = ROOT / "models"
+RUN_BASE = ROOT / "run"
+SEED = 0
+FACTOR = 4
+
+# The universal vocabulary: one model for every setting rather than one per
+# setting. A hospital and a railway counter need the same greetings, the same
+# pronouns and the same words for time; only the nouns differ, and carrying both
+# sets costs far less than carrying all 264.
+#
+# 83 classes rather than 38 is a deliberate trade. The vocabulary curve
+# (run/vocab_eval.json) says accuracy falls as classes rise, so this buys
+# coverage with a few points of top-1. Whether that trade is worth taking is
+# measured, not assumed: compare against models/clinical/metrics.json.
+UNIVERSAL = [
+    # people, and who is being spoken about
+    "I", "you", "he", "she", "we", "they", "Man", "Woman", "Child", "Family", "Friend",
+    # opening and closing any conversation, anywhere
+    "Hello", "Thank you", "How are you", "Alright", "Pleased", "good", "bad",
+    "Good Morning", "Good afternoon", "Good evening", "Good night",
+    # health
+    "sick", "healthy", "weak", "strong", "alive", "Death", "Doctor", "Hospital",
+    "Medicine", "Patient", "Deaf", "Blind", "hot", "cold", "warm", "cool",
+    # getting around, and the transactions that go with it
+    "Train", "Bus", "Car", "Plane", "Boat", "Bicycle", "Train Station",
+    "train ticket", "Restaurant", "Market", "Store or Shop", "Street or Road",
+    "City", "Bank", "Money", "Police", "Park", "Bill", "Key", "Door",
+    "Transportation", "Location",
+    # when: onset, duration and appointments are most of any exchange
+    "Today", "Tomorrow", "Yesterday", "Time", "Morning", "Evening", "Night",
+    "Afternoon", "Hour", "Minute", "Week", "Month", "Year",
+    # where
+    "Bathroom", "Bedroom", "House", "School", "Office", "Library", "Temple",
+    "University", "Kitchen", "Ground",
+]
+
+# Chosen for what a consultation needs, then filtered to what the data actually
+# supports. Grouped so the gaps are visible rather than buried.
+CLINICAL = [
+    # who is speaking, and about whom
+    "I", "you", "he", "she", "we", "they",
+    # opening and closing a conversation
+    "Hello", "Thank you", "How are you", "Alright", "Pleased",
+    # the two words that carry most of a triage answer
+    "good", "bad",
+    # state of health
+    "sick", "healthy", "weak", "strong", "alive", "Death",
+    # who and where
+    "Doctor", "Hospital", "Medicine", "Patient", "Deaf", "Blind",
+    # sensation, the closest this corpus gets to a symptom
+    "hot", "cold", "warm", "cool",
+    # when: onset and duration are most of a history
+    "Today", "Tomorrow", "Yesterday", "Time", "Morning", "Evening", "Night",
+    # where in a building, for orientation and mobility
+    "Bathroom", "Bedroom",
+]
+
+
+def warm_start(model, n_classes) -> int:
+    """Copy the pretrained encoder in, skipping the classifier head.
+
+    Matched by position and shape; a mismatch is the head, which is exactly what
+    we want to skip. Both candidate encoders were trained with a 2,186-class
+    head, so that is the shape to rebuild before loading.
+    """
+    src_path = ENCODER if ENCODER.exists() else ENCODER_FALLBACK
+    if not src_path.exists():
+        return 0
+    src = build_model(32, 195, 2186)
+    try:
+        src.load_weights(src_path)
+    except Exception as exc:  # noqa: BLE001
+        print(f"  ! could not load {src_path.name}: {exc}")
+        return 0
+    # BY NAME, not by position. zip(src.layers, model.layers) pairs the wrong
+    # layers the moment anything is inserted, every shape still happens to
+    # match, and the ASL pretraining worth +18.4 vanishes with no error at all.
+    # The motion trunk is named "mot*" precisely so it is skipped and starts
+    # fresh, while the position trunk keeps its pretrained weights.
+    by_name = {l.name: l for l in src.layers}
+    moved = 0
+    for b in model.layers:
+        a = by_name.get(b.name)
+        if a is None:
+            continue
+        wa, wb = a.get_weights(), b.get_weights()
+        if len(wa) != len(wb) or any(x.shape != z.shape for x, z in zip(wa, wb)):
+            continue
+        b.set_weights(wa)
+        moved += 1
+    keras.backend.clear_session()
+    return moved
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--vocab", choices=["clinical", "universal"], default="clinical")
+    ap.add_argument("--seed", type=int, default=SEED,
+                    help="three identical runs gave 75.1, 73.8 and 73.3 top-1, "
+                         "so a single run is a draw and not a measurement")
+    ap.add_argument("--tag", default="",
+                    help="suffix for the eval json, so runs do not overwrite")
+    ap.add_argument("--motion", action="store_true",
+                    help="two-stream: positions plus an in-graph motion trunk")
+    ap.add_argument("--extra", action="store_true",
+                    help="fold in data/dict_extra.npz: dictionary clips of "
+                         "classes already in the set, as their own signer group")
+    args = ap.parse_args()
+    vocab = CLINICAL if args.vocab == "clinical" else UNIVERSAL
+    out_dir = OUT_BASE / args.vocab
+    run_path = RUN_BASE / f"{args.vocab}_eval{args.tag}.json"
+    print(f"vocabulary: {args.vocab} ({len(vocab)} requested)")
+
+    d = np.load(DATA, allow_pickle=True)
+    X, y, signer, corpus = d["X"], d["y"], d["signer"], d["corpus"]
+    labels = [str(s) for s in d["labels"]]
+
+    # Extra SIGNERS, not extra classes. The measured history here is blunt:
+    # five training-side changes did nothing, cutting the vocabulary 264 -> 83
+    # gave +8.4, and adding CISLR (different people, words already in the set)
+    # gave +3.4. Signer diversity is the lever. These are dictionary clips of
+    # classes already trained on, in their own signer group so leave-one-group
+    # -out still means what it says.
+    if args.extra:
+        ep = ROOT / "data" / "dict_extra.npz"
+        if not ep.exists():
+            print(f"missing {ep.name}, run train/preprocess_dict_extra.py first")
+            return 1
+        e = np.load(ep, allow_pickle=True)
+        assert [str(s) for s in e["labels"]] == labels, "label sets differ"
+        assert e["X"].shape[1:] == X.shape[1:], "feature shape differs"
+        X = np.concatenate([X, e["X"]])
+        y = np.concatenate([y, e["y"]])
+        signer = np.concatenate([signer, e["signer"]])
+        corpus = np.concatenate([corpus, e["corpus"]])
+        print(f"folded in {len(e['X'])} dictionary clips as signer group "
+              f"{int(e['signer'][0])}")
+    index = {l: i for i, l in enumerate(labels)}
+    rng = np.random.default_rng(args.seed)
+    tf.random.set_seed(args.seed)
+    which = ENCODER if ENCODER.exists() else ENCODER_FALLBACK
+    print(f"encoder: {which.name}")
+
+    keep, missing = [], []
+    for w in vocab:
+        (keep if w in index else missing).append(w)
+    if missing:
+        print(f"not in the corpus, dropped: {', '.join(missing)}")
+    ids = [index[w] for w in keep]
+    remap = -np.ones(len(labels), np.int64)
+    for new, old in enumerate(ids):
+        remap[old] = new
+
+    m = np.isin(y, ids)
+    Xs, ys, sg, cp = X[m], remap[y[m]], signer[m], corpus[m]
+    counts = np.bincount(ys, minlength=len(keep))
+    print(f"\n{len(keep)} classes | {len(Xs)} clips "
+          f"(min {counts.min()}, median {int(np.median(counts))}, max {counts.max()})")
+    print(f"dropped {len(X) - len(Xs)} clips of the other {len(labels) - len(keep)} classes\n")
+
+    # ---- leave-one-group-out: honest accuracy AND out-of-fold predictions ----
+    groups = sorted(set(sg.tolist()))
+    oof = np.zeros((len(Xs), len(keep)), np.float32)
+    seen = np.zeros(len(Xs), bool)
+    per = []
+    for g in groups:
+        te = sg == g
+        if te.sum() < 20:
+            continue
+        tr = ~te
+        idx = np.flatnonzero(tr)
+        rng.shuffle(idx)
+        cut = max(int((1 - VAL_FRACTION) * len(idx)), 1)
+        core, va = idx[:cut], idx[cut:]
+        Xa, ya = aug.augment_batch(Xs[core], ys[core], rng, factor=FACTOR)
+        model = build_model(Xa.shape[1], Xa.shape[2] * Xa.shape[3], len(keep),
+                            motion=args.motion)
+        warm_start(model, len(keep))
+        model.fit(standardise(Xa), ya,
+                  validation_data=(standardise(Xs[va]), ys[va]),
+                  epochs=EPOCHS, batch_size=BATCH,
+                  callbacks=[
+                      keras.callbacks.EarlyStopping(monitor="val_accuracy", patience=12,
+                                                    restore_best_weights=True),
+                      keras.callbacks.ReduceLROnPlateau(monitor="val_accuracy",
+                                                        factor=0.5, patience=5,
+                                                        min_lr=1e-5),
+                  ], verbose=0)
+        p = model.predict(standardise(close_range(Xs[te])), verbose=0)
+        oof[te], seen[te] = p, True
+        t1 = float((p.argmax(1) == ys[te]).mean())
+        t5 = float(np.mean([ys[te][i] in p[i].argsort()[-5:] for i in range(int(te.sum()))]))
+        src = "INCLUDE" if cp[te][0] == 0 else "CISLR"
+        per.append({"group": int(g), "corpus": src, "clips": int(te.sum()),
+                    "top1": t1, "top5": t5})
+        print(f"  group {g} ({src:7s}, {int(te.sum()):4d} clips)  "
+              f"top-1 {t1*100:5.1f}%  top-5 {t5*100:5.1f}%", flush=True)
+        keras.backend.clear_session()
+
+    inc = [r for r in per if r["corpus"] == "INCLUDE"]
+    m1 = float(np.mean([r["top1"] for r in inc]))
+    m5 = float(np.mean([r["top5"] for r in inc]))
+    print(f"\n  INCLUDE mean  top-1 {m1*100:5.1f}%  top-5 {m5*100:5.1f}%")
+    print(f"  264-class model on the same protocol: 64.8% top-1, 86.6% top-5")
+
+    # ---- calibrate on the out-of-fold predictions ----
+    p, yy = oof[seen], ys[seen]
+    T = fit_temperature(p, yy)
+    before, after = ece(p, yy), ece(temperature_scale(p, T), yy)
+    cal = temperature_scale(p, T)
+    print(f"\n  temperature {T:.2f}   ECE {before*100:.1f}pp -> {after*100:.1f}pp")
+    bands = []
+    for floor in (0.30, 0.40, 0.50, 0.70, 0.90):
+        sel = cal.max(1) >= floor
+        rate = float(sel.mean())
+        acc = float((cal[sel].argmax(1) == yy[sel]).mean()) if sel.any() else 0.0
+        bands.append({"floor": floor, "speaks": rate, "accuracy": acc})
+        print(f"    floor {floor:.2f}  speaks {rate*100:4.1f}%  right {acc*100:5.1f}%")
+
+    # ---- final model on everything ----
+    print("\n  final model, all groups...", flush=True)
+    idx = rng.permutation(len(Xs))
+    cut = max(int((1 - VAL_FRACTION) * len(idx)), 1)
+    core, va = idx[:cut], idx[cut:]
+    Xa, ya = aug.augment_batch(Xs[core], ys[core], rng, factor=FACTOR)
+    final = build_model(Xa.shape[1], Xa.shape[2] * Xa.shape[3], len(keep),
+                        motion=args.motion)
+    warm_start(final, len(keep))
+    final.fit(standardise(Xa), ya,
+              validation_data=(standardise(Xs[va]), ys[va]),
+              epochs=EPOCHS, batch_size=BATCH,
+              callbacks=[
+                  keras.callbacks.EarlyStopping(monitor="val_accuracy", patience=12,
+                                                restore_best_weights=True),
+                  keras.callbacks.ReduceLROnPlateau(monitor="val_accuracy", factor=0.5,
+                                                    patience=5, min_lr=1e-5),
+              ], verbose=0)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    final.save(out_dir / "gloss_classifier.keras")
+    (out_dir / "labels.json").write_text(json.dumps(keep))
+    doc = {"classes": len(keep), "labels": keep, "clips": int(len(Xs)),
+           "encoder": which.name,
+           "held_out_group": per, "held_out_mean": {"top1": m1, "top5": m5},
+           "temperature": T, "ece_before": before, "ece_after": after,
+           "bands": bands, "cannot_say": ["pain", "water", "help", "yes", "no",
+                                          "please", "fever", "breathe"]}
+    (out_dir / "metrics.json").write_text(json.dumps(doc, indent=2))
+    run_path.parent.mkdir(parents=True, exist_ok=True)
+    run_path.write_text(json.dumps(doc, indent=2))
+    print(f"\nsaved {out_dir.relative_to(ROOT)}/  (temperature {T:.2f})")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

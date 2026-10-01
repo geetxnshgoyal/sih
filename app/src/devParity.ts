@@ -9,19 +9,23 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import { extractFeatures, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame } from "./lib/features";
+import { asset } from "./lib/assetUrl";
 
 export async function checkModelParity() {
   try {
     const [ref, labels, model] = await Promise.all([
-      fetch("/model/_ref.json").then((r) => r.json()),
-      fetch("/model/labels.json").then((r) => r.json()) as Promise<string[]>,
-      tf.loadGraphModel("/model/model.json"),
+      fetch(asset("/model/_ref.json")).then((r) => r.json()),
+      fetch(asset("/model/labels.json")).then((r) => r.json()) as Promise<string[]>,
+      tf.loadGraphModel(asset("/model/model.json")),
     ]);
 
     const rows: number[][] = ref.input;
     const flat = rows.flat();
     const input = tf.tensor(flat, [1, rows.length, rows[0].length]);
-    const probs = Array.from((model.predict(input) as tf.Tensor).dataSync());
+    // the graph has two outputs now (softmax + embedding), so name the one
+    // this check is about rather than relying on predict()'s array order
+    const probs = Array.from(
+      (model.execute(input, ["Identity"]) as tf.Tensor).dataSync());
     input.dispose();
 
     let maxDiff = 0;
@@ -50,18 +54,22 @@ export async function checkModelParity() {
 export async function checkClipParity() {
   try {
     const [clips, labels, model] = await Promise.all([
-      fetch("/model/_demo.json").then((r) => r.json()),
-      fetch("/model/labels.json").then((r) => r.json()) as Promise<string[]>,
-      tf.loadGraphModel("/model/model.json"),
+      fetch(asset("/model/_demo.json")).then((r) => r.json()),
+      fetch(asset("/model/labels.json")).then((r) => r.json()) as Promise<string[]>,
+      tf.loadGraphModel(asset("/model/model.json")),
     ]);
     console.log("[clip] name              py-pred          ts-pred          py-conf ts-conf");
     for (const c of clips) {
       const frames: PointFrame[] = c.frames.map((f: number[][]) =>
         f.map(([x, y, z]) => ({ x, y, z }))
       );
-      const feats = extractFeatures(frames);
+      // These are INCLUDE clips, and INCLUDE is uniformly 1920x1080. Clips
+      // written after the isotropic fix carry their own aspect; older ones
+      // predate the field, and 16/9 is what they were.
+      const feats = extractFeatures(frames, c.aspect ?? 16 / 9);
       const t = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
-      const probs = Array.from((model.predict(t) as tf.Tensor).dataSync());
+      const probs = Array.from(
+        (model.execute(t, ["Identity"]) as tf.Tensor).dataSync());
       t.dispose();
       let bi = 0;
       for (let i = 1; i < probs.length; i++) if (probs[i] > probs[bi]) bi = i;

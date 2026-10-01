@@ -8,7 +8,7 @@ Writes run/cislr_eval.json
 
 Why this exists
 ---------------
-Every previous experiment — face mesh, SL-GCN, calibration — pointed at the
+Every previous experiment: face mesh, SL-GCN, calibration, pointed at the
 same conclusion: the ceiling is signer diversity, not architecture. CISLR is
 the first chance to test that claim directly, because it is the first data we
 have from people who are not the seven students INCLUDE recorded.
@@ -31,7 +31,7 @@ expect it to be low, and report it anyway.
 Protocol note
 -------------
 train.py passes the TEST set as validation_data with restore_best_weights, so
-the stopping epoch is chosen on the test set — that inflates every figure it
+the stopping epoch is chosen on the test set, that inflates every figure it
 prints, including the 40.4% baseline. Here validation is carved out of TRAIN by
 signer group where possible, so the test set is touched exactly once, at the
 end. Arm A is therefore NOT directly comparable to the published 40.4%; it is
@@ -97,7 +97,7 @@ def arm(name, desc, X, y, tr_m, te_m, va_group, signer, n_classes, rng):
 
     testable = len(set(y[core_m].tolist()) & set(y[te_m].tolist()))
     print("=" * 66)
-    print(f"ARM {name} — {desc}")
+    print(f"ARM {name}, {desc}")
     print(f"  train {core_m.sum()}  val {va_m.sum()}  test {te_m.sum()}"
           f"   ({testable} of {n_classes} test classes seen in training)")
     model, ep = fit(X[core_m], y[core_m], X[va_m], y[va_m], n_classes, rng)
@@ -113,7 +113,7 @@ def arm(name, desc, X, y, tr_m, te_m, va_group, signer, n_classes, rng):
 
 def main() -> int:
     if not DATA.exists():
-        print(f"missing {DATA.relative_to(ROOT)} — run train/preprocess_cislr.py")
+        print(f"missing {DATA.relative_to(ROOT)}, run train/preprocess_cislr.py")
         return 1
     d = np.load(DATA, allow_pickle=True)
     X, y, signer, corpus = d["X"], d["y"], d["signer"], d["corpus"]
@@ -142,7 +142,7 @@ def main() -> int:
     ]
 
     print("=" * 66)
-    print("SUMMARY  (close-range — the condition the app runs in)")
+    print("SUMMARY  (close-range: the condition the app runs in)")
     print("=" * 66)
     for r in results:
         print(f"  {r['arm']}  {r['close_top1']*100:5.1f}%  top-5 {r['close_top5']*100:5.1f}%"

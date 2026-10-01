@@ -7,7 +7,7 @@ Why this exists
 ---------------
 The model collapses at laptop distance: 67.3% on held-out INCLUDE clips as
 recorded, 2.1% after re-projecting them to close range. That re-projection is
-a transform I wrote, not a measured camera model — MediaPipe's z is a relative
+a transform I wrote, not a measured camera model, MediaPipe's z is a relative
 pseudo-depth in an unspecified scale, so `1 + z/d` approximates a pinhole
 camera rather than reproducing one.
 
@@ -138,8 +138,8 @@ def main() -> int:
     #
     # The direct test needs no geometry inference at all: run each candidate
     # model on your takes and compare. That is what --eval does.
-    print("\nGeometry summary only. For the question that matters — does the")
-    print("perspective-augmented model actually read YOUR signing — run:")
+    print("\nGeometry summary only. For the question that matters, does the")
+    print("perspective-augmented model actually read YOUR signing, run:")
     print("  .venv-tf/bin/python train/eval_on_takes.py <recordings.json>")
     return 0
 

@@ -129,7 +129,7 @@ def build_ssl(seq_len: int, n_feat: int):
 
 
 def mask_batch(X: np.ndarray, rng) -> tuple[np.ndarray, np.ndarray]:
-    """Zero a random third of frames. Returns (corrupted, mask) — target is X."""
+    """Zero a random third of frames. Returns (corrupted, mask), target is X."""
     n, t, _ = X.shape
     m = rng.random((n, t)) < MASK_FRACTION
     # never mask a whole clip: with nothing observed there is nothing to infer
@@ -320,13 +320,13 @@ def arm(name, src, X, y, tr_m, te_m, n_classes, rng):
 
 def main() -> int:
     if not SSL.exists():
-        print(f"missing {SSL.relative_to(ROOT)} — run train/preprocess_ssl.py")
+        print(f"missing {SSL.relative_to(ROOT)}, run train/preprocess_ssl.py")
         return 1
     rng = np.random.default_rng(SEED)
     tf.random.set_seed(SEED)
 
     print("=" * 62)
-    print("SELF-SUPERVISED PRETRAINING — masked frame reconstruction")
+    print("SELF-SUPERVISED PRETRAINING, masked frame reconstruction")
     print("=" * 62)
     src = pretrain(rng)
 

@@ -1,14 +1,14 @@
 /**
  * The gloss sequences we precompute translations for.
  *
- * Every entry uses ONLY glosses that exist in models/labels.json — INCLUDE is a
+ * Every entry uses ONLY glosses that exist in models/labels.json, INCLUDE is a
  * lexicon of 264 isolated signs, so an utterance can only be built from signs the
  * classifier can actually recognise. Notably absent, and worth remembering before
  * you add anything: there is no YES, NO, PLEASE, HELP, WHERE, WHAT, or NOT.
  *
  * The workarounds that vocabulary forces:
- *   "Location" carries WHERE   — "Bathroom Location" = "where is the bathroom"
- *   "Time"     carries WHEN    — "Doctor Time" = "when will the doctor come"
+ *   "Location" carries WHERE  , "Bathroom Location" = "where is the bathroom"
+ *   "Time"     carries WHEN   , "Doctor Time" = "when will the doctor come"
  *   "Price"    carries HOW MUCH
  *   "Mean"     carries WHAT DOES ... MEAN
  *
@@ -19,7 +19,7 @@
 export interface GlossSeq {
   /** Signs in the order they are produced, i.e. ISL order, not spoken order. */
   glosses: string[];
-  /** Where this utterance is expected — steers register and word choice. */
+  /** Where this utterance is expected, steers register and word choice. */
   domain: "medical" | "travel" | "civic" | "social";
   /** Free-text hint for anything the glosses alone cannot convey. */
   note?: string;
@@ -29,7 +29,7 @@ export interface GlossSeq {
  * Utterances a patient plainly needs and INCLUDE's 264 signs CANNOT express.
  *
  * Each of these was attempted and removed because the gloss does not exist in
- * `models/labels.json` — the classifier can never emit it, so no amount of
+ * `models/labels.json`: the classifier can never emit it, so no amount of
  * translation work makes the utterance reachable. This is the concrete,
  * checkable form of HANDOFF.md's "INCLUDE is a lexicon, not a conversation
  * vocabulary", and it is the argument for recording our own signs.
@@ -40,7 +40,7 @@ export const UNREACHABLE: Array<{ want: string; missing: string }> = [
   { want: "I need water", missing: "Water" },
   { want: "I need help", missing: "Help" },
   { want: "yes / no", missing: "Yes, No" },
-  { want: "where is X (as a question word)", missing: "Where — 'Location' is the stand-in" },
+  { want: "where is X (as a question word)", missing: "Where, 'Location' is the stand-in" },
   { want: "my name is X", missing: "Name" },
   { want: "I need a hotel", missing: "Hotel" },
   { want: "it hurts here", missing: "Pain, Hurt" },
@@ -127,5 +127,5 @@ export const GLOSS_CORPUS: GlossSeq[] = [
   { glosses: ["you", "good"], domain: "social" },
   { glosses: ["Alright"], domain: "social" },
   { glosses: ["I", "Sign"], domain: "social", note: "I sign / I use sign language" },
-  { glosses: ["I", "Deaf", "you", "Sign"], domain: "social", note: "I am deaf — can you sign?" },
+  { glosses: ["I", "Deaf", "you", "Sign"], domain: "social", note: "I am deaf: can you sign?" },
 ];

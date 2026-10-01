@@ -2,7 +2,7 @@
  * Web Speech API types.
  *
  * SpeechRecognition is still not in TypeScript's DOM lib because the spec never
- * reached Recommendation — it ships prefixed in Chrome/Edge/Safari and is
+ * reached Recommendation: it ships prefixed in Chrome/Edge/Safari and is
  * absent in Firefox. Declaring only what we use, rather than pulling a
  * dependency for four members.
  */

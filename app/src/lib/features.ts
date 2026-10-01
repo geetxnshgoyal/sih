@@ -75,6 +75,44 @@ export function assembleFrame(
  * element-wise, and `y * (1/aspect)` rounds differently. test_parity.py asserts
  * equality to 0.000e+00, so that difference would surface as a failure.
  */
+/**
+ * The smallest shoulder span that can be a real person.
+ *
+ * anchor() divides every coordinate by the shoulder span, clamped at 1e-6 so it
+ * cannot divide by zero. That clamp keeps the arithmetic finite but not
+ * meaningful: when MediaPipe finds hands and loses the pose, both shoulders come
+ * through as (0,0), the span clamps, every coordinate is multiplied by a
+ * million, and standardise() then renormalises that back into a vector that
+ * looks perfectly ordinary. Measured, the model called it "alive" at 99.6%
+ * confidence, which is the "confident" band, which is spoken aloud.
+ *
+ * So the span is checked rather than clamped-and-hoped. Across 48,965 frames of
+ * INCLUDE, CISLR, NCERT and ISH Shiksha the smallest real span is 0.0571 and
+ * nothing at all falls below 0.05. 0.02 is roughly three times below anything
+ * ever observed and far above the degenerate zero, so it separates "no pose"
+ * from "person standing far away" without ever rejecting a real signer.
+ */
+export const MIN_SHOULDER_SPAN = 0.02;
+
+/**
+ * Can this frame be anchored, or are its shoulders missing?
+ *
+ * Uses the same isotropic span anchor() does, so the two cannot disagree.
+ */
+export function anchorable(f: PointFrame, aspect: number): boolean {
+  const ls = f[L_SHOULDER], rs = f[R_SHOULDER];
+  if (!ls || !rs) return false;
+  const dx = ls.x - rs.x, dy = ls.y / aspect - rs.y / aspect;
+  return Math.hypot(dx, dy) >= MIN_SHOULDER_SPAN;
+}
+
+/** How many frames of a sequence carry a usable pose. */
+export function anchorableCount(seq: PointFrame[], aspect: number): number {
+  let n = 0;
+  for (const f of seq) if (anchorable(f, aspect)) n++;
+  return n;
+}
+
 function anchor(seq: PointFrame[], aspect: number): Float64Array {
   const per = N_POINTS * N_DIMS;
   const out = new Float64Array(seq.length * per);

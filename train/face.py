@@ -1,5 +1,5 @@
 """
-Non-manual markers — the grammar ISL carries on the face.
+Non-manual markers: the grammar ISL carries on the face.
 
 Why this file exists
 --------------------
