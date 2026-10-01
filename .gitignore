@@ -6,7 +6,11 @@
 #   data/fetch_video.sh   INCLUDE raw video (Zenodo 4010759, CC BY 4.0)
 #   data/fetch_poses_all.sh
 #   data/fetch_cislr.sh   CISLR (gated, AFL-3.0)
-data/
+# `data/*` and not `data/`: git never descends into an excluded DIRECTORY, so
+# the negations below can never fire under `data/`. The existing fetch scripts
+# only survived because gitignore does not apply to already-tracked files --
+# data/fetch_islgov.sh was silently unstageable until this was fixed.
+data/*
 !data/*.sh
 !data/README*
 
@@ -14,6 +18,7 @@ data/
 .venv/
 .venv-tf/
 .venv-mp/
+.venv-camera/
 __pycache__/
 *.pyc
 node_modules/
@@ -25,7 +30,7 @@ app/.vite/
 
 # ------------------------------------------------------------- pipeline state
 # Locks, PIDs and logs for the long-running fetch/extract jobs. Machine-local
-# by definition — and the reason these live in the repo rather than /tmp is
+# by definition: and the reason these live in the repo rather than /tmp is
 # that macOS wiping /tmp killed the pipeline twice.
 run/
 
@@ -44,7 +49,7 @@ models/holistic_landmarker.task
 setu-recordings-*.json
 
 # ------------------------------------------------------------ editor/agent
-# Local tooling config — machine-specific, not part of the project.
+# Local tooling config: machine-specific, not part of the project.
 .claude/
 CLAUDE.md
 AGENTS.md
@@ -53,3 +58,20 @@ AGENTS.md
 .env
 .env.*
 *.pem
+
+# Stitch design export: the unpacked directory is kept as reference, the zip
+# was an exact duplicate of it.
+stitch_setu_healthcare_communication_bridge.zip
+
+# TFLite exports: derived from models/, rebuilt by train/export_tflite.py
+models/tflite/
+
+# Sentence corpus: landmarks derived from ISH News, rebuilt by
+# train/build_isl_sentences.py. Not ours to redistribute.
+data/isl_sentences/
+data/translate.npz
+models/translate/
+
+# ISH Shiksha landmarks: derived from their videos, rebuilt by
+# train/fetch_shiksha.py. Not ours to redistribute.
+data/shiksha_landmarks/
