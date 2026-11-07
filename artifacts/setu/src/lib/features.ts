@@ -191,8 +191,7 @@ export function extractFeatures(seq: PointFrame[], aspect: number): Float32Array
 
 /**
  * The anchored, resampled clip BEFORE standardisation: (SEQ_LEN, 65, 3) in
- * shoulder units. This is the coordinate space train/augment.py operates in,
- * so geometric transforms (mirror.ts) belong here and nowhere later.
+ * shoulder units. This is the coordinate space train/augment.py operates in.
  */
 export function extractAnchored(seq: PointFrame[], aspect: number): Float64Array {
   const per = N_POINTS * N_DIMS;

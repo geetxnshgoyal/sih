@@ -7,10 +7,9 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import {
-  extractFeatures, extractAnchored, standardise, anchorableCount,
+  extractFeatures, anchorableCount,
   SEQ_LEN, N_POINTS, N_DIMS, type PointFrame,
 } from "./features";
-import { mirrorAnchored } from "./mirror";
 import { fetchJson } from "./assets";
 import type { Prediction } from "./gate";
 import { calibrate, TEMPERATURE } from "./calibrate";
@@ -89,26 +88,12 @@ export class GlossClassifier {
     }
   }
 
-  /**
-   * Softmax averaged over the clip and its left-right reflection.
-   *
-   * Two orientations in one batch, one forward pass. The model trained on
-   * both, so this is not extrapolation; it is the same clip asked twice from
-   * either side and the two answers reconciled. Measured effect is a steadier
-   * read for left-handed signers and for selfie cameras whose Left/Right hand
-   * labelling disagrees with the training extraction.
-   */
+  /** Run the shipped model once over the parity-tested camera feature vector. */
   private probabilities(frames: PointFrame[], aspect: number): Float32Array {
     return tf.tidy(() => {
-      const anchored = extractAnchored(frames, aspect);
-      const a = standardise(anchored);
-      const b = standardise(mirrorAnchored(anchored));
-      const batch = new Float32Array(a.length * 2);
-      batch.set(a, 0);
-      batch.set(b, a.length);
-      const input = tf.tensor(batch, [2, SEQ_LEN, N_POINTS * N_DIMS]);
+      const input = tf.tensor(extractFeatures(frames, aspect), [1, SEQ_LEN, N_POINTS * N_DIMS]);
       const [p] = this.model!.execute(input, [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
-      return p.mean(0).dataSync() as Float32Array;
+      return p.dataSync() as Float32Array;
     });
   }
 
