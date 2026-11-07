@@ -1,45 +1,30 @@
-# [Project name]
+# Setu — Indian Sign Language Bridge
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Setu helps Deaf and hard-of-hearing people communicate with staff using Indian Sign Language, text, and speech in six Indian languages. The imported web app runs entirely in the browser; camera frames and recognition stay on the device.
 
-## Run & Operate
+## Run and verify
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Start Preview with the managed workflow `artifacts/setu: web`.
+- `pnpm --filter @workspace/setu test` — original recognition, segmentation, and playback regression tests.
+- `pnpm --filter @workspace/setu run check:glosses` — validates phrase references against bundled sign recordings.
+- `pnpm --filter @workspace/setu run typecheck` — frontend TypeScript check.
+- The managed workflow supplies `PORT` and `BASE_PATH`; do not start a root-level dev command.
+- No API credentials or database are needed for Setu.
 
-## Stack
+## Structure
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- `artifacts/setu/` — migrated React + Vite app, original styles, tests, tools, and public assets.
+- `.migration-backup/` — original imported repository, including research/training scripts and static prototypes, retained for reference.
+- `artifacts/api-server/`, `artifacts/mockup-sandbox/`, and `lib/` — workspace scaffold, not used by Setu's browser-only flows.
 
-## Where things live
+## Preservation requirements
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- Preserve the original hash navigation, role selection, domain settings, and on-device recognition behavior.
+- Keep the bundled model, sign shards, vision WASM, PWA manifest, and production service worker. Asset URLs derive from Vite's base path.
+- MediaPipe stays on the imported version to match the bundled vision runtime.
+- Replit handles HTTPS for camera access; the app does not need a self-signed local HTTPS plugin.
+- The original external project links and SEO canonical URLs are preserved. Change the canonical and sharing URLs only when the actual published destination is known.
 
-## Architecture decisions
+## Device limitations
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+Camera and microphone use requires browser permissions and appropriate hardware. Speech recognition and available speech voices depend on the browser. Service-worker caching is production-only, matching the original app.
