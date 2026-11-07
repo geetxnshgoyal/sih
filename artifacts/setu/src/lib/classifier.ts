@@ -7,8 +7,10 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import {
-  extractFeatures, anchorableCount, SEQ_LEN, N_POINTS, N_DIMS, type PointFrame,
+  extractFeatures, extractAnchored, standardise, anchorableCount,
+  SEQ_LEN, N_POINTS, N_DIMS, type PointFrame,
 } from "./features";
+import { mirrorAnchored } from "./mirror";
 import { fetchJson } from "./assets";
 import type { Prediction } from "./gate";
 import { calibrate, TEMPERATURE } from "./calibrate";
@@ -88,6 +90,29 @@ export class GlossClassifier {
   }
 
   /**
+   * Softmax averaged over the clip and its left-right reflection.
+   *
+   * Two orientations in one batch, one forward pass. The model trained on
+   * both, so this is not extrapolation; it is the same clip asked twice from
+   * either side and the two answers reconciled. Measured effect is a steadier
+   * read for left-handed signers and for selfie cameras whose Left/Right hand
+   * labelling disagrees with the training extraction.
+   */
+  private probabilities(frames: PointFrame[], aspect: number): Float32Array {
+    return tf.tidy(() => {
+      const anchored = extractAnchored(frames, aspect);
+      const a = standardise(anchored);
+      const b = standardise(mirrorAnchored(anchored));
+      const batch = new Float32Array(a.length * 2);
+      batch.set(a, 0);
+      batch.set(b, a.length);
+      const input = tf.tensor(batch, [2, SEQ_LEN, N_POINTS * N_DIMS]);
+      const [p] = this.model!.execute(input, [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
+      return p.mean(0).dataSync() as Float32Array;
+    });
+  }
+
+  /**
    * Top-k predictions, for the diagnostics panel.
    *
    * `aspect` is the source frame's width / height: see extractFeatures.
@@ -97,12 +122,7 @@ export class GlossClassifier {
   predictTop(frames: PointFrame[], aspect: number, k = 3): { gloss: string; conf: number }[] {
     if (!this.model || frames.length === 0) return [];
     if (!this.usable(frames, aspect)) return [];
-    const probs = tf.tidy(() => {
-      const feats = extractFeatures(frames, aspect);
-      const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
-      const [p] = this.model!.execute(input, [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
-      return p.dataSync();
-    });
+    const probs = this.probabilities(frames, aspect);
     return Array.from(calibrate(probs, this.temperature))
       .map((conf, i) => ({ gloss: this.labels[i], conf }))
       .sort((a, b) => b.conf - a.conf)
@@ -114,12 +134,7 @@ export class GlossClassifier {
     if (!this.model || frames.length === 0) return { gloss: null, conf: 0 };
     if (!this.usable(frames, aspect)) return { gloss: null, conf: 0 };
 
-    const probs = tf.tidy(() => {
-      const feats = extractFeatures(frames, aspect);
-      const input = tf.tensor(feats, [1, SEQ_LEN, N_POINTS * N_DIMS]);
-      const [p] = this.model!.execute(input, [OUT_PROBS, OUT_EMBED]) as tf.Tensor[];
-      return p.dataSync();
-    });
+    const probs = this.probabilities(frames, aspect);
 
     // Calibrate before reading a confidence off this. Raw softmax here is not a
     // probability: measured on a held-out signer group it said 0.90 while being

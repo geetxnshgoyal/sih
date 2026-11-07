@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, Send, Check, MessageSquare } from "lucide-react";
+import { Search, Send, Check, MessageSquare, X } from "lucide-react";
 import { useSession } from "../../context/SessionContext";
 import { useDomain } from "../../lib/useDomain";
 import {
@@ -15,18 +15,10 @@ import { loadPhrasebook, phraseText } from "../../lib/phrasebookTable";
  * sentence and it is projected to the client view as text, spoken, and played
  * back as signs where a recording exists.
  *
- * WHAT THIS REPLACES, because it is worth remembering. This screen used to
- * hold seven hardcoded clinical sentences in three languages, shown at all six
- * counters, so a shop assistant was offered "Take 1 tablet after meals" and a
- * Telugu, Bengali or Marathi user got English. Its gloss sequences were
- * invented: "Apply ointment twice daily" was mapped to HELP THANK YOU, and its
- * uppercase glosses matched no recording in any vocabulary. It was scaffolding
- * that never got finished and sat on a top-level nav item.
- *
- * Now it reads STAFF_PHRASES_FOR[domain] and the same committed NLLB table the
+ * It reads STAFF_PHRASES_FOR[domain] and the same committed NLLB table the
  * client board uses, so all six languages work and the phrases match the
  * counter. Categories are derived from the data rather than hardcoded, which
- * is what stopped "medication" appearing in a shop.
+ * is what stops "medication" appearing in a shop.
  */
 export function PhraseLibraryScreen() {
   const { projectToClient, selectedLang } = useSession();
@@ -66,72 +58,65 @@ export function PhraseLibraryScreen() {
     setStatus(`Sent to the ${domain.roles.client.lower} view: ${text}`);
   }
 
-  return <main><div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
-    <div className="flex items-center justify-between gap-3 flex-wrap">
+  return <main className="page"><div className="page-inner">
+    <div className="page-head">
       <div>
-        <span className="eyebrow-label">{domain.station}</span>
-        <h1 className="text-display-md font-bold mt-2">{domain.label} phrases</h1>
-        <p className="text-secondary mt-3">
-          Pick a sentence to send to the {domain.roles.client.lower} view.
-          It appears as text, is read aloud, and plays as signs where a
-          recording exists.
+        <span className="eyebrow indigo">{domain.station}</span>
+        <h1>{domain.label} phrases</h1>
+        <p className="lede">
+          One tap sends a sentence to the {domain.roles.client.lower}'s screen: as text in their language, read aloud, and as signs where a recording exists.
         </p>
       </div>
-      <a href="#bridge" className="secondary-action">Return to the counter</a>
+      <div className="page-head-actions"><a href="#bridge" className="btn btn-secondary">Return to the counter</a></div>
     </div>
 
-    <section className="content-card flex flex-col gap-4">
-      <div className="flex items-center gap-3 border border-outline-variant rounded-xl px-4 py-3">
-        <Search size={20} className="text-secondary shrink-0"/>
+    <section className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }} aria-label="Search and filter phrases">
+      <div className="search">
+        <Search size={20} aria-hidden="true" />
         <label htmlFor="phrase-search" className="sr-only">Search phrases</label>
-        <input id="phrase-search" value={query} onChange={e => setQuery(e.target.value)}
-               placeholder="Search phrases…" className="w-full bg-transparent outline-none"/>
+        <input id="phrase-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search phrases…" />
+        {query && <button className="btn btn-ghost btn-sm" onClick={() => setQuery('')} aria-label="Clear search"><X size={16} aria-hidden="true" /></button>}
       </div>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Phrase categories">
-        <button className={category === "all" ? "primary-action" : "secondary-action"}
-                aria-pressed={category === "all"} onClick={() => setCategory("all")}>
-          All phrases
-        </button>
-        {categories.map(value => (
-          <button key={value}
-                  className={category === value ? "primary-action" : "secondary-action"}
-                  aria-pressed={category === value} onClick={() => setCategory(value)}>
-            {CATEGORY_LABEL[value]}
-          </button>
-        ))}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div className="chip-row" role="group" aria-label="Phrase categories">
+          <button className="chip" aria-pressed={category === "all"} onClick={() => setCategory("all")}>All phrases</button>
+          {categories.map(value => (
+            <button key={value} className="chip" aria-pressed={category === value} onClick={() => setCategory(value)}>{CATEGORY_LABEL[value]}</button>
+          ))}
+        </div>
+        <p className="card-note" role="status" style={{ fontWeight: 700 }}>
+          {phrases.length} {phrases.length === 1 ? "phrase" : "phrases"}{ready ? "" : " · loading translations"}
+        </p>
       </div>
-      <p className="text-label-md text-secondary" role="status">
-        {phrases.length} {phrases.length === 1 ? "phrase" : "phrases"}
-        {ready ? "" : " · loading translations"}
-      </p>
     </section>
 
-    {status && <div role="status" className="content-card text-primary flex flex-wrap items-center justify-between gap-3"><span>{status}</span><a href="#bridge" className="secondary-action">View message</a></div>}
+    {status && <div role="status" className="notice notice-ok pop" style={{ justifyContent: 'space-between', alignItems: 'center' }}><span style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Check size={18} aria-hidden="true" />{status}</span><a href="#bridge" className="btn btn-secondary btn-sm">View on the counter</a></div>}
 
     {phrases.length ? (
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="phrase-grid stagger">
         {phrases.map(phrase => {
           const translated = phraseText(phrase, selectedLang);
+          const isSent = sent === phrase.id;
           return (
-            <article key={phrase.id} className={`content-card flex flex-col gap-3 ${phrase.urgent ? "border-primary" : ""}`}>
-              <span className="eyebrow-label">{CATEGORY_LABEL[phrase.category]}</span>
-              <h2 className="text-headline-md font-semibold">{phrase.en}</h2>
-              {translated !== phrase.en && <p className="text-body-lg text-secondary">{translated}</p>}
-              <button className="secondary-action mt-auto" onClick={() => send(phrase)}>
-                {sent === phrase.id ? <Check size={18}/> : <Send size={18}/>}
-                {sent === phrase.id ? "Send again" : `Send to ${domain.roles.client.lower}`}
+            <article key={phrase.id} className={`phrase-card${phrase.urgent ? " urgent" : ""}`}>
+              <span className="phrase-cat">{CATEGORY_LABEL[phrase.category]}{phrase.urgent ? ' · urgent' : ''}</span>
+              <h2>{phrase.en}</h2>
+              {translated !== phrase.en && <p className="phrase-tr" lang={selectedLang}>{translated}</p>}
+              <button className={`btn ${isSent ? 'btn-secondary is-sent' : 'btn-primary'}`} onClick={() => send(phrase)}>
+                {isSent ? <Check size={18} aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}
+                {isSent ? "Sent · send again" : `Send to ${domain.roles.client.lower}`}
               </button>
             </article>
           );
         })}
       </div>
     ) : (
-      <section className="content-card empty-state">
-        <MessageSquare size={32} className="mx-auto mb-4"/>
-        <h2 className="text-headline-md font-semibold">No matching phrases</h2>
-        <p className="mt-2">Try a different search or category.</p>
-        <button className="secondary-action mt-4" onClick={() => {setQuery(""); setCategory("all");}}>Clear filters</button>
-      </section>
+      <section className="card"><div className="empty">
+        <span className="empty-glyph"><MessageSquare size={30} aria-hidden="true" /></span>
+        <h2>No matching phrases</h2>
+        <p>Try a different word or category.</p>
+        <button className="btn btn-secondary" onClick={() => { setQuery(""); setCategory("all"); }}>Clear filters</button>
+      </div></section>
     )}
   </div></main>;
 }

@@ -38,20 +38,20 @@ export default function QuickPhrases({
   );
 
   return (
-    <section className="card quick">
+    <section className="card quick side-client" aria-labelledby="quick-heading">
       <div className="card-h">
-        <span>Tap to say</span>
-        <span className="mono">{domain.station}</span>
+        <span id="quick-heading">Tap to say · spoken aloud at once</span>
+        <span>{domain.station}</span>
       </div>
       <div className="phrase-groups">
         {priority.length > 0 && (
           <div className="phrase-group priority">
-            <div className="phrase-title"><BadgeAlert size={15} /> Priority needs</div>
+            <div className="phrase-title"><BadgeAlert size={16} aria-hidden="true" /> When something is wrong</div>
             <div className="quick-grid">{priority.map(renderPhrase)}</div>
           </div>
         )}
         <div className="phrase-group">
-          <div className="phrase-title"><MessageSquareText size={15} /> Everyday phrases</div>
+          <div className="phrase-title"><MessageSquareText size={16} aria-hidden="true" /> Everyday</div>
           <div className="quick-grid">{everyday.map(renderPhrase)}</div>
         </div>
       </div>

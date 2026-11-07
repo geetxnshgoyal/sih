@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Download, Printer, Plus, FileText } from 'lucide-react';
+import { Download, Printer, Plus, FileText, Check, AlertTriangle } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 import { useDomain } from '../../lib/useDomain';
+import { LANGUAGES } from '../../lib/speech';
 
 /** Sentence case for a domain noun that is stored lowercase. */
 const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
@@ -10,16 +11,48 @@ export function SessionSummaryScreen() {
   const domain = useDomain();
   const [confirmReset, setConfirmReset] = useState(false);
   const [status, setStatus] = useState('');
+  const staffCount = transcript.filter(t => t.speaker === 'staff').length;
+  const clientCount = transcript.filter(t => t.speaker === 'client').length;
+  const langLabel = LANGUAGES.find(l => l.code === selectedLang)?.label ?? selectedLang;
   function exportNotes() {
     const data = { exportedAt: new Date().toISOString(), language: selectedLang, messages: transcript };
-    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'}));
-    const link = document.createElement('a'); link.href = url; link.download = `setu-${domain.id}-${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(link); link.click(); link.remove();
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = `setu-${domain.id}-${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000); setStatus('Session notes exported.');
   }
-  return <main><div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
-    <div><span className="eyebrow-label">Session review</span><h1 className="text-display-md font-bold mt-2">{cap(domain.session)} summary</h1><p className="text-secondary mt-3">Review the messages from this visit before saving a copy.</p></div>
-    <div className="grid lg:grid-cols-3 gap-6 items-start"><section className="content-card lg:col-span-2"><div className="flex items-center justify-between mb-5"><h2 className="text-headline-md font-semibold">Conversation notes</h2><span className="text-label-md text-secondary">{transcript.length} {transcript.length === 1 ? "message" : "messages"} · {selectedLang}</span></div>
-      {transcript.length === 0 ? <div className="empty-state"><FileText size={32} className="mx-auto mb-4"/><h3 className="text-headline-md font-semibold">No messages yet</h3><p className="mt-2">Start a {domain.session} to add messages to your summary.</p><a href="#bridge" className="primary-action mt-5 no-print">Open {domain.session}</a></div> : <ol className="flex flex-col gap-5">{transcript.map(item => <li key={item.id} className="border-b border-outline-variant/30 pb-4"><div className="flex items-center justify-between text-label-sm text-secondary mb-2"><span className="font-semibold capitalize">{item.speaker}</span><time>{item.timestamp}</time></div><p className="text-body-lg">{item.text}</p>{item.textEn && item.textEn !== item.text && <p className="text-secondary mt-2">{item.textEn}</p>}{item.medication && <p className="mt-2">{item.medication.instructions}</p>}</li>)}</ol>}
-    </section><aside className="content-card no-print flex flex-col gap-3"><h2 className="text-headline-md font-semibold mb-2">Save this visit</h2><button className="primary-action" disabled={!transcript.length} onClick={exportNotes}><Download size={18}/>Export session notes</button><button className="secondary-action" disabled={!transcript.length} onClick={() => window.print()}><Printer size={18}/>Print / save as PDF</button><button className="secondary-action" onClick={() => transcript.length ? setConfirmReset(true) : resetSession()}><Plus size={18}/>New {domain.session}</button>{confirmReset && <div className="rounded-xl bg-surface-container-low p-4" role="alert"><p className="text-label-md mb-3">Starting a new visit clears these messages. Export a copy first if needed.</p><div className="flex flex-wrap gap-2"><button className="primary-action" onClick={resetSession}>Clear & start new</button><button className="secondary-action" onClick={() => setConfirmReset(false)}>Cancel</button></div></div>}<p role="status" className="text-label-md text-primary">{status}</p></aside></div>
+  return <main className="page"><div className="page-inner">
+    <div className="page-head"><div><span className="eyebrow indigo">Session review</span><h1>{cap(domain.session)} summary</h1><p className="lede">The record of this {domain.session}, in the order it happened. Save a copy before starting the next one.</p></div></div>
+    <div className="stat-row stagger">
+      <div className="stat"><b>{transcript.length}</b><span>{transcript.length === 1 ? 'message' : 'messages'}</span></div>
+      <div className="stat"><b style={{ color: 'var(--indigo)' }}>{staffCount}</b><span>from the {domain.roles.staff.lower}</span></div>
+      <div className="stat"><b style={{ color: 'var(--teal-deep)' }}>{clientCount}</b><span>from the {domain.roles.client.lower}</span></div>
+    </div>
+    <div className="summary-grid">
+      <section className="card" aria-labelledby="notes-heading">
+        <div className="card-h"><span><FileText size={15} aria-hidden="true" /> Conversation notes</span><span>{langLabel}</span></div>
+        <div className="card-b">
+          <h2 id="notes-heading" className="sr-only">Conversation notes</h2>
+          {transcript.length === 0
+            ? <div className="empty"><span className="empty-glyph"><FileText size={30} aria-hidden="true" /></span><h3>No messages yet</h3><p>Start a {domain.session} and every line from both sides lands here.</p><a href="#bridge" className="btn btn-primary no-print">Open the {domain.session}</a></div>
+            : <ol className="summary-list" style={{ listStyle: 'none', margin: 0, padding: 0 }}>{transcript.map(item => <li key={item.id} className={`summary-item ${item.speaker}`}><div className="summary-who"><span>{item.speakerName}</span><time>{item.timestamp}</time></div><div><p className="summary-text">{item.text}</p>{item.textEn && item.textEn !== item.text && <p className="summary-en">{item.textEn}</p>}{item.medication && <p className="summary-en">{item.medication.instructions}</p>}</div></li>)}</ol>}
+        </div>
+      </section>
+      <aside className="card no-print" aria-labelledby="save-heading">
+        <div className="card-h"><span>Save this {domain.session}</span></div>
+        <div className="card-b" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <h2 id="save-heading" className="sr-only">Save this {domain.session}</h2>
+          <button className="btn btn-primary btn-block" disabled={!transcript.length} onClick={exportNotes}><Download size={18} aria-hidden="true" />Export session notes</button>
+          <button className="btn btn-secondary btn-block" disabled={!transcript.length} onClick={() => window.print()}><Printer size={18} aria-hidden="true" />Print / save as PDF</button>
+          <div className="or-rule" style={{ margin: '6px 0' }}>then</div>
+          <button className="btn btn-secondary btn-block" onClick={() => transcript.length ? setConfirmReset(true) : resetSession()}><Plus size={18} aria-hidden="true" />New {domain.session}</button>
+          {confirmReset && <div className="notice notice-warn pop" role="alert" style={{ flexDirection: 'column' }}>
+            <p style={{ display: 'flex', gap: 10 }}><AlertTriangle size={18} aria-hidden="true" /><span>Starting a new {domain.session} clears these messages. Export a copy first if you need one.</span></p>
+            <div className="chip-row" style={{ marginTop: 10 }}><button className="btn btn-danger btn-sm" onClick={resetSession}>Clear & start new</button><button className="btn btn-secondary btn-sm" onClick={() => setConfirmReset(false)}>Cancel</button></div>
+          </div>}
+          {status && <p role="status" className="notice notice-ok"><Check size={18} aria-hidden="true" /><span>{status}</span></p>}
+          {!status && <p role="status" className="sr-only" />}
+        </div>
+      </aside>
+    </div>
   </div></main>;
 }

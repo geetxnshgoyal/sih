@@ -1,0 +1,1 @@
+- [ISL model promotion](isl-model-promotion.md) — do not replace the browser model with a candidate until it wins on the same untouched signer-held-out evaluation.

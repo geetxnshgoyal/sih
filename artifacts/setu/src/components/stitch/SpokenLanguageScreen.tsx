@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, Check, Languages } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
-import { LANGUAGES, hasVoiceFor, refreshVoices } from '../../lib/speech';
+import { LANGUAGES, hasVoiceFor, refreshVoices, type LangCode } from '../../lib/speech';
+
+/** One native glyph per language, so the card is recognisable without reading the label. */
+const GLYPH: Record<LangCode, string> = { 'hi-IN': 'अ', 'ta-IN': 'அ', 'te-IN': 'అ', 'bn-IN': 'অ', 'mr-IN': 'म', 'en-IN': 'A' };
 
 export function SpokenLanguageScreen() {
   const { selectedLang, setSelectedLang } = useSession();
@@ -19,10 +22,29 @@ export function SpokenLanguageScreen() {
     window.speechSynthesis?.addEventListener('voiceschanged', onChange);
     return () => window.speechSynthesis?.removeEventListener('voiceschanged', onChange);
   }, []);
-  return <main><div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
-    <div><span className="eyebrow-label">Setup · Step 1</span><h1 className="text-display-md font-bold mt-2">Choose a spoken language</h1><p className="text-secondary mt-3">Use the language that feels most comfortable for your visit.</p></div>
-    <fieldset><legend className="sr-only">Spoken language</legend><div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{LANGUAGES.map(language => <label key={language.code} className={`content-card cursor-pointer flex items-center gap-4 ${selectedLang === language.code ? 'border-primary bg-surface-container-low' : ''}`}><input className="accent-primary w-5 h-5 shrink-0" type="radio" name="spoken-language" value={language.code} checked={selectedLang === language.code} onChange={() => setSelectedLang(language.code)}/><span className="flex-1"><span className="text-headline-md font-medium">{language.label}</span>{!hasVoiceFor(language.code) && <span className="block text-label-md text-secondary mt-1">No {language.label.split(' · ').pop()} voice on this device: spoken in the nearest voice. Text is exact.</span>}</span>{selectedLang === language.code && <Check size={20} className="text-primary shrink-0"/>}</label>)}</div></fieldset>
-    <div className="content-card flex gap-4 items-start"><Languages size={24} className="text-primary shrink-0"/><p className="text-secondary">This language is used for speech input and playback. Which voices exist is decided by your device, not by Setu, and a language with no voice is read in the nearest one that shares its script. The written text and the phrase board are exact either way.</p></div>
-    <div className="flex flex-wrap gap-3"><a href="#devices" className="primary-action">Continue to device check<ArrowRight size={18}/></a><a href="#bridge" className="secondary-action">Return to the counter</a></div>
+  return <main className="page"><div className="page-inner">
+    <div className="page-head">
+      <div><span className="eyebrow indigo">Setup · Step 1 of 2</span><h1>Which language is spoken here?</h1><p className="lede">Used for speech input and for reading messages aloud. Written text and the phrase board are exact in every one of these.</p></div>
+    </div>
+    <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+      <legend className="sr-only">Spoken language</legend>
+      <div className="lang-grid stagger">
+        {LANGUAGES.map(language => {
+          const on = selectedLang === language.code;
+          const [native, english] = language.label.split(' · ');
+          return <label key={language.code} className={`lang-card${on ? ' on' : ''}`}>
+            <input type="radio" name="spoken-language" value={language.code} checked={on} onChange={() => setSelectedLang(language.code)} />
+            <span className="lang-glyph" aria-hidden="true">{GLYPH[language.code]}</span>
+            <span style={{ minWidth: 0 }}>
+              <span className="lang-name">{native}</span>
+              <span className="lang-meta">{english ? english : 'Indian English'}{!hasVoiceFor(language.code) && ' · no voice on this device, read in the nearest one'}</span>
+            </span>
+            {on && <span className="lang-check" aria-hidden="true"><Check size={18} /></span>}
+          </label>;
+        })}
+      </div>
+    </fieldset>
+    <div className="notice notice-info"><Languages size={20} aria-hidden="true" /><p>Which voices exist is decided by your device, not by Setu. A language with no installed voice is read in the nearest one that shares its script. Text is never affected.</p></div>
+    <div className="chip-row"><a href="#devices" className="btn btn-primary btn-lg">Continue to device check<ArrowRight size={20} aria-hidden="true" /></a><a href="#bridge" className="btn btn-secondary btn-lg">Go to the counter</a></div>
   </div></main>;
 }

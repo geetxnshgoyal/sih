@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, Search, X } from "lucide-react";
 import {
   CATEGORY_LABEL, ORDER_FOR, PHRASES_FOR,
   type Phrase, type PhraseCategory,
@@ -69,32 +70,33 @@ export default function PhraseBoard({
   );
 
   return (
-    <section className="card phraseboard">
+    <section className="card phraseboard side-client" aria-labelledby="pb-heading">
       <div className="card-h">
-        <span>Tap to speak</span>
-        <span className="mono">
-          {phrases.length} phrases{ready ? "" : " · loading"}
-        </span>
+        <span id="pb-heading">Tap to speak · the whole board</span>
+        <span>{phrases.length} phrases{ready ? "" : " · loading"}</span>
       </div>
 
       <div className="pb-search">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search: pain, water, doctor…"
-          aria-label="Search phrases"
-        />
-        {query && (
-          <button className="pb-clear" onClick={() => setQuery("")} aria-label="Clear search">
-            clear
-          </button>
-        )}
+        <div className="search">
+          <Search size={20} aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search: pain, water, doctor…"
+            aria-label="Search phrases"
+          />
+          {query && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setQuery("")} aria-label="Clear search">
+              <X size={16} aria-hidden="true" />
+            </button>
+          )}
+        </div>
       </div>
 
       {matches ? (
         <div className="pb-grid">
           {matches.length === 0 ? (
-            <p className="note">No phrase matches “{query}”.</p>
+            <p className="card-note">No phrase matches “{query}”.</p>
           ) : (
             matches.map((p) => <Button key={p.id} p={p} />)
           )}
@@ -114,7 +116,10 @@ export default function PhraseBoard({
                 aria-expanded={open}
               >
                 <span>{CATEGORY_LABEL[cat]}</span>
-                <span className="mono">{items.length}</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+                  <span className="mono">{items.length}</span>
+                  {cat !== "emergency" && <ChevronDown size={18} aria-hidden="true" />}
+                </span>
               </button>
               {open && (
                 <div className="pb-grid">

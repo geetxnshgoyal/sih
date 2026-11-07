@@ -208,75 +208,82 @@ export default function Recorder() {
     // targets #main-content on it. This route had neither, so keyboard and
     // screen-reader users landed nowhere when they opened Capture, and the
     // skip link pointed at an id that did not exist on the page.
-    <main className="recorder">
-      <div className="record-lead">
-        <p className="eyebrow">Community data collection</p>
-        <h1>Collect clean examples from the same camera used in the demo.</h1>
-        <p className="muted">For moving signs such as Please, keep the full path in frame: start at the lips, move down, and finish the finger shake before the capture ends.</p>
-      </div>
-      <div className="card">
-        <div className="card-h">
-          <span>Collect signs</span>
-          <span className="mono">{takes.length} takes</span>
-        </div>
-
-        <div className="stage rec-stage">
-          <video ref={videoRef} playsInline muted />
-          <canvas ref={canvasRef} />
-          {!live && <div className="idle"><b>Camera is off.</b><span>Start, enter a sign label, then record a take.</span></div>}
-          {phase === "counting" && <div className="countdown">{count}</div>}
-          {phase === "capturing" && <div className="capturing">RECORDING</div>}
-          {live && (
-            <div className="rec-hands">
-              <span className={hands ? "on" : "off"}>{hands ? "hands visible" : "no hands"}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="card-b">
-          <div className="row">
-            {!live ? (
-              <button className="go" onClick={start} disabled={state !== "ready" || starting}>
-                <Camera size={17} /> {starting ? "Opening…" : state === "ready" ? "Start camera" : "Preparing..."}
-              </button>
-            ) : (
-              <button onClick={stop}><Square size={16} /> Stop camera</button>
-            )}
-            <input
-              className="say"
-              value={gloss}
-              placeholder="Sign label, e.g. Please"
-              onChange={(e) => setGloss(e.target.value)}
-            />
-            <button
-              className="go"
-              onClick={record}
-              disabled={!live || !gloss.trim() || phase !== "idle"}
-            >
-              <Dot size={20} /> Record take
-            </button>
-            <button onClick={download} disabled={!takes.length}>
-              <Download size={17} /> Download {takes.length ? `(${takes.length})` : ""}
-            </button>
+    <main className="page recorder">
+      <div className="page-inner" style={{ maxWidth: 1040 }}>
+        <div className="page-head">
+          <div>
+            <span className="eyebrow">Community data collection</span>
+            <h1>Collect clean examples from the same camera used in the demo.</h1>
+            <p className="lede">For moving signs such as Please, keep the full path in frame: start at the lips, move down, and finish the finger shake before the capture ends.</p>
           </div>
-
-          {error && <div className="err-box">Landmarker: {error}</div>}
-          {camError && <div className="err-box">{camError}</div>}
-
-          <p className="note" style={{ marginTop: 14 }}>
-            Aim for <b>30-50 takes per sign</b>. Vary distance, angle and lighting
-            so the demo learns the room it will be shown in.
-          </p>
-
-          {Object.keys(counts).length > 0 && (
-            <div className="tally">
-              {Object.entries(counts).sort().map(([g, n]) => (
-                <span key={g} className={n >= 30 ? "done" : ""}>
-                  {g} <b>{n}</b>
-                </span>
-              ))}
+        </div>
+        <div className="card side-client">
+          <div className="card-h">
+            <span><Camera size={15} aria-hidden="true" /> Collect signs</span>
+            <span>{takes.length} takes</span>
+          </div>
+          <div className="card-b" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="stage rec-stage">
+              <video ref={videoRef} playsInline muted />
+              <canvas ref={canvasRef} />
+              {live && <div className="stage-frame" aria-hidden="true" />}
+              {!live && <div className="idle"><span className="idle-glyph"><Camera size={28} aria-hidden="true" /></span><b>Camera is off</b><span>Start, enter a sign label, then record a take.</span></div>}
+              {phase === "counting" && <div className="countdown">{count}</div>}
+              {phase === "capturing" && <div className="capturing">RECORDING</div>}
+              {live && (
+                <div className="rec-hands">
+                  <span className={hands ? "on" : "off"}>{hands ? "hands visible" : "no hands"}</span>
+                </div>
+              )}
             </div>
-          )}
+
+            <div className="sb-controls">
+              {!live ? (
+                <button className="btn btn-teal" onClick={start} disabled={state !== "ready" || starting}>
+                  <Camera size={18} aria-hidden="true" /> {starting ? "Opening…" : state === "ready" ? "Start camera" : "Preparing..."}
+                </button>
+              ) : (
+                <button className="btn btn-secondary" onClick={stop}><Square size={16} aria-hidden="true" /> Stop camera</button>
+              )}
+              <label className="sr-only" htmlFor="rec-gloss">Sign label</label>
+              <input
+                id="rec-gloss"
+                className="input"
+                style={{ flex: "1 1 220px", width: "auto", minHeight: 48 }}
+                value={gloss}
+                placeholder="Sign label, e.g. Please"
+                onChange={(e) => setGloss(e.target.value)}
+              />
+              <button
+                className="btn btn-primary"
+                onClick={record}
+                disabled={!live || !gloss.trim() || phase !== "idle"}
+              >
+                <Dot size={22} aria-hidden="true" /> Record take
+              </button>
+              <button className="btn btn-secondary" onClick={download} disabled={!takes.length}>
+                <Download size={17} aria-hidden="true" /> Download {takes.length ? `(${takes.length})` : ""}
+              </button>
+            </div>
+
+            {error && <div className="err-box">Landmarker: {error}</div>}
+            {camError && <div className="err-box">{camError}</div>}
+
+            <p className="card-note">
+              Aim for <b>30-50 takes per sign</b>. Vary distance, angle and lighting
+              so the demo learns the room it will be shown in.
+            </p>
+
+            {Object.keys(counts).length > 0 && (
+              <div className="tally" style={{ marginTop: 0 }}>
+                {Object.entries(counts).sort().map(([g, n]) => (
+                  <span key={g} className={n >= 30 ? "done" : ""}>
+                    {g} <b>{n}</b>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </main>

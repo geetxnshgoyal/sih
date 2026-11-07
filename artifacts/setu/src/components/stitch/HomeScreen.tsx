@@ -1,32 +1,59 @@
 import { InstallButton } from '../InstallPrompt';
-import { ArrowRight, Video, Languages, MessageSquare, FileText, ClipboardCheck, Settings2 } from 'lucide-react';
+import { ArrowRight, Hand, Languages, MessageSquare, FileText, ClipboardCheck, Settings2, ShieldCheck, WifiOff, Cpu } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 import { useDomain } from '../../lib/useDomain';
 import type { Domain } from '../../lib/domains';
+import heroArt from '../../assets/hero.png';
+
 const modules = (d: Domain) => [
-  { view: 'bridge', title: `Live ${d.session}`, description: 'Speak, type, or sign to keep the conversation moving.', cta: `Open ${d.session}`, icon: Video },
-  { view: 'language', title: 'Spoken language', description: 'Choose the language used for speech and playback.', cta: 'Choose language', icon: Languages },
-  { view: 'phrases', title: `${d.label} phrases`, description: 'Find the common questions and answers for this counter.', cta: 'Browse phrases', icon: MessageSquare },
-  { view: 'transcript', title: 'Conversation transcript', description: `Review and search messages from this ${d.session}.`, cta: 'View transcript', icon: FileText },
-  { view: 'summary', title: `${d.session.charAt(0).toUpperCase() + d.session.slice(1)} summary`, description: 'Review the conversation and export your session notes.', cta: 'Review summary', icon: ClipboardCheck },
-  { view: 'diagnostics', title: 'Device & system checks', description: 'Check device access and the available sign library.', cta: 'Check system', icon: Settings2 },
+  { view: 'bridge', title: `Live ${d.session}`, description: 'Speak, type, or sign. The other side of the counter sees it at once, in their language.', cta: `Open the ${d.session}`, icon: Hand },
+  { view: 'phrases', title: `${d.label} phrases`, description: 'The questions and answers this counter actually needs, ready to send in one tap.', cta: 'Browse phrases', icon: MessageSquare },
+  { view: 'language', title: 'Spoken language', description: 'Hindi, Tamil, Telugu, Bengali, Marathi or English for speech and playback.', cta: 'Choose language', icon: Languages },
+  { view: 'transcript', title: 'Transcript', description: `Every line from both sides of this ${d.session}, searchable.`, cta: 'View transcript', icon: FileText },
+  { view: 'summary', title: `${d.session.charAt(0).toUpperCase() + d.session.slice(1)} summary`, description: 'Review, export or print the record before the next person steps up.', cta: 'Review summary', icon: ClipboardCheck },
+  { view: 'diagnostics', title: 'Device & system checks', description: 'Camera, microphone, speech support and the sign library on this machine.', cta: 'Check system', icon: Settings2 },
 ];
+
 export function HomeScreen() {
   const { selectedRole, transcript } = useSession();
   const domain = useDomain();
-  return <main><div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-8">
-    <section className="home-hero">
-      <div><span className="eyebrow-label">{domain.tagline}</span>
-        <h1 className="text-display-lg font-bold tracking-tight">A clearer conversation.<br /><span className="text-primary">A more connected visit.</span></h1>
-        <p className="text-body-lg">A shared space for Deaf or hard of hearing people and the staff they need to talk to. Bring speech, sign playback, and written messages to one counter.</p>
-        <div className="home-actions"><a href="#language" className="primary-action">Set up the counter <ArrowRight size={18} /></a><a href="#bridge" className="secondary-action">Open {domain.roles[selectedRole].lower} view</a></div>
+  return <main className="page"><div className="page-inner">
+    <section className="hero rise">
+      <div>
+        <span className="eyebrow">{domain.tagline}</span>
+        <h1>Two people.<br />One counter.<br /><em>No interpreter needed.</em></h1>
+        <p className="lede">Setu turns Indian Sign Language into speech and speech back into signs, right here at the {domain.station.split(' · ')[0].toLowerCase()}. Nothing leaves this device.</p>
+        <div className="hero-actions">
+          <a href="#bridge" className="btn btn-primary btn-lg">Open the {domain.roles[selectedRole].lower} view <ArrowRight size={20} /></a>
+          <a href="#language" className="btn btn-secondary btn-lg">Set up this counter</a>
+        </div>
+        <div className="hero-facts" aria-label="Key facts">
+          <span><Languages size={16} aria-hidden="true" /> 6 Indian languages</span>
+          <span><Cpu size={16} aria-hidden="true" /> Runs on the device</span>
+          <span><WifiOff size={16} aria-hidden="true" /> Works offline</span>
+          <span><ShieldCheck size={16} aria-hidden="true" /> No video uploaded</span>
+        </div>
       </div>
-      <aside className="setup-card"><h2>Ready when you are</h2>
-        {[['Choose your language', 'Select a spoken language for this visit.'], ['Check your devices', 'Test camera and microphone access.'], ['Start the conversation', 'Use speech, text, and quick phrases.']].map(([title, description], i) => <div className="setup-step" key={title}><span>{i + 1}</span><div><strong>{title}</strong><p>{description}</p></div></div>)}
-      </aside>
+      <div className="hero-art"><img src={heroArt} alt="Two people at a service counter under a marigold bridge arch, one of them signing" width={880} height={880} /></div>
     </section>
-    <section aria-labelledby="workspace-heading"><div className="flex items-center justify-between mb-5 gap-3"><div><span className="eyebrow-label">Your workspace</span><h2 id="workspace-heading" className="text-headline-lg font-semibold mt-1">Everything for the conversation</h2></div><span className="text-label-md text-secondary">{transcript.length} {transcript.length === 1 ? "message" : "messages"} this session</span></div>
-      <div className="module-grid">{modules(domain).map(({view, title, description, cta, icon: Icon}) => <a href={`#${view}`} key={view} className="module-card"><span className="module-icon"><Icon size={22}/></span><h3>{title}</h3><p>{description}</p><span className="module-cta flex items-center gap-2">{cta}<ArrowRight size={16}/></span></a>)}</div>
+
+    <section aria-labelledby="steps-heading">
+      <h2 id="steps-heading" className="sr-only">Set up in three steps</h2>
+      <div className="steps stagger">
+        {[
+          ['Choose the language', 'Pick what the hearing person speaks. Text and phrases are exact in all six.', '#language'],
+          ['Check the devices', 'Camera for signs, microphone for speech. Text works even if both fail.', '#devices'],
+          ['Turn the screen around', 'Both sides share one screen. Switch the view from the top bar.', '#bridge'],
+        ].map(([title, description, href], i) => <a className="step" href={href} key={title}><span className="step-n" aria-hidden="true">{i + 1}</span><div><strong>{title}</strong><p>{description}</p></div></a>)}
+      </div>
+    </section>
+
+    <section aria-labelledby="workspace-heading">
+      <div className="section-head" style={{ marginBottom: 18 }}>
+        <div><span className="eyebrow">Your workspace</span><h2 id="workspace-heading">Everything for the conversation</h2></div>
+        <span className="count">{transcript.length} {transcript.length === 1 ? 'message' : 'messages'} this session</span>
+      </div>
+      <div className="module-grid stagger">{modules(domain).map(({ view, title, description, cta, icon: Icon }) => <a href={`#${view}`} key={view} className="module"><span className="module-icon"><Icon size={24} aria-hidden="true" /></span><h3>{title}</h3><p>{description}</p><span className="module-cta">{cta}<ArrowRight size={16} aria-hidden="true" /></span></a>)}</div>
     </section>
 
     {/* What this is, who built it, and what it cannot do.
@@ -36,10 +63,10 @@ export function HomeScreen() {
         clinic needs to know the phrase board is the reliable path and the
         camera is the shortcut. Saying so here is cheaper than a doctor
         discovering it mid-consultation. */}
-    <section aria-labelledby="about-heading" className="about-setu">
+    <section aria-labelledby="about-heading" className="about">
       <div>
-        <span className="eyebrow-label">About</span>
-        <h2 id="about-heading" className="text-headline-lg font-semibold mt-1">Setu means bridge</h2>
+        <span className="eyebrow">About</span>
+        <h2 id="about-heading" style={{ fontSize: 'clamp(1.75rem, 1.3rem + 1.6vw, 2.5rem)' }}>Setu means bridge.</h2>
       </div>
       <div className="about-grid">
         <div>
@@ -92,18 +119,16 @@ export function HomeScreen() {
           </p>
         </div>
       </div>
-      <p className="about-install">
+      <div className="about-foot">
         <InstallButton />
-      </p>
-      <p className="about-credit">
-        Built by <strong>Team Awaaz</strong> for Smart India Hackathon 2026.
-        Free to use, and always will be.{" "}
-        <a href="https://github.com/geetxnshgoyal/sih/blob/main/PRIVACY.md"
-           target="_blank" rel="noopener noreferrer">Privacy</a>
-        {" · "}
-        <a href="https://github.com/geetxnshgoyal/sih" target="_blank"
-           rel="noopener noreferrer">Source</a>
-      </p>
+        <p>
+          Built by <strong>Team Awaaz</strong> for Smart India Hackathon 2026.
+          Free to use, and always will be.{' '}
+          <a href="https://github.com/geetxnshgoyal/sih/blob/main/PRIVACY.md" target="_blank" rel="noopener noreferrer">Privacy</a>
+          {' · '}
+          <a href="https://github.com/geetxnshgoyal/sih" target="_blank" rel="noopener noreferrer">Source</a>
+        </p>
+      </div>
     </section>
   </div></main>;
 }

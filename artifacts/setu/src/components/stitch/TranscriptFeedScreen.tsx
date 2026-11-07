@@ -1,17 +1,52 @@
 import { useState } from 'react';
-import { Search, FileText, Volume2 } from 'lucide-react';
+import { Search, FileText, Volume2, X } from 'lucide-react';
 import { useSession } from '../../context/SessionContext';
 import { speak } from '../../lib/speech';
 import { useDomain } from '../../lib/useDomain';
+
 export function TranscriptFeedScreen() {
   const { transcript, selectedLang } = useSession();
   const domain = useDomain();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
   const items = transcript.filter(item => (filter === 'all' || item.speaker === filter) && `${item.text} ${item.textEn || ''}`.toLowerCase().includes(query.toLowerCase().trim()));
-  return <main><div className="mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
-    <div className="flex items-center justify-between"><div><span className="eyebrow-label">Conversation history</span><h1 className="text-display-md font-bold mt-2">Session transcript</h1><p className="text-secondary mt-3">Review messages from both sides of the conversation.</p></div><a href="#summary" className="secondary-action">Review summary</a></div>
-    <section className="content-card flex flex-col gap-5"><div className="flex flex-wrap gap-4 items-center justify-between"><div className="flex items-center gap-3 border border-outline-variant rounded-xl px-4 py-3 w-full sm:w-96"><Search size={20} className="text-secondary shrink-0"/><label className="sr-only" htmlFor="transcript-search">Search transcript</label><input id="transcript-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search messages…" className="w-full bg-transparent outline-none"/></div><div className="flex flex-wrap gap-2" role="group" aria-label="Filter by speaker">{['all', 'staff', 'client'].map(value => <button key={value} aria-pressed={filter === value} className={filter === value ? 'primary-action' : 'secondary-action'} onClick={() => setFilter(value)}>{value === 'all' ? 'All messages' : value === 'staff' ? domain.roles.staff.label : domain.roles.client.label}</button>)}</div></div><p className="text-label-md text-secondary" role="status">{items.length} {items.length === 1 ? 'message' : 'messages'}</p></section>
-    {items.length ? <ol className="flex flex-col gap-4">{items.map(item => <li className="content-card" key={item.id}><div className="flex items-center justify-between mb-3"><span className="text-label-md text-primary font-semibold">{item.speakerName}</span><time className="text-label-sm text-secondary">{item.timestamp}</time></div><p className="text-body-xl leading-relaxed">{item.text}</p>{item.textEn && item.textEn !== item.text && <p className="text-secondary mt-2">{item.textEn}</p>}<button className="secondary-action mt-4" onClick={() => speak(item.text, selectedLang)} aria-label={`Read ${item.speakerName} message aloud`}><Volume2 size={16}/>Read aloud</button></li>)}</ol> : <section className="content-card empty-state"><FileText size={36} className="mx-auto mb-4"/><h2 className="text-headline-md font-semibold">{transcript.length ? 'No matching messages' : 'Your conversation starts here'}</h2><p className="mt-2">{transcript.length ? 'Try another search or choose all messages.' : `Messages will appear here as you use the ${domain.session}.`}</p>{transcript.length ? <button className="secondary-action mt-5" onClick={() => {setQuery(''); setFilter('all');}}>Clear filters</button> : <a href="#bridge" className="primary-action mt-5">Start a conversation</a>}</section>}
+  const initial = (name: string) => name.trim().charAt(0).toUpperCase();
+  return <main className="page"><div className="page-inner">
+    <div className="page-head">
+      <div><span className="eyebrow indigo">Conversation history</span><h1>Transcript</h1><p className="lede">Both sides of the {domain.session}, in order. The {domain.roles.staff.lower} on the left, the {domain.roles.client.lower} on the right.</p></div>
+      <div className="page-head-actions"><a href="#summary" className="btn btn-secondary">Review summary</a></div>
+    </div>
+
+    <section className="card card-pad" style={{ display: 'flex', flexDirection: 'column', gap: 14 }} aria-label="Search and filter">
+      <div className="search">
+        <Search size={20} aria-hidden="true" />
+        <label className="sr-only" htmlFor="transcript-search">Search transcript</label>
+        <input id="transcript-search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search messages…" />
+        {query && <button className="btn btn-ghost btn-sm" onClick={() => setQuery('')} aria-label="Clear search"><X size={16} aria-hidden="true" /></button>}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div className="chip-row" role="group" aria-label="Filter by speaker">
+          {['all', 'staff', 'client'].map(value => <button key={value} aria-pressed={filter === value} className="chip" onClick={() => setFilter(value)}>{value === 'all' ? 'Everyone' : value === 'staff' ? domain.roles.staff.label : domain.roles.client.label}</button>)}
+        </div>
+        <p className="card-note" role="status" style={{ fontWeight: 700 }}>{items.length} {items.length === 1 ? 'message' : 'messages'}</p>
+      </div>
+    </section>
+
+    {items.length ? <>
+      <div className="legend" aria-hidden="true"><span><i style={{ background: 'var(--indigo)' }} />{domain.roles.staff.label}</span><span><i style={{ background: 'var(--teal)' }} />{domain.roles.client.label}</span></div>
+      <ol className="thread stagger" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {items.map(item => <li className={`bubble ${item.speaker}`} key={item.id}>
+          <div className="bubble-meta"><span className="bubble-who"><i aria-hidden="true">{initial(item.speakerName)}</i>{item.speakerName}</span><time>{item.timestamp}</time></div>
+          <p className="bubble-text">{item.text}</p>
+          {item.textEn && item.textEn !== item.text && <p className="bubble-en">{item.textEn}</p>}
+          <div className="bubble-actions"><button className="btn btn-secondary btn-sm" onClick={() => speak(item.text, selectedLang)} aria-label={`Read ${item.speakerName} message aloud`}><Volume2 size={16} aria-hidden="true" />Read aloud</button></div>
+        </li>)}
+      </ol>
+    </> : <section className="card"><div className="empty">
+      <span className="empty-glyph"><FileText size={30} aria-hidden="true" /></span>
+      <h2>{transcript.length ? 'No matching messages' : 'The conversation starts here'}</h2>
+      <p>{transcript.length ? 'Try another word, or show everyone.' : `Every message from the ${domain.session} appears here as it is said or signed.`}</p>
+      {transcript.length ? <button className="btn btn-secondary" onClick={() => { setQuery(''); setFilter('all'); }}>Clear filters</button> : <a href="#bridge" className="btn btn-primary">Open the {domain.session}</a>}
+    </div></section>}
   </div></main>;
 }

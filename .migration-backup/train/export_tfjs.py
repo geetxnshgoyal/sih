@@ -36,7 +36,7 @@ _SRC = ROOT / "models" / os.environ.get("SETU_VOCAB", "clinical")
 MODEL = _SRC / "gloss_classifier.keras"
 LABELS = _SRC / "labels.json"
 METRICS = _SRC / "metrics.json"
-OUT = ROOT / "app" / "public" / "model"
+OUT = Path(os.environ.get("SETU_MODEL_OUT", ROOT / "app" / "public" / "model"))
 
 
 def patch_keras3_topology(model_json: Path) -> None:
@@ -91,7 +91,10 @@ def main() -> int:
     # so exposing it adds no weights and no download, but it is what lets the
     # app look a sign up in a reference bank instead of being limited to the 83
     # answers the softmax can give. See train/build_bank.py.
-    emb = model.layers[-2].output
+    # The ensemble (train/train_ensemble.py) exposes member 0's pooled output,
+    # the frozen shipped trunk that _bank.json was built from.
+    emb = (model.get_layer("m0_head").input if model.name == "gloss_ensemble"
+           else model.layers[-2].output)
     model = keras.Model(model.input, [model.output, emb], name="gloss")
     print(f"exporting 2 outputs: softmax {model.output_shape[0]} "
           f"and embedding {model.output_shape[1]}")

@@ -162,7 +162,7 @@ function roundHalfToEven(v: number): number {
 }
 
 /** Zero mean, unit std over the flattened vector. Mirrors standardise(). */
-function standardise(v: Float64Array): Float32Array {
+export function standardise(v: Float64Array): Float32Array {
   let mean = 0;
   for (let i = 0; i < v.length; i++) mean += v[i];
   mean /= v.length;
@@ -185,15 +185,24 @@ function standardise(v: Float64Array): Float32Array {
  * just answering about a differently-shaped body.
  */
 export function extractFeatures(seq: PointFrame[], aspect: number): Float32Array {
-  const per = N_POINTS * N_DIMS;
   if (seq.length === 0) return new Float32Array(FEATURE_SIZE);
+  return standardise(extractAnchored(seq, aspect));
+}
+
+/**
+ * The anchored, resampled clip BEFORE standardisation: (SEQ_LEN, 65, 3) in
+ * shoulder units. This is the coordinate space train/augment.py operates in,
+ * so geometric transforms (mirror.ts) belong here and nowhere later.
+ */
+export function extractAnchored(seq: PointFrame[], aspect: number): Float64Array {
+  const per = N_POINTS * N_DIMS;
+  const picked = new Float64Array(FEATURE_SIZE);
+  if (seq.length === 0) return picked;
 
   const anchored = anchor(seq, aspect);
   const idx = resampleIndices(seq.length);
-
-  const picked = new Float64Array(FEATURE_SIZE);
   for (let i = 0; i < SEQ_LEN; i++) {
     picked.set(anchored.subarray(idx[i] * per, idx[i] * per + per), i * per);
   }
-  return standardise(picked);
+  return picked;
 }

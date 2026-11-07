@@ -43,6 +43,7 @@ models/*.keras
 models/*.h5
 models/saved_model/
 models/holistic_landmarker.task
+models/clinical-ensemble/
 
 # Own recordings may contain identifiable video of real people. Contributors
 # should share these deliberately, not by accident.
